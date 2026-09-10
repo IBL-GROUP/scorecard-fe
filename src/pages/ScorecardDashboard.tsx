@@ -55,6 +55,14 @@ const INVENTORY_THRESHOLD_DAYS: Record<string, number> = {
   C: 15,
 };
 
+// Chip colours for the classification x-axis, shared by every class-keyed chart.
+const CLS_LABEL_COLORS: Record<string, string> = {
+  A: clsColors.A,
+  B: clsColors.B,
+  C: clsColors.C,
+  N: clsColors.N,
+};
+
 const DAYS_BENCHMARKS = [
   {
     cls: 'A',
@@ -82,6 +90,16 @@ const DAYS_BENCHMARKS = [
     color: clsColors.C,
     bg: '#fffbeb',
     border: '#fde68a',
+  },
+  {
+    cls: 'N',
+    // Unclassified — no cover-days benchmark agreed yet.
+    days: null as number | null,
+    bm: 0,
+    rd: 0,
+    color: clsColors.N,
+    bg: '#f5f3ff',
+    border: '#ddd6fe',
   },
 ];
 
@@ -780,7 +798,7 @@ function SupplyChainTab({
                             color={b.color}
                             lineHeight="1"
                           >
-                            {dayVal}
+                            {dayVal ?? '—'}
                           </Text>
                         </Flex>
                         {/* SKUs cell */}
@@ -911,11 +929,7 @@ function SupplyChainTab({
                 labelFormatter={(v) => `${Math.round(Number(v))}%`}
                 showLabels
                 xTickMargin={4}
-                xLabelColors={{
-                  A: clsColors.A,
-                  B: clsColors.B,
-                  C: clsColors.C,
-                }}
+                xLabelColors={CLS_LABEL_COLORS}
               />
             </Box>
           </Flex>
@@ -1001,11 +1015,7 @@ function SupplyChainTab({
                 labelFormatter={(v) => `${Math.round(Number(v))}%`}
                 showLabels
                 xTickMargin={4}
-                xLabelColors={{
-                  A: clsColors.A,
-                  B: clsColors.B,
-                  C: clsColors.C,
-                }}
+                xLabelColors={CLS_LABEL_COLORS}
               />
             </Box>
           </Flex>
@@ -1044,11 +1054,7 @@ function SupplyChainTab({
               showTotal
               yTickFormatter={(v) => `${v}%`}
               labelFormatter={(v) => `${v}%`}
-              xLabelColors={{
-                A: clsColors.A,
-                B: clsColors.B,
-                C: clsColors.C,
-              }}
+              xLabelColors={CLS_LABEL_COLORS}
             />
           </Box>
         </ChartCard>
@@ -1394,7 +1400,7 @@ function ServiceMeasureTab({
             showLabels
             labelFormatter={(v) => `${Math.round(Number(v))}`}
             yTickFormatter={(v) => `${Math.round(Number(v))}`}
-            xLabelColors={{ A: clsColors.A, B: clsColors.B, C: clsColors.C }}
+            xLabelColors={CLS_LABEL_COLORS}
           />
         </ChartCard>
 
@@ -1429,7 +1435,7 @@ function ServiceMeasureTab({
               },
             ]}
             showLabels
-            xLabelColors={{ A: clsColors.A, B: clsColors.B, C: clsColors.C }}
+            xLabelColors={CLS_LABEL_COLORS}
           />
         </ChartCard>
       </Grid>

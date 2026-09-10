@@ -43,14 +43,17 @@ export const clsColors = {
   A: '#2563eb',
   B: '#059669',
   C: '#fca311',
+  N: '#7c3aed',
   Other: '#6b7280',
   Abg: '#dbeafe',
   Bbg: '#d1fae5',
   Cbg: '#fef3c7',
+  Nbg: '#ede9fe',
   Otherbg: '#f3f4f6',
   Aborder: '#eff6ff',
   Bborder: '#f0fdf4',
   Cborder: '#fffbeb',
+  Nborder: '#f5f3ff',
   Otherborder: '#e5e7eb',
 } as const;
 
