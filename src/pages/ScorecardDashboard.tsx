@@ -12,6 +12,7 @@ import {
 import { useGetForecastAccuracyYearly } from '@/api/forecastAccuracyYearly';
 import { useGetInventoryDays } from '@/api/inventoryDays';
 import { useGetAboveBelowThreshold } from '@/api/aboveBelowThreshold';
+import { useGetCoverDaysBenchmark } from '@/api/coverDaysBenchmark';
 import { useGetForecastAccuracyCategoryMonthly } from '@/api/forcastAccuracyCategoryMonthly';
 import { useGetForecastAccuracyCategoryYearly } from '@/api/forcastAccuracyCategoryYearly';
 import { useGetIblVsTscl } from '@/api/iblVsTscl';
@@ -49,11 +50,9 @@ import {
   type RdStatusApiRow,
 } from '@/api/rdStatus';
 
-const INVENTORY_THRESHOLD_DAYS: Record<string, number> = {
-  A: 30,
-  B: 20,
-  C: 15,
-};
+// Per-class cover-days benchmark (`days`) and inventory-days threshold
+// (`threshold`), served from the cover_days table.
+type ClsBenchmark = { days: number | null; threshold: number | null };
 
 // Chip colours for the classification x-axis, shared by every class-keyed chart.
 const CLS_LABEL_COLORS: Record<string, string> = {
@@ -66,7 +65,6 @@ const CLS_LABEL_COLORS: Record<string, string> = {
 const DAYS_BENCHMARKS = [
   {
     cls: 'A',
-    days: 35,
     bm: 92,
     rd: 99,
     color: clsColors.A,
@@ -75,7 +73,6 @@ const DAYS_BENCHMARKS = [
   },
   {
     cls: 'B',
-    days: 25,
     bm: 80,
     rd: 95,
     color: clsColors.B,
@@ -84,7 +81,6 @@ const DAYS_BENCHMARKS = [
   },
   {
     cls: 'C',
-    days: 20,
     bm: 70,
     rd: 90,
     color: clsColors.C,
@@ -93,8 +89,6 @@ const DAYS_BENCHMARKS = [
   },
   {
     cls: 'N',
-    // Unclassified — no cover-days benchmark agreed yet.
-    days: null as number | null,
     bm: 0,
     rd: 0,
     color: clsColors.N,
@@ -106,7 +100,6 @@ const DAYS_BENCHMARKS = [
 const INV_BENCHMARKS = [
   {
     cls: 'A',
-    days: 30,
     bm: 92,
     rd: 99,
     color: clsColors.A,
@@ -115,7 +108,6 @@ const INV_BENCHMARKS = [
   },
   {
     cls: 'B',
-    days: 20,
     bm: 80,
     rd: 95,
     color: clsColors.B,
@@ -124,12 +116,19 @@ const INV_BENCHMARKS = [
   },
   {
     cls: 'C',
-    days: 15,
     bm: 70,
     rd: 90,
     color: clsColors.C,
     bg: '#fffbeb',
     border: '#fde68a',
+  },
+  {
+    cls: 'N',
+    bm: 0,
+    rd: 0,
+    color: clsColors.N,
+    bg: '#f5f3ff',
+    border: '#ddd6fe',
   },
 ];
 
@@ -283,6 +282,7 @@ function BenchmarkBanner({
   border,
   sku,
 }: Omit<(typeof INV_BENCHMARKS)[0], 'rd' | 'bm'> & {
+  days?: number | null;
   isLast?: boolean;
   sku?: string;
 }) {
@@ -295,7 +295,7 @@ function BenchmarkBanner({
       opacity={0.9}
     >
       <Flex>
-        <Flex flex={1} align="center" gap={3} bg={bg} px={3} py={2}>
+        <Flex flex={1} align="center" gap={3} bg={bg} px={3} py="7px">
           <Flex
             w={9}
             h={9}
@@ -317,7 +317,7 @@ function BenchmarkBanner({
               color={color}
               lineHeight="1"
             >
-              {days}
+              {days ?? '—'}
             </Text>
             <Text
               fontSize="11px"
@@ -669,6 +669,7 @@ interface SupplyChainTabProps {
   pctSkusData: { class: string; pct: number }[];
   isLoadingPctSkus: boolean;
   skuCounts: Record<string, number>;
+  benchmarks: Record<string, ClsBenchmark>;
   endDate?: string;
 }
 
@@ -693,6 +694,7 @@ function SupplyChainTab({
   pctSkusData,
   isLoadingPctSkus,
   skuCounts,
+  benchmarks,
   endDate,
 }: SupplyChainTabProps) {
   return (
@@ -757,7 +759,8 @@ function SupplyChainTab({
               {/* Data rows */}
               <Flex direction="column" gap={3}>
                 {DAYS_BENCHMARKS.map((b) => {
-                  const dayVal = b.days;
+                  // 0 means no benchmark agreed for the class (e.g. N).
+                  const dayVal = benchmarks[b.cls]?.days || null;
                   const skuVal =
                     skuCounts[b.cls] !== undefined
                       ? skuCounts[b.cls]
@@ -770,7 +773,7 @@ function SupplyChainTab({
                       borderRadius="md"
                       overflow="hidden"
                     >
-                      <Flex align="stretch">
+                      <Flex align="stretch" h="50px">
                         <Flex
                           w={10}
                           flexShrink={0}
@@ -788,7 +791,6 @@ function SupplyChainTab({
                           align="center"
                           justify="center"
                           bg={b.bg}
-                          py={4}
                           borderLeft="1.5px dashed"
                           borderColor={b.border}
                         >
@@ -807,7 +809,6 @@ function SupplyChainTab({
                           align="center"
                           justify="center"
                           bg={b.bg}
-                          py={2}
                           borderLeft="1.5px dashed"
                           borderColor={b.border}
                         >
@@ -1074,6 +1075,7 @@ function ServiceMeasureTab({
   isLoadingServiceMeasure,
   isLoadingTgtVsActual,
   isLoadingThreshold,
+  benchmarks,
 }: {
   inventoryDaysData: unknown;
   skusThresholdData: { class: string; above: number; below: number }[];
@@ -1087,6 +1089,7 @@ function ServiceMeasureTab({
   isLoadingTgtVsActual: boolean;
   isLoadingThreshold: boolean;
   isLoadingPctSkus: boolean;
+  benchmarks: Record<string, ClsBenchmark>;
 }) {
   type ServiceRow = {
     branch: string;
@@ -1216,7 +1219,8 @@ function ServiceMeasureTab({
                 <BenchmarkBanner
                   key={b.cls}
                   {...b}
-                  days={INVENTORY_THRESHOLD_DAYS[b.cls] ?? b.days}
+                  // 0 means no threshold agreed for the class (e.g. N).
+                  days={benchmarks[b.cls]?.threshold || null}
                   isLast={i === INV_BENCHMARKS.length - 1}
                 />
               ))}
@@ -1286,14 +1290,7 @@ function ServiceMeasureTab({
                       {row.cls}
                     </Box>
                   );
-                const threshold =
-                  row.cls === 'A'
-                    ? 30
-                    : row.cls === 'B'
-                      ? 20
-                      : row.cls === 'C'
-                        ? 15
-                        : null;
+                const threshold = benchmarks[row.cls]?.threshold ?? null;
                 const rowTotal = row.vals.reduce((s, v) => s + v, 0) / locCount;
                 rows.push(
                   <DataTableRow
@@ -1855,6 +1852,19 @@ export default function ScorecardDashboard() {
     return acc;
   }, {});
 
+  // cover_days is effective-dated; the API resolves each class's row as of the
+  // selected end date.
+  const { data: coverDaysBenchmarkData } = useGetCoverDaysBenchmark({
+    ...(filters.dateTo && { endDate: filters.dateTo }),
+  });
+  type CoverDaysBenchmarkRow = ClsBenchmark & { classification: string };
+  const benchmarks = (
+    (coverDaysBenchmarkData as { data?: CoverDaysBenchmarkRow[] })?.data ?? []
+  ).reduce<Record<string, ClsBenchmark>>((acc, r) => {
+    acc[r.classification] = { days: r.days, threshold: r.threshold };
+    return acc;
+  }, {});
+
   const { data: salesSummaryData, isFetching: isLoadingSales } =
     useGetSalesSummary(params);
   const { data: coverDaysData, isFetching: isLoadingCoverDays } =
@@ -2353,6 +2363,7 @@ export default function ScorecardDashboard() {
             pctSkusData={pctSkusData}
             isLoadingPctSkus={isLoadingIblVsTscl}
             skuCounts={skuCounts}
+            benchmarks={benchmarks}
             endDate={closingDate ?? filters.dateTo}
           />
         )}
@@ -2370,6 +2381,7 @@ export default function ScorecardDashboard() {
             isLoadingTgtVsActual={isLoadingTgtVsActual}
             isLoadingThreshold={isLoadingThreshold}
             isLoadingPctSkus={isLoadingIblVsTscl}
+            benchmarks={benchmarks}
           />
         )}
         {mainTab === 'regionalDistributor' && (
