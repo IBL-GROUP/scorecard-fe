@@ -23,6 +23,7 @@ function labelColor(label: string) {
   if (label.startsWith('A')) return clsColors.A;
   if (label.startsWith('B')) return clsColors.B;
   if (label.startsWith('C')) return clsColors.C;
+  if (label === 'N') return clsColors.N;
   return '#64748b';
 }
 
@@ -145,7 +146,7 @@ export function SalesSummaryCard({
             const lc = labelColor(row.label);
             const pc = pctColor(row.up);
             const isLast = idx === rows.length - 1;
-            const isCls = ['A', 'B', 'C'].includes(row.label);
+            const isCls = ['A', 'B', 'C', 'N'].includes(row.label);
             return (
               <Flex
                 key={row.label}

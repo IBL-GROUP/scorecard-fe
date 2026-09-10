@@ -18,6 +18,8 @@ export const ApiEndpoints = {
   coverDays: '/cover-days',
   coverDaysTotal: '/cover-days/total',
   coverDaysClosingInv: '/cover-days/closing-inv',
+  // Benchmark cover days + Inventory Days Threshold, from the cover_days table.
+  coverDaysBenchmarks: '/cover-days/benchmarks',
   aboveBelowThreshold: '/above-below-threshold',
   forecastAccuracyCategoryMonthly: '/forecast-accuracy-category-monthly',
   forecastAccuracyCategoryYearly: '/forecast-accuracy-category-yearly',

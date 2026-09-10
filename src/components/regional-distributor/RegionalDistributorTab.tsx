@@ -67,7 +67,10 @@ const pct = (part: number, whole: number) =>
 
 interface StatCardProps {
   label: string;
+  /** The headline figure — units. */
   value: string;
+  /** The same stock valued, shown on its own line under the units. */
+  stockValue?: string;
   caption: string;
   badge: string;
   accent: string;
@@ -79,6 +82,7 @@ interface StatCardProps {
 function StatCard({
   label,
   value,
+  stockValue,
   caption,
   badge,
   accent,
@@ -130,15 +134,35 @@ function StatCard({
           {isLoading ? (
             <Skeleton height="30px" width="55%" borderRadius="sm" />
           ) : (
-            <Text
-              fontSize="2rem"
-              fontWeight="800"
-              color="gray.800"
-              lineHeight="1"
-              letterSpacing="-0.02em"
-            >
-              {value}
-            </Text>
+            // Units, then the same stock valued beside them: "3,786,109 |
+            // Value: 664,654,871". Wraps under the units on a narrow card.
+            <Flex align="baseline" gap={3} minW={0} wrap="wrap">
+              <Text
+                fontSize="2rem"
+                fontWeight="800"
+                color="gray.800"
+                lineHeight="1"
+                letterSpacing="-0.02em"
+              >
+                {value}
+              </Text>
+              {stockValue !== undefined && (
+                <>
+                  <Box w="1px" h="22px" bg="gray.300" alignSelf="center" />
+                  <Text
+                    fontSize="15px"
+                    fontWeight="600"
+                    color="gray.500"
+                    whiteSpace="nowrap"
+                  >
+                    Value:{' '}
+                    <Box as="span" fontWeight="800" color="gray.800">
+                      {stockValue}
+                    </Box>
+                  </Text>
+                </>
+              )}
+            </Flex>
           )}
           {!isLoading && (
             <Box px={2} py="2px" borderRadius="full" bg={tint} flexShrink={0}>
@@ -163,6 +187,10 @@ const fmt = (v: number | string | null | undefined): string => {
   if (Number.isNaN(n)) return String(v);
   return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
 };
+
+// Whole rupees for the card totals: at hundreds of millions the paisa are noise.
+const fmtWhole = (v: number): string =>
+  v.toLocaleString('en-US', { maximumFractionDigits: 0 });
 
 // Only one of the two stock columns is populated per row, so a zero is "not
 // applicable here" rather than a real quantity — show a dash instead.
@@ -196,6 +224,11 @@ export function RegionalDistributorTab({
   const totalPrevious = sum('lastStockQty');
   const grandTotal = totalCurrent + totalPrevious;
 
+  // The same three totals valued — the table's two Value columns, summed.
+  const totalCurrentValue = sum('stockValue');
+  const totalPreviousValue = sum('lastStockValue');
+  const grandTotalValue = totalCurrentValue + totalPreviousValue;
+
   // An RD sits on exactly one side: it uploaded for this period, or it is
   // still carrying its previous figure.
   const reportedCount = rows.filter(
@@ -219,6 +252,7 @@ export function RegionalDistributorTab({
         <StatCard
           label="Total Current Stock in Hand"
           value={fmt(totalCurrent)}
+          stockValue={fmtWhole(totalCurrentValue)}
           caption={`${reportedCount} RD${reportedCount === 1 ? '' : 's'} uploaded this period`}
           badge={`${currentShare.toFixed(1)}% of total`}
           accent={CURRENT_ACCENT}
@@ -229,6 +263,7 @@ export function RegionalDistributorTab({
         <StatCard
           label="Total Previous Stock in Hand"
           value={fmt(totalPrevious)}
+          stockValue={fmtWhole(totalPreviousValue)}
           caption={`${carriedCount} RD${carriedCount === 1 ? '' : 's'} carrying an older upload`}
           badge={`${previousShare.toFixed(1)}% of total`}
           accent={PREVIOUS_ACCENT}
@@ -239,6 +274,7 @@ export function RegionalDistributorTab({
         <StatCard
           label="Total Stock in Hand"
           value={fmt(grandTotal)}
+          stockValue={fmtWhole(grandTotalValue)}
           caption="Current + previous stock in hand"
           badge={`${rows.length} distributor${rows.length === 1 ? '' : 's'}`}
           accent={TOTAL_ACCENT}

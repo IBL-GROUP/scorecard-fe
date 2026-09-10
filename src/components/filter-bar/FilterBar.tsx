@@ -150,6 +150,10 @@ export function FilterBar({ initialFilters }: FilterBarProps) {
 
   const { data: branchesData } = useGetFilterBranches({});
   type BranchRow = {
+    /** mv_scoreboard_hub_mapping — what /filters/branches returns now. */
+    hub_branch_code?: string | number;
+    hub_branch_desc?: string;
+    storage_location_code?: string | number;
     branch_id?: string;
     branch_desc?: string;
     sale_loc?: string;
@@ -177,14 +181,25 @@ export function FilterBar({ initialFilters }: FilterBarProps) {
       }));
   }, [rows]);
 
-  const branchOptions = useMemo(
-    () =>
-      branchRows.map((r) => ({
-        value: r.branch_id ?? r.sale_loc ?? '',
-        label: r.branch_desc ?? r.sale_loc_desc ?? '',
-      })),
-    [branchRows]
-  );
+  // One option per hub branch, sorted by name. /filters/branches returns one row
+  // per storage location (mv_scoreboard_hub_mapping), so a hub repeats and is
+  // deduped by its code — the code the reports filter their branch by.
+  const branchOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const options: { value: string; label: string }[] = [];
+    for (const r of branchRows) {
+      const value = String(
+        r.hub_branch_code ?? r.branch_id ?? r.sale_loc ?? ''
+      ).trim();
+      const label = String(
+        r.hub_branch_desc ?? r.branch_desc ?? r.sale_loc_desc ?? ''
+      ).trim();
+      if (!value || seen.has(value)) continue;
+      seen.add(value);
+      options.push({ value, label: label || value });
+    }
+    return options.sort((a, b) => a.label.localeCompare(b.label));
+  }, [branchRows]);
 
   // RD branch/distributor lists come from the RD Status response itself —
   // same query key as the tab, so both share one request.

@@ -4,6 +4,8 @@ import {
   useGetCoverDays,
   useGetCoverDaysTotal,
   useGetCoverDaysClosingInv,
+  useGetCoverDaysBenchmarks,
+  type CoverDaysBenchmarkRow,
 } from '@/api/coverDays';
 import {
   useGetForecastAccuracyMonthly,
@@ -50,16 +52,16 @@ import {
   type RdStatusApiRow,
 } from '@/api/rdStatus';
 
-const INVENTORY_THRESHOLD_DAYS: Record<string, number> = {
-  A: 30,
-  B: 20,
-  C: 15,
-};
-
+/**
+ * The classification rows of the Benchmark card (Summary) and the Inventory
+ * Days Threshold card (Service Measure). Only the styling lives here: the days
+ * come from the cover_days table (GET /cover-days/benchmarks), which is
+ * versioned by effective date — `days` feeds the Benchmark, `threshold` the
+ * Inventory Days Threshold. A class with nothing set reads "—".
+ */
 const DAYS_BENCHMARKS = [
   {
     cls: 'A',
-    days: 35,
     bm: 92,
     rd: 99,
     color: clsColors.A,
@@ -68,7 +70,6 @@ const DAYS_BENCHMARKS = [
   },
   {
     cls: 'B',
-    days: 25,
     bm: 80,
     rd: 95,
     color: clsColors.B,
@@ -77,44 +78,24 @@ const DAYS_BENCHMARKS = [
   },
   {
     cls: 'C',
-    days: 20,
     bm: 70,
     rd: 90,
     color: clsColors.C,
     bg: '#fffbeb',
     border: '#fde68a',
+  },
+  {
+    cls: 'N',
+    bm: null,
+    rd: null,
+    color: clsColors.N,
+    bg: '#f5f3ff',
+    border: '#ddd6fe',
   },
 ];
 
-const INV_BENCHMARKS = [
-  {
-    cls: 'A',
-    days: 30,
-    bm: 92,
-    rd: 99,
-    color: clsColors.A,
-    bg: '#eff6ff',
-    border: '#bfdbfe',
-  },
-  {
-    cls: 'B',
-    days: 20,
-    bm: 80,
-    rd: 95,
-    color: clsColors.B,
-    bg: '#f0fdf4',
-    border: '#a7f3d0',
-  },
-  {
-    cls: 'C',
-    days: 15,
-    bm: 70,
-    rd: 90,
-    color: clsColors.C,
-    bg: '#fffbeb',
-    border: '#fde68a',
-  },
-];
+/** Same rows, same styling — only the figure they carry differs. */
+const INV_BENCHMARKS = DAYS_BENCHMARKS;
 
 const COVER_DAYS = [
   {
@@ -159,6 +140,17 @@ const COVER_DAYS = [
     color: clsColors.C,
     bg: clsColors.Cbg,
     border: clsColors.Cborder,
+    dot: '●',
+  },
+  {
+    label: 'N – Cover Days',
+    value: 0,
+    inv: '0',
+    inv_efp: '0',
+    quantity: '0',
+    color: clsColors.N,
+    bg: clsColors.Nbg,
+    border: clsColors.Nborder,
     dot: '●',
   },
   {
@@ -266,6 +258,8 @@ function BenchmarkBanner({
   border,
   sku,
 }: Omit<(typeof INV_BENCHMARKS)[0], 'rd' | 'bm'> & {
+  /** From the cover_days table; null when nothing is set, shown as "—". */
+  days?: number | null;
   isLast?: boolean;
   sku?: string;
 }) {
@@ -300,7 +294,7 @@ function BenchmarkBanner({
               color={color}
               lineHeight="1"
             >
-              {days}
+              {days ?? '—'}
             </Text>
             <Text
               fontSize="11px"
@@ -427,33 +421,24 @@ function CoverDaysSection({
         />
       </Flex>
       {isLoadingCoverDays ? (
-        <Flex direction="column" gap={2}>
-          <Skeleton height="60px" borderRadius="lg" />
-          <Grid templateColumns="1fr 1fr" gap={2}>
-            <Skeleton height="72px" borderRadius="md" />
-            <Skeleton height="72px" borderRadius="md" />
-            <Skeleton height="72px" borderRadius="md" />
-            <Skeleton height="72px" borderRadius="md" />
-          </Grid>
-        </Flex>
+        <Grid templateColumns="1fr 1fr" gap={2}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} height="72px" borderRadius="md" />
+          ))}
+        </Grid>
       ) : (
-        <Flex direction="column" gap={2}>
-          <CoverDaysCard
-            {...coverDaysRows[0]}
-            endDate={endDate}
-            inventoryView={coverDaysInventoryView}
-          />
-          <Grid templateColumns="1fr 1fr" gap={2}>
-            {coverDaysRows.slice(1).map((c) => (
-              <CoverDaysCard
-                key={c.label}
-                {...c}
-                endDate={endDate}
-                inventoryView={coverDaysInventoryView}
-              />
-            ))}
-          </Grid>
-        </Flex>
+        // Two by two: Total | A, B | C, N | O. Each card fills its grid cell,
+        // so the two cards in a row always match in height.
+        <Grid templateColumns="1fr 1fr" gap={2}>
+          {coverDaysRows.map((c) => (
+            <CoverDaysCard
+              key={c.label}
+              {...c}
+              endDate={endDate}
+              inventoryView={coverDaysInventoryView}
+            />
+          ))}
+        </Grid>
       )}
     </Box>
   );
@@ -494,6 +479,8 @@ function CoverDaysCard({
         borderColor="gray.100"
         boxShadow="sm"
         w="full"
+        h="full"
+        align="center"
         position="relative"
         overflow="hidden"
       >
@@ -561,6 +548,7 @@ function CoverDaysCard({
       boxShadow="sm"
       border="1px solid"
       borderColor={border}
+      h="full"
     >
       <Flex gap={3}>
         <Flex
@@ -652,6 +640,8 @@ interface SupplyChainTabProps {
   pctSkusData: { class: string; pct: number }[];
   isLoadingPctSkus: boolean;
   skuCounts: Record<string, number>;
+  /** Benchmark cover days per classification, from the cover_days table. */
+  benchmarkDays: Record<string, number>;
   endDate?: string;
 }
 
@@ -676,6 +666,7 @@ function SupplyChainTab({
   pctSkusData,
   isLoadingPctSkus,
   skuCounts,
+  benchmarkDays,
   endDate,
 }: SupplyChainTabProps) {
   return (
@@ -740,7 +731,7 @@ function SupplyChainTab({
               {/* Data rows */}
               <Flex direction="column" gap={3}>
                 {DAYS_BENCHMARKS.map((b) => {
-                  const dayVal = b.days;
+                  const dayVal = benchmarkDays[b.cls];
                   const skuVal =
                     skuCounts[b.cls] !== undefined
                       ? skuCounts[b.cls]
@@ -781,7 +772,7 @@ function SupplyChainTab({
                             color={b.color}
                             lineHeight="1"
                           >
-                            {dayVal}
+                            {dayVal ?? '—'}
                           </Text>
                         </Flex>
                         {/* SKUs cell */}
@@ -916,6 +907,7 @@ function SupplyChainTab({
                   A: clsColors.A,
                   B: clsColors.B,
                   C: clsColors.C,
+                  N: clsColors.N,
                 }}
               />
             </Box>
@@ -1006,6 +998,7 @@ function SupplyChainTab({
                   A: clsColors.A,
                   B: clsColors.B,
                   C: clsColors.C,
+                  N: clsColors.N,
                 }}
               />
             </Box>
@@ -1030,14 +1023,17 @@ function SupplyChainTab({
                   key: 'pct',
                   label: '% SKUs',
                   color: clsColors.A,
+                  // Each class in its own colour; Total (and anything else)
+                  // stays grey.
                   cellColor: (e) =>
-                    String(e.class) === 'A'
-                      ? clsColors.A
-                      : String(e.class) === 'B'
-                        ? clsColors.B
-                        : String(e.class) === 'C'
-                          ? clsColors.C
-                          : '#6b7280',
+                    (
+                      {
+                        A: clsColors.A,
+                        B: clsColors.B,
+                        C: clsColors.C,
+                        N: clsColors.N,
+                      } as Record<string, string>
+                    )[String(e.class)] ?? '#6b7280',
                 },
               ]}
               showLabels
@@ -1049,6 +1045,7 @@ function SupplyChainTab({
                 A: clsColors.A,
                 B: clsColors.B,
                 C: clsColors.C,
+                N: clsColors.N,
               }}
             />
           </Box>
@@ -1069,6 +1066,7 @@ function ServiceMeasureTab({
   isLoadingServiceMeasure,
   isLoadingTgtVsActual,
   isLoadingThreshold,
+  thresholdDays,
 }: {
   inventoryDaysData: unknown;
   skusThresholdData: { class: string; above: number; below: number }[];
@@ -1082,12 +1080,15 @@ function ServiceMeasureTab({
   isLoadingTgtVsActual: boolean;
   isLoadingThreshold: boolean;
   isLoadingPctSkus: boolean;
+  /** Inventory Days Threshold per classification, from the cover_days table. */
+  thresholdDays: Record<string, number>;
 }) {
   type ServiceRow = {
     branch: string;
     'SKU-A%': string;
     'SKU-B%': string;
     'SKU-C%': string;
+    'SKU-N%'?: string;
   };
   const allBranches = (
     (allBranchesServiceMeasureData as { data?: ServiceRow[] })?.data ?? []
@@ -1105,6 +1106,10 @@ function ServiceMeasureTab({
       skuA: r && !isNaN(parseFloat(r['SKU-A%'])) ? parseFloat(r['SKU-A%']) : 0,
       skuB: r && !isNaN(parseFloat(r['SKU-B%'])) ? parseFloat(r['SKU-B%']) : 0,
       skuC: r && !isNaN(parseFloat(r['SKU-C%'])) ? parseFloat(r['SKU-C%']) : 0,
+      skuN:
+        r && !isNaN(parseFloat(r['SKU-N%'] ?? ''))
+          ? parseFloat(r['SKU-N%'] ?? '')
+          : 0,
     };
   });
   type TgtVsActualRow = {
@@ -1139,7 +1144,7 @@ function ServiceMeasureTab({
     return acc;
   }, {});
 
-  const computedRows = (['A', 'B', 'C', 'Others'] as const)
+  const computedRows = (['A', 'B', 'C', 'N', 'Others'] as const)
     .filter((c) => grouped[c]?.length)
     .map((cls) => ({
       cls,
@@ -1158,8 +1163,10 @@ function ServiceMeasureTab({
     'Total',
   ];
 
-  // Average of A, B, C only (divided by 3) per branch
-  const abcRows = computedRows.filter((r) => ['A', 'B', 'C'].includes(r.cls));
+  // Average of the classified rows (A, B, C and N) per branch — Others stays out.
+  const abcRows = computedRows.filter((r) =>
+    ['A', 'B', 'C', 'N'].includes(r.cls)
+  );
   const totalVals = branchKeys.map((_, i) =>
     abcRows.length > 0
       ? abcRows.reduce((s, row) => s + row.vals[i], 0) / abcRows.length
@@ -1211,7 +1218,7 @@ function ServiceMeasureTab({
                 <BenchmarkBanner
                   key={b.cls}
                   {...b}
-                  days={INVENTORY_THRESHOLD_DAYS[b.cls] ?? b.days}
+                  days={thresholdDays[b.cls] ?? null}
                   isLast={i === INV_BENCHMARKS.length - 1}
                 />
               ))}
@@ -1238,21 +1245,23 @@ function ServiceMeasureTab({
                   (rowIdx === computedRows.length - 1 ||
                     computedRows[rowIdx + 1]?.isOther);
                 const clsColor =
-                  row.cls === 'A'
-                    ? clsColors.A
-                    : row.cls === 'B'
-                      ? clsColors.B
-                      : row.cls === 'C'
-                        ? clsColors.C
-                        : clsColors.Other;
+                  (
+                    {
+                      A: clsColors.A,
+                      B: clsColors.B,
+                      C: clsColors.C,
+                      N: clsColors.N,
+                    } as Record<string, string>
+                  )[row.cls] ?? clsColors.Other;
                 const clsRowBg =
-                  row.cls === 'A'
-                    ? clsColors.Abg
-                    : row.cls === 'B'
-                      ? clsColors.Bbg
-                      : row.cls === 'C'
-                        ? clsColors.Cbg
-                        : clsColors.Otherbg;
+                  (
+                    {
+                      A: clsColors.Abg,
+                      B: clsColors.Bbg,
+                      C: clsColors.Cbg,
+                      N: clsColors.Nbg,
+                    } as Record<string, string>
+                  )[row.cls] ?? clsColors.Otherbg;
                 const clsBadge =
                   row.cls === 'Others' ? (
                     <Box
@@ -1281,14 +1290,9 @@ function ServiceMeasureTab({
                       {row.cls}
                     </Box>
                   );
-                const threshold =
-                  row.cls === 'A'
-                    ? 30
-                    : row.cls === 'B'
-                      ? 20
-                      : row.cls === 'C'
-                        ? 15
-                        : null;
+                // The class's threshold from the cover_days table — the same
+                // figure the Inventory Days Threshold card beside it shows.
+                const threshold = thresholdDays[row.cls] ?? null;
                 const rowTotal = row.vals.reduce((s, v) => s + v, 0) / locCount;
                 rows.push(
                   <DataTableRow
@@ -1367,6 +1371,7 @@ function ServiceMeasureTab({
               { key: 'skuA', label: 'SKU-A%', color: clsColors.A },
               { key: 'skuB', label: 'SKU-B%', color: clsColors.B },
               { key: 'skuC', label: 'SKU-C%', color: clsColors.C },
+              { key: 'skuN', label: 'SKU-N%', color: clsColors.N },
             ].filter(
               (l) => !classification || l.key === `sku${classification}`
             )}
@@ -1395,7 +1400,12 @@ function ServiceMeasureTab({
             showLabels
             labelFormatter={(v) => `${Math.round(Number(v))}`}
             yTickFormatter={(v) => `${Math.round(Number(v))}`}
-            xLabelColors={{ A: clsColors.A, B: clsColors.B, C: clsColors.C }}
+            xLabelColors={{
+              A: clsColors.A,
+              B: clsColors.B,
+              C: clsColors.C,
+              N: clsColors.N,
+            }}
           />
         </ChartCard>
 
@@ -1430,7 +1440,12 @@ function ServiceMeasureTab({
               },
             ]}
             showLabels
-            xLabelColors={{ A: clsColors.A, B: clsColors.B, C: clsColors.C }}
+            xLabelColors={{
+              A: clsColors.A,
+              B: clsColors.B,
+              C: clsColors.C,
+              N: clsColors.N,
+            }}
           />
         </ChartCard>
       </Grid>
@@ -1848,6 +1863,26 @@ export default function ScorecardDashboard() {
     return acc;
   }, {});
 
+  // Benchmark cover days (`days`) and Inventory Days Threshold (`threshold`)
+  // per classification, from the cover_days table as of the window's end — the
+  // table is versioned by effective date, so a past month shows its own. A 0
+  // or missing value means nothing is set, and the card reads "—".
+  const { data: benchmarksData } = useGetCoverDaysBenchmarks({
+    endDate: filters.dateTo || new Date().toISOString().slice(0, 10),
+  });
+  const benchmarkRows =
+    (benchmarksData as { data?: CoverDaysBenchmarkRow[] })?.data ?? [];
+  const benchmarkDays: Record<string, number> = Object.fromEntries(
+    benchmarkRows
+      .filter((r) => Number(r.days) > 0)
+      .map((r) => [r.classification, Number(r.days)])
+  );
+  const thresholdDays: Record<string, number> = Object.fromEntries(
+    benchmarkRows
+      .filter((r) => Number(r.threshold) > 0)
+      .map((r) => [r.classification, Number(r.threshold)])
+  );
+
   const { data: salesSummaryData, isFetching: isLoadingSales } =
     useGetSalesSummary(params);
   const { data: coverDaysData, isFetching: isLoadingCoverDays } =
@@ -2040,6 +2075,14 @@ export default function ScorecardDashboard() {
     },
     {
       ...COVER_DAYS[4],
+      value: Math.round(Number(findCls('N')?.cover_days ?? 0)),
+      value_efp: Math.round(Number(findCls('N')?.cover_days_efp ?? 0)),
+      inv: fmtNumber(findCls('N')?.inv_val),
+      inv_efp: fmtNumber(findCls('N')?.inv_val_efp),
+      quantity: fmtNumber(findCls('N')?.quantity),
+    },
+    {
+      ...COVER_DAYS[5],
       value: Math.round(Number(findCls('Others')?.cover_days ?? 0)),
       value_efp: Math.round(Number(findCls('Others')?.cover_days_efp ?? 0)),
       inv: fmtNumber(findCls('Others')?.inv_val),
@@ -2072,7 +2115,7 @@ export default function ScorecardDashboard() {
   };
   const iblVsTsclRows =
     (iblVsTsclData as { data?: IblVsTsclRow[] })?.data ?? [];
-  const pctSkusData = (['Total', 'A', 'B', 'C', 'Others'] as const)
+  const pctSkusData = (['Total', 'A', 'B', 'C', 'N', 'Others'] as const)
     .filter(
       (cls) =>
         cls === 'Total' ||
@@ -2346,11 +2389,13 @@ export default function ScorecardDashboard() {
             pctSkusData={pctSkusData}
             isLoadingPctSkus={isLoadingIblVsTscl}
             skuCounts={skuCounts}
+            benchmarkDays={benchmarkDays}
             endDate={closingDate ?? filters.dateTo}
           />
         )}
         {mainTab === 'serviceMeasure' && (
           <ServiceMeasureTab
+            thresholdDays={thresholdDays}
             inventoryDaysData={inventoryDaysData}
             skusThresholdData={skusThresholdData}
             pctSkusData={pctSkusData}
