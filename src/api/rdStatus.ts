@@ -1,6 +1,7 @@
 import axios from '@/config/axios';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { ApiEndpoints } from '@/api/endpoints';
+import type { QueryOptions } from '@/api/queryOptions';
 import { ApiKey } from '@/utils/enum';
 
 // Row shape returned by GET /rd-status — mirrors the franchise stock query.
@@ -36,11 +37,12 @@ const getRdStatus = async (params: RdStatusParams) => {
 // Fires on mount, not on tab switch: the underlying query takes ~12s, so it
 // is prefetched while the user is on another tab and the RD Status tab opens
 // against a warm cache.
-export const useGetRdStatus = (params: RdStatusParams = {}) => {
+export const useGetRdStatus = (params: RdStatusParams = {}, options: QueryOptions = {}) => {
   return useQuery({
     queryKey: [ApiKey.rdStatus, params],
     queryFn: () => getRdStatus(params),
     placeholderData: keepPreviousData,
     staleTime: 5 * 60 * 1000,
+    enabled: options.enabled ?? true,
   });
 };

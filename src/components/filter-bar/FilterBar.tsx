@@ -1,5 +1,6 @@
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useGetFilterBranches, useGetFilters } from '@/api/filters';
+import { useCanSeeTab } from '@/features/salesDashboard/tabs';
 import {
   useGetRdStatus,
   rdStatusDate,
@@ -145,10 +146,23 @@ export function FilterBar({ initialFilters }: FilterBarProps) {
     dispatch(resetFilters());
   };
 
-  const { data: filtersData } = useGetFilters({});
+  // Option lists are fetched only for tabs this user can open. Classification,
+  // SKU and Branches are shown on Summary and Service Measure; the RD lists
+  // come from the RD Status response, which only RD Data Status users get.
+  const canSeeTab = useCanSeeTab();
+  const needsSkuAndBranchOptions =
+    canSeeTab('supplyChain') || canSeeTab('serviceMeasure');
+
+  const { data: filtersData } = useGetFilters(
+    {},
+    { enabled: needsSkuAndBranchOptions }
+  );
   const rows: FilterRow[] = (filtersData as { data?: FilterRow[] })?.data ?? [];
 
-  const { data: branchesData } = useGetFilterBranches({});
+  const { data: branchesData } = useGetFilterBranches(
+    {},
+    { enabled: needsSkuAndBranchOptions }
+  );
   type BranchRow = {
     /** mv_scoreboard_hub_mapping — what /filters/branches returns now. */
     hub_branch_code?: string | number;
@@ -202,10 +216,13 @@ export function FilterBar({ initialFilters }: FilterBarProps) {
   }, [branchRows]);
 
   // RD branch/distributor lists come from the RD Status response itself —
-  // same query key as the tab, so both share one request.
-  const { data: rdStatusData } = useGetRdStatus({
-    date: rdStatusDate(initialFilters.dateTo),
-  });
+  // same query key as the tab, so both share one request. Only asked for while
+  // RD Data Status is open (the only tab showing these lists), so the filter
+  // bar never pulls that tab ahead of its turn in the dashboard's load queue.
+  const { data: rdStatusData } = useGetRdStatus(
+    { date: rdStatusDate(initialFilters.dateTo) },
+    { enabled: isRdStatus && canSeeTab('regionalDistributor') }
+  );
   const rdRows: RdStatusApiRow[] =
     (rdStatusData as { data?: RdStatusApiRow[] })?.data ?? [];
 

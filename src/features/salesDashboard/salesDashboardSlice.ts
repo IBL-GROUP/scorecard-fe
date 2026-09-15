@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
-type MainTab = 'supplyChain' | 'serviceMeasure' | 'dispatchWip' | 'regionalDistributor'
+export type MainTab = 'supplyChain' | 'serviceMeasure' | 'dispatchWip' | 'regionalDistributor'
 type ViewTab = 'visualizations' | 'tables'
 type DisplayMode = 'TP' | 'EFP'
 

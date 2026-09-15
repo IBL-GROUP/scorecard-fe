@@ -18,6 +18,14 @@ import { useGetForecastAccuracyCategoryMonthly } from '@/api/forcastAccuracyCate
 import { useGetForecastAccuracyCategoryYearly } from '@/api/forcastAccuracyCategoryYearly';
 import { useGetIblVsTscl } from '@/api/iblVsTscl';
 import { useGetDispatchVsOrder } from '@/api/dispatchVsOrder';
+import {
+  isQuerySettled,
+  useReleaseNextTab,
+  useTabLoadQueue,
+  type QueryProgress,
+  type TabSettledMap,
+} from '@/features/salesDashboard/tabs';
+import type { MainTab } from '@/features/salesDashboard/salesDashboardSlice';
 import { useAppSelector } from '@/app/hooks';
 import { ChartCard } from '@/components/chart-card';
 import { BarChart, GaugeChart, LineChart } from '@/components/charts';
@@ -1771,6 +1779,41 @@ function DispatchWipTab({
 export default function ScorecardDashboard() {
   const { mainTab, filters } = useAppSelector((state) => state.salesDashboard);
 
+  // ── Load queue ────────────────────────────────────────────────────────────
+  // Queries run tab by tab, in tab order: all of Summary's together, then —
+  // once every one of them has settled — all of Service Measure's, and so on,
+  // whichever tab is on screen. The tab being viewed always loads straight
+  // away, and a tab the user holds no VIEW permission on never loads at all.
+  // A filter change starts the queue again from the first tab.
+  // See useTabLoadQueue in features/salesDashboard/tabs.ts.
+  const restartKey = JSON.stringify([
+    filters.classification,
+    filters.branch,
+    filters.sku,
+    filters.dateFrom,
+    filters.dateTo,
+  ]);
+  const queue = useTabLoadQueue(mainTab, restartKey);
+  const loadSummary = queue.shouldLoad('supplyChain');
+  const loadServiceMeasure = queue.shouldLoad('serviceMeasure');
+  const loadDispatchWip = queue.shouldLoad('dispatchWip');
+  const loadRdStatus = queue.shouldLoad('regionalDistributor');
+
+  // Filled in by track() as each query below is declared: a tab is settled
+  // once every query registered to it has finished for the current params.
+  const settledByTab: TabSettledMap = {
+    supplyChain: true,
+    serviceMeasure: true,
+    dispatchWip: true,
+    regionalDistributor: true,
+  };
+  const track = <T extends QueryProgress>(tabs: MainTab[], query: T): T => {
+    if (!isQuerySettled(query)) {
+      for (const tab of tabs) settledByTab[tab] = false;
+    }
+    return query;
+  };
+
   const params = {
     ...(filters.classification && { classification: filters.classification }),
     ...(filters.branch.length > 0 && { branch: filters.branch }),
@@ -1788,11 +1831,14 @@ export default function ScorecardDashboard() {
     ...(cappedEndDate && { endDate: cappedEndDate }),
   };
 
-  // RD stock position — served from the secondary (franchise) database, so it
-  // only fires while its own tab is open.
-  const { data: rdStatusData, isFetching: isLoadingRdStatus } = useGetRdStatus({
-    date: rdStatusDate(filters.dateTo),
-  });
+  // RD stock position — the last tab in the queue.
+  const { data: rdStatusData, isFetching: isLoadingRdStatus } = track(
+    ['regionalDistributor'],
+    useGetRdStatus(
+      { date: rdStatusDate(filters.dateTo) },
+      { enabled: loadRdStatus }
+    )
+  );
   // Branch/distributor are applied here rather than in SQL — the RD list is
   // ~100 rows and both filter lists are built from this same response.
   const rdStatusRows = useMemo(() => {
@@ -1851,10 +1897,18 @@ export default function ScorecardDashboard() {
     filters.uploadCount,
   ]);
 
-  const { data: totalSkuData } = useGetTotalSku({
-    ...(filters.classification && { classification: filters.classification }),
-    ...(filters.sku.length > 0 && { sku: filters.sku }),
-  });
+  const { data: totalSkuData } = track(
+    ['supplyChain'],
+    useGetTotalSku(
+      {
+        ...(filters.classification && {
+          classification: filters.classification,
+        }),
+        ...(filters.sku.length > 0 && { sku: filters.sku }),
+      },
+      { enabled: loadSummary }
+    )
+  );
   type TotalSkuRow = { classification: string; count: number };
   const skuCounts = (
     (totalSkuData as { data?: TotalSkuRow[] })?.data ?? []
@@ -1867,9 +1921,15 @@ export default function ScorecardDashboard() {
   // per classification, from the cover_days table as of the window's end — the
   // table is versioned by effective date, so a past month shows its own. A 0
   // or missing value means nothing is set, and the card reads "—".
-  const { data: benchmarksData } = useGetCoverDaysBenchmarks({
-    endDate: filters.dateTo || new Date().toISOString().slice(0, 10),
-  });
+  // Read by both Summary (benchmark days) and Service Measure (thresholds), so
+  // it loads with whichever of the two is released first.
+  const { data: benchmarksData } = track(
+    ['supplyChain', 'serviceMeasure'],
+    useGetCoverDaysBenchmarks(
+      { endDate: filters.dateTo || new Date().toISOString().slice(0, 10) },
+      { enabled: loadSummary || loadServiceMeasure }
+    )
+  );
   const benchmarkRows =
     (benchmarksData as { data?: CoverDaysBenchmarkRow[] })?.data ?? [];
   const benchmarkDays: Record<string, number> = Object.fromEntries(
@@ -1883,54 +1943,89 @@ export default function ScorecardDashboard() {
       .map((r) => [r.classification, Number(r.threshold)])
   );
 
-  const { data: salesSummaryData, isFetching: isLoadingSales } =
-    useGetSalesSummary(params);
-  const { data: coverDaysData, isFetching: isLoadingCoverDays } =
-    useGetCoverDays(params);
+  // ── Summary ───────────────────────────────────────────────────────────────
+  const summaryOnly = { enabled: loadSummary };
+  const summary = <T extends QueryProgress>(query: T) =>
+    track(['supplyChain'], query);
+  const { data: salesSummaryData, isFetching: isLoadingSales } = summary(
+    useGetSalesSummary(params, summaryOnly)
+  );
+  const { data: coverDaysData, isFetching: isLoadingCoverDays } = summary(
+    useGetCoverDays(params, summaryOnly)
+  );
   const { data: coverDaysTotalData, isFetching: isLoadingCoverDaysTotal } =
-    useGetCoverDaysTotal(params);
-  const { data: coverDaysClosingInvData } = useGetCoverDaysClosingInv();
+    summary(useGetCoverDaysTotal(params, summaryOnly));
+  const { data: coverDaysClosingInvData } = summary(
+    useGetCoverDaysClosingInv(summaryOnly)
+  );
   const closingDate =
     (coverDaysClosingInvData as { data?: { closing_date?: string }[] })
       ?.data?.[0]?.closing_date ?? undefined;
-  const { data: forecastAccuracyMonthlyData } =
-    useGetForecastAccuracyMonthly(params);
-  const { data: forecastAccuracyMonthlyDaysGoneData } =
-    useGetForecastAccuracyMonthlyDaysGone(daysGoneParams);
+  const { data: forecastAccuracyMonthlyData } = summary(
+    useGetForecastAccuracyMonthly(params, summaryOnly)
+  );
+  const { data: forecastAccuracyMonthlyDaysGoneData } = summary(
+    useGetForecastAccuracyMonthlyDaysGone(daysGoneParams, summaryOnly)
+  );
   const {
     data: forecastAccuracyCategoryMonthlyData,
     isFetching: isLoadingForecastTscl,
-  } = useGetForecastAccuracyCategoryMonthly({
-    ...params,
-    endDate: filters.dateTo || new Date().toISOString().slice(0, 10),
-  });
+  } = summary(
+    useGetForecastAccuracyCategoryMonthly(
+      {
+        ...params,
+        endDate: filters.dateTo || new Date().toISOString().slice(0, 10),
+      },
+      summaryOnly
+    )
+  );
 
-  const { data: forecastAccuracyYearlyData } = useGetForecastAccuracyYearly({
-    ...params,
-    date: filters.dateTo || new Date().toISOString().slice(0, 10),
-  });
+  const { data: forecastAccuracyYearlyData } = summary(
+    useGetForecastAccuracyYearly(
+      {
+        ...params,
+        date: filters.dateTo || new Date().toISOString().slice(0, 10),
+      },
+      summaryOnly
+    )
+  );
   const {
     data: forecastAccuracyCategoryYearlyData,
     isFetching: isLoadingForecastIbl,
-  } = useGetForecastAccuracyCategoryYearly({
-    ...params,
-    endDate: filters.dateTo || new Date().toISOString().slice(0, 10),
-  });
+  } = summary(
+    useGetForecastAccuracyCategoryYearly(
+      {
+        ...params,
+        endDate: filters.dateTo || new Date().toISOString().slice(0, 10),
+      },
+      summaryOnly
+    )
+  );
+  const { data: iblVsTsclData, isFetching: isLoadingIblVsTscl } = summary(
+    useGetIblVsTscl(params, summaryOnly)
+  );
 
+  // ── Service Measure ───────────────────────────────────────────────────────
+  const serviceMeasureOnly = { enabled: loadServiceMeasure };
+  const serviceMeasure = <T extends QueryProgress>(query: T) =>
+    track(['serviceMeasure'], query);
   const { data: inventoryDaysData, isFetching: isLoadingInventoryDays } =
-    useGetInventoryDays(params);
+    serviceMeasure(useGetInventoryDays(params, serviceMeasureOnly));
   const { data: aboveBelowThresholdData, isFetching: isLoadingThreshold } =
-    useGetAboveBelowThreshold(params);
-  const { data: iblVsTsclData, isFetching: isLoadingIblVsTscl } =
-    useGetIblVsTscl(params);
+    serviceMeasure(useGetAboveBelowThreshold(params, serviceMeasureOnly));
+
   // Dispatch vs Order ignores SKU and Classification filters.
   const dispatchParams = {
     ...(filters.branch.length > 0 && { branch: filters.branch }),
     ...(filters.dateFrom && { startDate: filters.dateFrom }),
     ...(filters.dateTo && { endDate: filters.dateTo }),
   };
+  // ── Dispatch & WIP ────────────────────────────────────────────────────────
+  const dispatchWipOnly = { enabled: loadDispatchWip };
+  const dispatchWip = <T extends QueryProgress>(query: T) =>
+    track(['dispatchWip'], query);
   const { data: dispatchVsOrderData, isFetching: isLoadingDispatch } =
-    useGetDispatchVsOrder(dispatchParams);
+    dispatchWip(useGetDispatchVsOrder(dispatchParams, dispatchWipOnly));
 
   // WIP & RPM only respect date filters — branch / classification / sku are
   // intentionally excluded.
@@ -1938,18 +2033,35 @@ export default function ScorecardDashboard() {
     ...(filters.dateFrom && { startDate: filters.dateFrom }),
     ...(filters.dateTo && { endDate: filters.dateTo }),
   };
-  const { data: wipData, isFetching: isLoadingWip } = useGetWip(dateOnlyParams);
-  const { data: rpmData, isFetching: isLoadingRpm } = useGetRpm(dateOnlyParams);
+  const { data: wipData, isFetching: isLoadingWip } = dispatchWip(
+    useGetWip(dateOnlyParams, dispatchWipOnly)
+  );
+  const { data: rpmData, isFetching: isLoadingRpm } = dispatchWip(
+    useGetRpm(dateOnlyParams, dispatchWipOnly)
+  );
+
+  // ── Service Measure (continued) ───────────────────────────────────────────
   const { data: serviceMeasureData, isFetching: isLoadingServiceMeasure } =
-    useGetServiceMeasure(params);
-  const { data: allBranchesServiceMeasureData } = useGetServiceMeasure({
-    ...(filters.classification && { classification: filters.classification }),
-    ...(filters.sku.length > 0 && { sku: filters.sku }),
-    ...(filters.dateFrom && { startDate: filters.dateFrom }),
-    ...(filters.dateTo && { endDate: filters.dateTo }),
-  });
+    serviceMeasure(useGetServiceMeasure(params, serviceMeasureOnly));
+  const { data: allBranchesServiceMeasureData } = serviceMeasure(
+    useGetServiceMeasure(
+      {
+        ...(filters.classification && {
+          classification: filters.classification,
+        }),
+        ...(filters.sku.length > 0 && { sku: filters.sku }),
+        ...(filters.dateFrom && { startDate: filters.dateFrom }),
+        ...(filters.dateTo && { endDate: filters.dateTo }),
+      },
+      serviceMeasureOnly
+    )
+  );
   const { data: tgtVsActualData, isFetching: isLoadingTgtVsActual } =
-    useGetTgtVsActual(params);
+    serviceMeasure(useGetTgtVsActual(params, serviceMeasureOnly));
+
+  // Every query is declared, so settledByTab is complete: release the next tab
+  // once the ones already released have all finished.
+  useReleaseNextTab(queue, settledByTab);
 
   const apiRows = salesSummaryData?.data as
     | { classification: string; sku: string | number; amount: number }[]

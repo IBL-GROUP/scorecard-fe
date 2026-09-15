@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { permissionCode, usePermissions } from '@/api/permissions';
+import { usePermissions } from '@/api/permissions';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { Button } from '@/components/button';
 import { colors } from '@/constants/theme';
@@ -9,24 +9,11 @@ import {
   setMainTab,
   setFilter,
 } from '@/features/salesDashboard/salesDashboardSlice';
+import { MAIN_TABS, useCanSeeTab } from '@/features/salesDashboard/tabs';
 import { Flex, HStack } from '@chakra-ui/react';
 // import { FiBarChart2, FiGrid } from 'react-icons/fi';
 
-/**
- * The tabs, each carrying the permission section_code that governs it.
- *
- * The section code cannot be derived from the redux value — RD Data Status is
- * stored as RD_DATA_STATUS but switched on as 'regionalDistributor' — so the
- * mapping has to be written down somewhere, and this is that somewhere.
- */
-const mainTabs = [
-  { label: 'Summary', value: 'supplyChain', section: 'SUMMARY' },
-  { label: 'Service Measure', value: 'serviceMeasure', section: 'SERVICE_MEASURE' },
-  { label: 'Dispatch & WIP', value: 'dispatchWip', section: 'DISPATCH_WIP' },
-  { label: 'RD Data Status', value: 'regionalDistributor', section: 'RD_DATA_STATUS' },
-] as const;
-
-type MainTabValue = (typeof mainTabs)[number]['value'];
+type MainTabValue = (typeof MAIN_TABS)[number]['value'];
 
 export function HeaderActions() {
   const dispatch = useAppDispatch();
@@ -34,14 +21,15 @@ export function HeaderActions() {
     (state) => state.salesDashboard
   );
 
-  const { has, isReady } = usePermissions();
+  const { isReady } = usePermissions();
+  const canSeeTab = useCanSeeTab();
 
   // Only the tabs this user holds a VIEW permission on. Nothing renders until
   // the codes have arrived — showing all four first would flash tabs the user
   // is not entitled to before removing them again.
   const visibleTabs = useMemo(
-    () => (isReady ? mainTabs.filter((tab) => has(permissionCode(tab.section))) : []),
-    [isReady, has]
+    () => MAIN_TABS.filter((tab) => canSeeTab(tab.value)),
+    [canSeeTab]
   );
 
   // The selected tab is remembered in redux, so a user can land on one they may
