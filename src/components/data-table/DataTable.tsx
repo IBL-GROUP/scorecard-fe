@@ -27,6 +27,7 @@ import {
 } from 'react-icons/fi';
 import { colors, gradients } from '@/constants/theme';
 import { TablePagination } from '@/components/pagination';
+import { recordExport } from '@/utils/usage';
 import * as XLSX from 'xlsx';
 
 export interface SubRowData {
@@ -208,6 +209,7 @@ export function DataTable({
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
     XLSX.writeFile(wb, `${exportName ?? title ?? 'export'}.xlsx`);
+    recordExport(exportName ?? title);
   };
 
   return (

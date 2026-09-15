@@ -21,6 +21,15 @@ const customConfig = {
         },
       },
     },
+    keyframes: {
+      // The user avatar's hover ring: a ripple that spreads out from the edge
+      // and fades. Only the shadow moves, so the circle itself stays still.
+      avatarRing: {
+        '0%': { boxShadow: '0 0 0 0 rgba(59, 130, 246, 0.45)' },
+        '70%': { boxShadow: '0 0 0 8px rgba(59, 130, 246, 0)' },
+        '100%': { boxShadow: '0 0 0 0 rgba(59, 130, 246, 0)' },
+      },
+    },
     recipes: {
       input: inputRecipe,
       button: buttonRecipe,

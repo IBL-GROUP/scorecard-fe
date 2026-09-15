@@ -39,6 +39,8 @@ interface TokenPayload {
   exp?: number;
   /** organization.user_login.user_login_id — who the token belongs to. */
   sub?: string;
+  user_name?: string;
+  email_id?: string;
 }
 
 function decodeTokenPayload(token: string): TokenPayload | null {
@@ -168,4 +170,25 @@ export function redirectToPortal() {
 
 export function hasValidSession() {
   return getToken() !== null;
+}
+
+/** The signed-in user, as the token's claims describe them. */
+export interface SessionUser {
+  /** organization.user_login.user_name, e.g. "syed.sharjeel". */
+  userName: string;
+  email: string | null;
+}
+
+/**
+ * Who is signed in, read straight from the token — no request. Null when there
+ * is no valid session.
+ */
+export function getSessionUser(): SessionUser | null {
+  const token = getToken();
+  if (!token) return null;
+
+  const payload = decodeTokenPayload(token);
+  if (!payload?.user_name) return null;
+
+  return { userName: payload.user_name, email: payload.email_id ?? null };
 }

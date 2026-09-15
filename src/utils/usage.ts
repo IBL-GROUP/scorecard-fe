@@ -3,6 +3,8 @@
  */
 
 import { getToken, AUTH_API_URL } from '@/utils/session';
+import { store } from '@/app/store';
+import { MAIN_TABS } from '@/features/salesDashboard/tabs';
 
 const HEARTBEAT_MS = 30_000;
 const SESSION_ID_KEY = 'searle_usage_session_scorecard';
@@ -39,6 +41,39 @@ function send(event: 'ping' | 'end') {
       Authorization: `Bearer ${token}`,
     },
     body,
+    keepalive: true,
+  }).catch(() => {
+    // Usage tracking must never surface an error to the user.
+  });
+}
+
+/**
+ * Records that the user downloaded an Excel file, for the Exports column of the
+ * authenticator's engagement report.
+ *
+ * Call it once per download, right after the file is written. Who exported
+ * comes from the token; the body says where: this dashboard, the tab that was
+ * open, and the table's title when it has one (most tables here have none,
+ * which is why the tab is read from the store rather than left to the caller).
+ * Fire-and-forget, like the heartbeat: a failure never reaches the user.
+ */
+export function recordExport(table?: string): void {
+  const token = getToken();
+  if (!token) return;
+
+  const { mainTab } = store.getState().salesDashboard;
+  const tab = MAIN_TABS.find((t) => t.value === mainTab)?.label ?? mainTab;
+  const report = [tab, table && table !== tab ? table : null]
+    .filter(Boolean)
+    .join(' › ');
+
+  void fetch(`${AUTH_API_URL}/usage/export`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ dashboard: window.location.origin, report }),
     keepalive: true,
   }).catch(() => {
     // Usage tracking must never surface an error to the user.

@@ -35,6 +35,7 @@ import { RmpmDetails } from '@/dialog/rmpm-details';
 import { WipDetails } from '@/dialog/wip-details';
 import { FilterBar } from '@/components/filter-bar';
 import { HeaderActions } from '@/components/header-actions';
+import { UserMenu } from '@/components/user-menu';
 import { clsColors, colors, gradients } from '@/constants/theme';
 import {
   Box,
@@ -2463,6 +2464,11 @@ export default function ScorecardDashboard() {
               Q1 2025 · Jan — Mar
             </Text>
           </HStack> */}
+
+          {/* User menu, in the top-right corner. */}
+          <Box ml="auto" flexShrink={0}>
+            <UserMenu />
+          </Box>
         </Flex>
       </Box>
 
