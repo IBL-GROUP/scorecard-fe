@@ -2220,7 +2220,12 @@ export default function ScorecardDashboard() {
       class: r.classification,
       above: Number(r['No Of SKUs > Threshold']) ?? 0,
       below: Number(r['No Of SKUs < Threshold']) ?? 0,
-    }));
+    }))
+    // Drop classes with nothing in them. The endpoint enumerates A/B/C/N
+    // regardless, so a SKU filter leaves three empty groups on the axis;
+    // Cover Days Threshold vs Actual only ever returns the classes it has
+    // data for, and this keeps the two cards reading the same way.
+    .filter((r) => r.above + r.below > 0);
 
   type IblVsTsclRow = {
     classification: string;
@@ -2235,15 +2240,19 @@ export default function ScorecardDashboard() {
         !filters.classification ||
         cls === filters.classification
     )
-    .map((cls) => {
-      const row = iblVsTsclRows.find(
-        (r) => (r.classification ?? 'Others') === cls
-      );
-      return {
-        class: cls,
-        pct: row ? Math.round(Number(row.ibl_vs_tscl_pct)) : 0,
-      };
-    });
+    .map((cls) => ({
+      cls,
+      row: iblVsTsclRows.find((r) => (r.classification ?? 'Others') === cls),
+    }))
+    // Drop classes the endpoint returned no row for. The class list here is
+    // hardcoded, so without this a SKU filter leaves the classes it excluded
+    // sitting on the axis as 0% bars, which reads as "measured, came out zero"
+    // rather than "not in this selection". Total always stays.
+    .filter(({ cls, row }) => cls === 'Total' || row)
+    .map(({ cls, row }) => ({
+      class: cls,
+      pct: row ? Math.round(Number(row.ibl_vs_tscl_pct)) : 0,
+    }));
 
   const tsclAccuracy = (() => {
     const row = (
