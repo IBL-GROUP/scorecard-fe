@@ -127,11 +127,18 @@ export async function openDashboard(dashboard: UserDashboard): Promise<void> {
 }
 
 /**
- * This dashboard's user manual, set per project in VITE_USER_MANUAL_URL. Null
- * until one is published — the menu then shows the entry as coming soon.
+ * This dashboard's user manual — the /usermanual route in this same app, opened
+ * in a new tab from the avatar menu.
+ *
+ * Built from BASE_URL rather than written out, so it follows whatever base path
+ * the app is served under ('/scorecard-dashboard/' here) instead of having to be
+ * kept in step with it by hand.
+ *
+ * VITE_USER_MANUAL_URL still wins if it is set, which is the escape hatch for
+ * pointing a dashboard at a manual hosted somewhere else.
  */
-export const USER_MANUAL_URL: string | null =
-  import.meta.env.VITE_USER_MANUAL_URL?.trim() || null;
+export const USER_MANUAL_URL: string =
+  import.meta.env.VITE_USER_MANUAL_URL?.trim() || `${import.meta.env.BASE_URL}usermanual`;
 
 /**
  * Signs the user out everywhere, via the portal's /logout page.

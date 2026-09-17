@@ -5,6 +5,9 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import ErrorPage from '@/pages/ErrorPage';
 
 const ScorecardDashboard = lazy(() => import('@/pages/ScorecardDashboard'));
+// Its own chunk: the manual is a reference document most sessions never open,
+// so it must not sit in the dashboard's bundle.
+const UserManual = lazy(() => import('@/pages/UserManual'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
 function LoadingFallback() {
@@ -32,6 +35,16 @@ const router = createBrowserRouter(
       element: (
         <Suspense fallback={<LoadingFallback />}>
           <ScorecardDashboard />
+        </Suspense>
+      ),
+      errorElement: <ErrorPage />,
+    },
+    {
+      // Opened in a new tab from the avatar menu's User Manual entry.
+      path: '/usermanual',
+      element: (
+        <Suspense fallback={<LoadingFallback />}>
+          <UserManual />
         </Suspense>
       ),
       errorElement: <ErrorPage />,

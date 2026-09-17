@@ -1,0 +1,597 @@
+/* Document typography for the manual. Every face has a real system fallback, so
+   the page still reads correctly on a network that blocks Google Fonts. */
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@600;700&display=swap");
+
+/*
+ * The user manual page.
+ *
+ * Deliberately NOT built on the dashboard's Chakra theme: this is a reference
+ * document opened in its own tab, read rather than operated, and it wants
+ * document typography (a measure, a type scale, dense tables) instead of the
+ * dashboard's card-and-chart chrome. Everything is namespaced under .manual so
+ * it cannot leak into the dashboard if the two ever render together.
+ */
+
+.manual {
+  --ground: #f2f4f9;
+  --surface: #ffffff;
+  --surface-2: #f8f9fc;
+  --ink: #14172b;
+  --muted: #5b6178;
+  --faint: #878da3;
+  --line: #dce0ec;
+  --line-soft: #e9ecf4;
+  --navy: #232f72;
+  --navy-soft: #ebeef9;
+  --green: #2e7d63;
+  --green-soft: #e4f2ec;
+  --amber: #9a5b06;
+  --amber-soft: #fbeedc;
+  --violet: #5b3e96;
+  --violet-soft: #efeafa;
+  --slate-soft: #eceef4;
+  --shadow: 0 1px 2px rgba(20, 23, 43, 0.06), 0 8px 24px -16px rgba(20, 23, 43, 0.35);
+  --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.manual *,
+.manual *::before,
+.manual *::after {
+  box-sizing: border-box;
+}
+
+/* ── Masthead ──────────────────────────────────────────────────────────── */
+.manual-masthead {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: 28px 32px 30px;
+}
+.manual-masthead-inner {
+  max-width: 1480px;
+  margin: 0 auto;
+}
+.manual-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 26px;
+}
+.manual-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.manual-brand img {
+  width: 74px;
+  height: auto;
+}
+.manual-brand span {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+  border-left: 1px solid var(--line);
+  padding-left: 12px;
+}
+.manual-actions {
+  display: flex;
+  gap: 8px;
+}
+.manual-actions button,
+.manual-actions a {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.manual-actions button:hover,
+.manual-actions a:hover {
+  border-color: var(--navy);
+  color: var(--navy);
+}
+
+.manual-eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 0 0 12px;
+}
+.manual h1 {
+  font-family: var(--serif);
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  margin: 0 0 10px;
+  text-wrap: balance;
+}
+.manual-standfirst {
+  max-width: 64ch;
+  color: var(--muted);
+  font-size: 16px;
+  margin: 0 0 24px;
+}
+.manual-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 1px;
+  background: var(--line-soft);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 0;
+}
+.manual-fact {
+  background: var(--surface);
+  padding: 12px 16px;
+}
+.manual-fact dt {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 0 0 3px;
+}
+.manual-fact dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ── Shell ─────────────────────────────────────────────────────────────── */
+.manual-shell {
+  max-width: 1480px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 36px;
+  padding: 32px;
+  align-items: start;
+}
+@media (max-width: 1040px) {
+  .manual-shell {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    padding: 20px;
+  }
+  .manual-rail {
+    position: static;
+    max-height: none;
+  }
+}
+
+.manual-rail {
+  position: sticky;
+  top: 20px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  font-size: 13.5px;
+}
+.manual-rail-title {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 0 0 10px;
+  padding-left: 12px;
+}
+.manual-rail ol {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+}
+.manual-rail a {
+  display: flex;
+  gap: 10px;
+  padding: 5px 12px;
+  border-left: 2px solid transparent;
+  color: var(--muted);
+  text-decoration: none;
+  border-radius: 0 4px 4px 0;
+}
+.manual-rail a:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+.manual-rail a.on {
+  color: var(--navy);
+  border-left-color: var(--navy);
+  background: var(--surface);
+  font-weight: 600;
+}
+.manual-rail .n {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--faint);
+  min-width: 16px;
+}
+.manual-rail a.on .n {
+  color: var(--navy);
+}
+
+.manual-search {
+  margin-bottom: 18px;
+}
+.manual-search label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 8px;
+}
+.manual-search input {
+  width: 100%;
+  font: inherit;
+  font-size: 13.5px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.manual-search input:focus {
+  outline: 2px solid var(--navy);
+  outline-offset: 1px;
+}
+.manual-search p {
+  font-size: 12px;
+  color: var(--faint);
+  margin: 6px 0 0;
+  min-height: 18px;
+}
+
+/* ── Sections ──────────────────────────────────────────────────────────── */
+.manual section {
+  scroll-margin-top: 20px;
+  margin-bottom: 44px;
+}
+.manual-sec-head {
+  margin-bottom: 18px;
+}
+.manual-kicker {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+  display: block;
+  margin-bottom: 6px;
+}
+.manual h2 {
+  font-family: var(--serif);
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+  text-wrap: balance;
+}
+.manual h3 {
+  font-size: 15.5px;
+  font-weight: 700;
+  margin: 28px 0 10px;
+  letter-spacing: -0.005em;
+}
+.manual h4 {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 22px 0 8px;
+}
+.manual p {
+  margin: 0 0 12px;
+  max-width: 76ch;
+}
+.manual ul {
+  max-width: 76ch;
+  color: var(--muted);
+}
+.manual li {
+  margin-bottom: 4px;
+}
+.manual .lede {
+  color: var(--muted);
+}
+
+.manual-panel {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 20px 22px;
+  box-shadow: var(--shadow);
+}
+.manual-panel + .manual-panel {
+  margin-top: 16px;
+}
+
+/* Layout list — encodes the real top-to-bottom screen order */
+.manual-layout {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: lay;
+}
+.manual-layout li {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line-soft);
+  align-items: baseline;
+  margin: 0;
+}
+.manual-layout li:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+.manual-layout li::before {
+  counter-increment: lay;
+  content: counter(lay);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.manual-layout b {
+  font-weight: 600;
+}
+.manual-layout .kind {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  margin-left: 8px;
+}
+.manual-layout .where {
+  display: block;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+/* Field dictionary tables */
+.manual-tbl {
+  overflow-x: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.manual table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 1180px;
+  font-size: 13px;
+}
+.manual thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 10px 12px;
+  white-space: nowrap;
+  z-index: 1;
+}
+.manual tbody td {
+  border-top: 1px solid var(--line-soft);
+  padding: 10px 12px;
+  vertical-align: top;
+}
+.manual tbody tr:hover {
+  background: var(--surface-2);
+}
+.manual td.num {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.manual td.field {
+  font-weight: 600;
+  min-width: 150px;
+}
+.manual td.src,
+.manual td.srcfield {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  min-width: 150px;
+  line-height: 1.5;
+}
+.manual td.srcfield {
+  color: var(--muted);
+}
+.manual td.calc {
+  min-width: 240px;
+}
+.manual td.biz {
+  min-width: 230px;
+  color: var(--muted);
+}
+.manual td.rep {
+  min-width: 190px;
+}
+.manual code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  background: var(--slate-soft);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.manual .chip {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.manual .t-direct {
+  background: var(--navy-soft);
+  color: var(--navy);
+}
+.manual .t-agg {
+  background: var(--green-soft);
+  color: var(--green);
+}
+.manual .t-calc {
+  background: var(--violet-soft);
+  color: var(--violet);
+}
+.manual .t-derived {
+  background: var(--slate-soft);
+  color: var(--muted);
+}
+.manual .t-hard {
+  background: var(--slate-soft);
+  color: var(--faint);
+}
+.manual .t-unconf {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.manual-callout {
+  border-left: 3px solid var(--amber);
+  background: var(--amber-soft);
+  color: var(--ink);
+  padding: 12px 16px;
+  border-radius: 0 6px 6px 0;
+  margin: 16px 0;
+  font-size: 13.5px;
+}
+.manual-callout.neutral {
+  border-left-color: var(--navy);
+  background: var(--navy-soft);
+}
+.manual-callout p:last-child {
+  margin-bottom: 0;
+}
+
+.manual .flow {
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 2;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  white-space: pre;
+  margin: 0 0 14px;
+}
+
+.manual .legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+}
+.manual .legend div {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.manual-checklist table {
+  min-width: 860px;
+}
+.manual-checklist td:nth-child(2),
+.manual-checklist td:nth-child(3),
+.manual-checklist td:nth-child(4),
+.manual-checklist td:nth-child(5) {
+  text-align: center;
+}
+.manual .tick {
+  color: var(--green);
+  font-weight: 700;
+}
+.manual .cross {
+  color: var(--amber);
+  font-weight: 700;
+}
+
+.manual-hidden {
+  display: none !important;
+}
+
+.manual-footer {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 28px 32px 56px;
+  color: var(--faint);
+  font-size: 12.5px;
+  border-top: 1px solid var(--line);
+}
+
+/* An empty state, for a dashboard whose manual has not been written yet. */
+.manual-empty {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 44px 32px;
+  text-align: center;
+}
+.manual-empty h2 {
+  margin-bottom: 12px;
+}
+.manual-empty p {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media print {
+  .manual-rail,
+  .manual-actions {
+    display: none;
+  }
+  .manual-shell {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0 16px;
+  }
+  .manual {
+    background: #fff;
+  }
+  .manual-tbl {
+    box-shadow: none;
+  }
+}

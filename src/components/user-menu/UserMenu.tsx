@@ -48,7 +48,9 @@ export function UserMenu() {
 
   const handleSelect = ({ value }: { value: string }) => {
     if (value === 'userManual') {
-      if (USER_MANUAL_URL) window.open(USER_MANUAL_URL, '_blank', 'noopener,noreferrer');
+      // A new tab, so the dashboard behind it keeps its filters and its loaded
+      // data — the manual is read alongside the screen it describes.
+      window.open(USER_MANUAL_URL, '_blank', 'noopener,noreferrer');
       return;
     }
     if (value === 'settings') {
@@ -154,20 +156,10 @@ export function UserMenu() {
 
             <Menu.Separator />
 
-            {/* Each project sets its own manual in VITE_USER_MANUAL_URL. */}
-            <Menu.Item
-              value="userManual"
-              {...itemProps}
-              disabled={!USER_MANUAL_URL}
-              _disabled={{ opacity: 1, cursor: 'default', color: 'gray.400' }}
-            >
+            {/* Opens this app's own /usermanual route in a new tab. */}
+            <Menu.Item value="userManual" {...itemProps}>
               <FiBookOpen size={16} />
               <Box flex="1">User Manual</Box>
-              {!USER_MANUAL_URL && (
-                <Badge size="xs" colorPalette="gray" variant="subtle">
-                  Coming soon
-                </Badge>
-              )}
             </Menu.Item>
 
             <Menu.Item value="settings" {...itemProps}>
