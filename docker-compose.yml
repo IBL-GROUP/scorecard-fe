@@ -2,7 +2,7 @@ name: scorecard-fe
 
 services:
   app:
-    image: iblgroup/searle-scorecard-fe:1.0.0
+    image: iblgroup/searle-scorecard-fe:1.0.0-prod
     container_name: searle-scorecard-fe
     restart: unless-stopped
     build:
