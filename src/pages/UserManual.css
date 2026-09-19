@@ -531,23 +531,6 @@
   color: var(--muted);
 }
 
-.manual-checklist table {
-  min-width: 860px;
-}
-.manual-checklist td:nth-child(2),
-.manual-checklist td:nth-child(3),
-.manual-checklist td:nth-child(4),
-.manual-checklist td:nth-child(5) {
-  text-align: center;
-}
-.manual .tick {
-  color: var(--green);
-  font-weight: 700;
-}
-.manual .cross {
-  color: var(--amber);
-  font-weight: 700;
-}
 
 .manual-hidden {
   display: none !important;

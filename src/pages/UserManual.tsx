@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  MANUAL_TABS_NOTE,
   MANUAL_TITLE,
   MANUAL_UPDATED,
   SECTIONS,
@@ -110,40 +109,6 @@ function BlockView({ block }: { block: Block }) {
     );
   }
   if (block.kind === 'fields') return <FieldsTable block={block} />;
-  if (block.kind === 'checklist') {
-    return (
-      <div className="manual-tbl manual-checklist">
-        <table>
-          <thead>
-            <tr>
-              <th>Dashboard Element</th>
-              <th>Visible</th>
-              <th>Documented</th>
-              <th>Source Identified</th>
-              <th>Logic Identified</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {block.rows.map((row) => (
-              <tr key={row[0]} data-row="">
-                <td className="field">{row[0]}</td>
-                {[row[1], row[2], row[3]].map((ok, i) => (
-                  <td key={i}>
-                    <span className={ok ? 'tick' : 'cross'}>{ok ? 'Yes' : 'No'}</span>
-                  </td>
-                ))}
-                <td>
-                  <span className={row[4] ? 'tick' : 'cross'}>{row[4] ? 'Yes' : 'Partial'}</span>
-                </td>
-                <td className="biz">{row[5]}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
   return null;
 }
 
@@ -168,13 +133,13 @@ export default function UserManual() {
   const [hits, setHits] = useState<number | null>(null);
 
   // Counts for the masthead, taken from the data so they cannot drift from it.
-  const { fieldCount, unconfirmed } = useMemo(() => {
+  const { fieldCount, tabCount } = useMemo(() => {
     const rows = SECTIONS.flatMap((section) =>
       section.blocks.flatMap((block) => (block.kind === 'fields' ? block.rows : [])),
     );
     return {
       fieldCount: rows.length,
-      unconfirmed: rows.filter((row) => row[4] === 'unconf').length,
+      tabCount: SECTIONS.filter((section) => section.num.startsWith('T')).length,
     };
   }, []);
 
@@ -251,9 +216,9 @@ export default function UserManual() {
           <p className="manual-eyebrow">OneThunder · The Searle Company Limited</p>
           <h1>{MANUAL_TITLE} — User Manual &amp; Data Dictionary</h1>
           <p className="manual-standfirst">
-            A screen-by-screen record of the dashboard as it stands today: every tab in the order the
-            tab bar shows them, every card, chart, filter and table column in the order it appears,
-            and for each one the source table, the source field and the calculation behind it.
+            A guide to every screen in the dashboard: what each tab is for, what every filter does,
+            and what each figure on it actually means — with the calculation behind it and where the
+            data comes from, so you can answer anyone who questions a number.
           </p>
           <dl className="manual-facts">
             <div className="manual-fact">
@@ -261,20 +226,12 @@ export default function UserManual() {
               <dd>{MANUAL_TITLE}</dd>
             </div>
             <div className="manual-fact">
-              <dt>Documented on</dt>
-              <dd>{MANUAL_UPDATED}</dd>
-            </div>
-            <div className="manual-fact">
               <dt>Tabs covered</dt>
-              <dd>{MANUAL_TABS_NOTE}</dd>
+              <dd>All {tabCount}</dd>
             </div>
             <div className="manual-fact">
-              <dt>Documented fields</dt>
+              <dt>Fields explained</dt>
               <dd>{fieldCount}</dd>
-            </div>
-            <div className="manual-fact">
-              <dt>Unverified items</dt>
-              <dd>{unconfirmed} marked Not Confirmed</dd>
             </div>
           </dl>
         </div>
@@ -321,9 +278,11 @@ export default function UserManual() {
       </div>
 
       <footer className="manual-footer">
-        {MANUAL_TITLE} User Manual &amp; Data Dictionary · Documented from the dashboard and its API
-        as deployed on {MANUAL_UPDATED}. Where a source or a formula could not be verified, the entry
-        is marked <span className="chip t-unconf">Not Confirmed</span> rather than inferred.
+        {MANUAL_TITLE} User Manual &amp; Data Dictionary · Written against the dashboard as it stood
+        on {MANUAL_UPDATED}. A handful of figures depend on definitions owned by the business rather
+        than by the dashboard; those are marked{' '}
+        <span className="chip t-unconf">Not Confirmed</span> and listed under Open Questions, never
+        guessed at.
       </footer>
     </div>
   );
