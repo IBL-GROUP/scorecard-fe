@@ -9,9 +9,9 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://dev-scorecard.onethunder.iblgrp.com/api}
-        VITE_AUTH_PORTAL_URL: ${VITE_AUTH_PORTAL_URL:-https://dev.onethunder.iblgrp.com/}
-        VITE_AUTH_API_URL: ${VITE_AUTH_API_URL:-https://dev-login.onethunder.iblgrp.com/api}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://scorecard.onethunder.iblgrp.com/api}
+        VITE_AUTH_PORTAL_URL: ${VITE_AUTH_PORTAL_URL:-https://onethunder.iblgrp.com/}
+        VITE_AUTH_API_URL: ${VITE_AUTH_API_URL:-https://login.onethunder.iblgrp.com/api}
     # Host nginx (HTTPS) is the only public entry; bind localhost so ports are
     # not reachable from the network.
     ports:
