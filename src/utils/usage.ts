@@ -9,6 +9,22 @@ import { MAIN_TABS } from '@/features/salesDashboard/tabs';
 const HEARTBEAT_MS = 30_000;
 const SESSION_ID_KEY = 'searle_usage_session_scorecard';
 
+/**
+ * Which dashboard these beats belong to.
+ *
+ * Deliberately NOT derived from the URL. In production all three dashboards are
+ * served from the one origin https://onethunder.iblgrp.com and differ only by
+ * path, so window.location.origin was the same string for every one of them:
+ * the usage report had nothing left to tell them apart and fell back to showing
+ * the bare host. The name is stated here instead.
+ *
+ * Keep it identical to the label the report uses for this app (DASHBOARD_BY_PORT
+ * in the authenticator's public/usage-report.html) so rows logged back when each
+ * dashboard had its own port fold together with new ones instead of splitting
+ * into two entries.
+ */
+const DASHBOARD = 'Supply Chain Pulse';
+
 /** One id per tab, so two tabs on the same dashboard are counted separately. */
 function usageSessionId(): string {
   let id = sessionStorage.getItem(SESSION_ID_KEY);
@@ -30,7 +46,7 @@ function send(event: 'ping' | 'end') {
 
   const body = JSON.stringify({
     session_id: usageSessionId(),
-    dashboard: window.location.origin,
+    dashboard: DASHBOARD,
     event,
   });
 
@@ -73,7 +89,7 @@ export function recordExport(table?: string): void {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ dashboard: window.location.origin, report }),
+    body: JSON.stringify({ dashboard: DASHBOARD, report }),
     keepalive: true,
   }).catch(() => {
     // Usage tracking must never surface an error to the user.
