@@ -154,18 +154,26 @@ export function UserMenu() {
               })}
             </Menu.ItemGroup>
 
-            <Menu.Separator />
+            {/* User Manual and Settings are hidden for now — flip this to true to
+                bring both back. The handlers behind them are left alone, and the
+                separator sits inside the guard so hiding the pair does not leave
+                two dividing lines stacked on top of each other above Log out. */}
+            {false && (
+              <>
+                <Menu.Separator />
 
-            {/* Opens this app's own /usermanual route in a new tab. */}
-            <Menu.Item value="userManual" {...itemProps}>
-              <FiBookOpen size={16} />
-              <Box flex="1">User Manual</Box>
-            </Menu.Item>
+                {/* Opens this app's own /usermanual route in a new tab. */}
+                <Menu.Item value="userManual" {...itemProps}>
+                  <FiBookOpen size={16} />
+                  <Box flex="1">User Manual</Box>
+                </Menu.Item>
 
-            <Menu.Item value="settings" {...itemProps}>
-              <FiSettings size={16} />
-              Settings
-            </Menu.Item>
+                <Menu.Item value="settings" {...itemProps}>
+                  <FiSettings size={16} />
+                  Settings
+                </Menu.Item>
+              </>
+            )}
 
             <Menu.Separator />
 
