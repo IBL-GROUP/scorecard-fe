@@ -5,7 +5,7 @@ import type { QueryOptions } from '@/api/queryOptions';
 import { ApiKey } from '@/utils/enum';
 
 interface FilterParams {
-  classification?: string;
+  classification?: string | string[];
   sku?: string | string[];
 }
 

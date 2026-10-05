@@ -1,5 +1,9 @@
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { useGetFilterBranches, useGetFilters } from '@/api/filters';
+import {
+  useGetFilterBranches,
+  useGetFilters,
+  type FilterItemRow,
+} from '@/api/filters';
 import { useCanSeeTab } from '@/features/salesDashboard/tabs';
 import {
   useGetRdStatus,
@@ -19,7 +23,8 @@ import { Button, Flex, Grid } from '@chakra-ui/react';
 import { useEffect, useMemo, useState } from 'react';
 
 interface Filters {
-  classification: string;
+  division: string[];
+  classification: string[];
   branch: string[];
   sku: string[];
   distributor: string[];
@@ -34,13 +39,7 @@ export interface FilterBarProps {
   initialFilters: Filters;
 }
 
-type FilterRow = {
-  item_code?: string;
-  item_description?: string;
-  sap_code?: string;
-  item_desc?: string;
-  classification: string | null;
-};
+type FilterRow = FilterItemRow;
 
 const CLS_LABEL: Record<string, string> = {
   A: 'A',
@@ -68,6 +67,7 @@ export function FilterBar({ initialFilters }: FilterBarProps) {
   const hideClassification = isDispatchWip || isRdStatus;
 
   // All filters staged locally — only flushed to Redux on Apply
+  const [localDivision, setLocalDivision] = useState(initialFilters.division);
   const [localClassification, setLocalClassification] = useState(
     initialFilters.classification
   );
@@ -90,6 +90,7 @@ export function FilterBar({ initialFilters }: FilterBarProps) {
 
   // Sync local state when Redux is reset externally (e.g. clear button)
   useEffect(() => {
+    setLocalDivision(initialFilters.division);
     setLocalClassification(initialFilters.classification);
     setLocalBranch(initialFilters.branch);
     setLocalSku(initialFilters.sku);
@@ -97,6 +98,7 @@ export function FilterBar({ initialFilters }: FilterBarProps) {
     setLocalDateFrom(initialFilters.dateFrom);
     setLocalDateTo(initialFilters.dateTo);
   }, [
+    initialFilters.division,
     initialFilters.classification,
     initialFilters.branch,
     initialFilters.sku,
@@ -106,7 +108,8 @@ export function FilterBar({ initialFilters }: FilterBarProps) {
   ]);
 
   const isDirty =
-    localClassification !== initialFilters.classification ||
+    localDivision.join(',') !== initialFilters.division.join(',') ||
+    localClassification.join(',') !== initialFilters.classification.join(',') ||
     localDateFrom !== initialFilters.dateFrom ||
     localDateTo !== initialFilters.dateTo ||
     localBranch.join(',') !== initialFilters.branch.join(',') ||
@@ -117,7 +120,8 @@ export function FilterBar({ initialFilters }: FilterBarProps) {
     localUploadCount !== initialFilters.uploadCount;
 
   const hasActiveFilters =
-    !!localClassification ||
+    localDivision.length > 0 ||
+    localClassification.length > 0 ||
     localBranch.length > 0 ||
     localSku.length > 0 ||
     localDistributor.length > 0 ||
@@ -125,6 +129,7 @@ export function FilterBar({ initialFilters }: FilterBarProps) {
     !!localDateTo;
 
   const handleApply = () => {
+    dispatch(setFilter({ key: 'division', value: localDivision }));
     dispatch(setFilter({ key: 'classification', value: localClassification }));
     dispatch(setFilter({ key: 'branch', value: localBranch }));
     dispatch(setFilter({ key: 'sku', value: localSku }));
@@ -137,7 +142,8 @@ export function FilterBar({ initialFilters }: FilterBarProps) {
   };
 
   const handleClear = () => {
-    setLocalClassification('');
+    setLocalDivision([]);
+    setLocalClassification([]);
     setLocalBranch([]);
     setLocalSku([]);
     setLocalDistributor([]);
@@ -176,9 +182,29 @@ export function FilterBar({ initialFilters }: FilterBarProps) {
   const branchRows: BranchRow[] =
     (branchesData as { data?: BranchRow[] })?.data ?? [];
 
+  // One option per division, in name order (DIVISION-1, DIVISION-2, …).
+  const divisionOptions = useMemo(
+    () =>
+      [...new Set(rows.map((r) => String(r.division ?? '').trim()))]
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+        .map((value) => ({ value, label: value })),
+    [rows]
+  );
+
+  // The SKU rows inside the staged division — what Classification and SKU are
+  // built from, so neither offers anything the division would exclude.
+  const divisionRows = useMemo(
+    () =>
+      localDivision.length > 0
+        ? rows.filter((r) => localDivision.includes(String(r.division ?? '')))
+        : rows,
+    [rows, localDivision]
+  );
+
   const classificationOptions = useMemo(() => {
     const seen = new Set<string>();
-    return rows
+    return divisionRows
       .filter(
         (r) =>
           r.classification != null &&
@@ -193,7 +219,7 @@ export function FilterBar({ initialFilters }: FilterBarProps) {
         label:
           CLS_LABEL[r.classification as string] ?? (r.classification as string),
       }));
-  }, [rows]);
+  }, [divisionRows]);
 
   // One option per hub branch, sorted by name. /filters/branches returns one row
   // per storage location (mv_scoreboard_hub_mapping), so a hub repeats and is
@@ -287,7 +313,7 @@ export function FilterBar({ initialFilters }: FilterBarProps) {
 
   const skuOptions = useMemo(() => {
     const seen = new Set<string>();
-    return rows
+    return divisionRows
       .map((r) => ({
         code: r.item_code ?? r.sap_code ?? '',
         description: r.item_description ?? r.item_desc ?? '',
@@ -296,12 +322,29 @@ export function FilterBar({ initialFilters }: FilterBarProps) {
       .filter(
         (r) =>
           r.code &&
-          (!localClassification || r.classification === localClassification) &&
+          (localClassification.length === 0 ||
+            localClassification.includes(String(r.classification))) &&
           !seen.has(r.code) &&
           seen.add(r.code)
       )
       .map((r) => ({ value: r.code, label: r.description }));
-  }, [rows, localClassification]);
+  }, [divisionRows, localClassification]);
+
+  // Changing the divisions drops any classification or SKU they no longer
+  // contain, so the staged selection can never reach outside them.
+  const handleDivisionChange = (next: string[]) => {
+    setLocalDivision(next);
+    if (next.length === 0) return;
+    const inDivision = rows.filter((r) => next.includes(String(r.division ?? '')));
+    setLocalClassification((prev) =>
+      prev.filter((cls) => inDivision.some((r) => r.classification === cls))
+    );
+    setLocalSku((prev) =>
+      prev.filter((code) =>
+        inDivision.some((r) => String(r.item_code ?? r.sap_code ?? '') === code)
+      )
+    );
+  };
 
   return (
     <Flex align="center" gap={2} w="100%">
@@ -335,15 +378,28 @@ export function FilterBar({ initialFilters }: FilterBarProps) {
                   xl: 'repeat(5, minmax(0, 1fr))',
                 }
               : {
-                  base: 'repeat(1, 1fr)',
-                  md: 'repeat(2, 1fr)',
-                  lg: 'repeat(3, 1fr)',
+                  // Division, Classification, SKU, Branches — one line from lg.
+                  base: 'repeat(1, minmax(0, 1fr))',
+                  md: 'repeat(2, minmax(0, 1fr))',
+                  lg: 'repeat(4, minmax(0, 1fr))',
                 }
           }
         >
           {!hideClassification && (
-            /* Classification — single select */
-            <Select
+            /* Division — multi select; narrows Classification and SKU */
+            <MultiSelect
+              label="Division"
+              value={localDivision}
+              options={divisionOptions}
+              onChange={handleDivisionChange}
+              isClearable
+              placeholder="Select..."
+            />
+          )}
+
+          {!hideClassification && (
+            /* Classification — multi select */
+            <MultiSelect
               label="Classification"
               value={localClassification}
               options={classificationOptions}

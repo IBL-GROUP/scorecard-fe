@@ -18,6 +18,7 @@ import { useGetForecastAccuracyCategoryMonthly } from '@/api/forcastAccuracyCate
 import { useGetForecastAccuracyCategoryYearly } from '@/api/forcastAccuracyCategoryYearly';
 import { useGetIblVsTscl } from '@/api/iblVsTscl';
 import { useGetDispatchVsOrder } from '@/api/dispatchVsOrder';
+import { useEffectiveSku } from '@/api/filters';
 import {
   isQuerySettled,
   useReleaseNextTab,
@@ -622,6 +623,71 @@ const LABEL_MAP: Record<string, string> = {
   Others: 'Others',
 };
 
+/**
+ * The "5 / 31" day count beside the pill. Hidden for now — only the percentage
+ * is shown. Flip to true to bring the count back; the left panel then needs to
+ * be ~190px wide for "31 / 31 100%" to fit on one line.
+ */
+const SHOW_DAYS_GONE_COUNT = false;
+
+/**
+ * "Days Gone: [16%]" — how far through the month the figures are, as the share
+ * of the month elapsed in a pill, to read against the gauge's achievement %.
+ */
+function DaysGone({ info }: { info?: { daysGone: number; totalDays: number } }) {
+  const percent =
+    info && info.totalDays > 0
+      ? Math.round((info.daysGone / info.totalDays) * 100)
+      : null;
+
+  return (
+    <Flex justify="space-between" align="center" gap={1}>
+      <Text fontSize="xs" color="gray.600" fontWeight="600" whiteSpace="nowrap">
+        Days Gone:
+      </Text>
+      <Flex align="center" gap={1.5} whiteSpace="nowrap">
+        {SHOW_DAYS_GONE_COUNT && (
+          <Text fontSize="13px" fontWeight="700">
+            <Text as="span" color="green.500">
+              {info?.daysGone ?? '-'}
+            </Text>
+            <Text as="span" color="gray.400" mx={1}>
+              /
+            </Text>
+            <Text as="span" color="gray.600">
+              {info?.totalDays ?? '-'}
+            </Text>
+          </Text>
+        )}
+        {/* With the count hidden, a dash keeps the row from looking empty
+            while the figures load. */}
+        {percent === null && !SHOW_DAYS_GONE_COUNT && (
+          <Text fontSize="13px" fontWeight="700" color="gray.400">
+            -
+          </Text>
+        )}
+        {percent !== null && (
+          <Text
+            as="span"
+            // Same size and weight as the days figure beside it; one shade
+            // darker than its green.500 so it still reads on the green tint.
+            fontSize="13px"
+            fontWeight="700"
+            lineHeight="1"
+            color="green.600"
+            bg="green.100"
+            px={1.5}
+            py={0.5}
+            borderRadius="4px"
+          >
+            {percent}%
+          </Text>
+        )}
+      </Flex>
+    </Flex>
+  );
+}
+
 interface SupplyChainTabProps {
   salesRows: {
     label: string;
@@ -848,22 +914,7 @@ function SupplyChainTab({
               gap={2}
             >
               <Box px={3} py={2} borderRadius="md" bg="gray.50" w="100%">
-                <Flex justify="space-between" align="center">
-                  <Text fontSize="xs" color="gray.600" fontWeight="600">
-                    Days Gone:
-                  </Text>
-                  <Text fontSize="13px" fontWeight="700">
-                    <Text as="span" color="green.500">
-                      {iblDaysGoneInfo?.daysGone ?? '-'}
-                    </Text>
-                    <Text as="span" color="gray.400" mx={1}>
-                      /
-                    </Text>
-                    <Text as="span" color="gray.600">
-                      {iblDaysGoneInfo?.totalDays ?? '-'}
-                    </Text>
-                  </Text>
-                </Flex>
+                <DaysGone info={iblDaysGoneInfo} />
                 <Separator my={1.5} borderColor="gray.200" />
                 <Flex justify="space-between" align="center">
                   <Text fontSize="xs" color="gray.600" fontWeight="600">
@@ -940,22 +991,7 @@ function SupplyChainTab({
               gap={2}
             >
               <Box px={3} py={2} borderRadius="md" bg="gray.50" w="100%">
-                <Flex justify="space-between" align="center">
-                  <Text fontSize="xs" color="gray.600" fontWeight="600">
-                    Days Gone:
-                  </Text>
-                  <Text fontSize="13px" fontWeight="700">
-                    <Text as="span" color="green.500">
-                      {tsclDaysGoneInfo?.daysGone ?? '-'}
-                    </Text>
-                    <Text as="span" color="gray.400" mx={1}>
-                      /
-                    </Text>
-                    <Text as="span" color="gray.600">
-                      {tsclDaysGoneInfo?.totalDays ?? '-'}
-                    </Text>
-                  </Text>
-                </Flex>
+                <DaysGone info={tsclDaysGoneInfo} />
                 <Separator my={1.5} borderColor="gray.200" />
                 <Flex justify="space-between" align="center">
                   <Text fontSize="xs" color="gray.600" fontWeight="600">
@@ -1083,7 +1119,7 @@ function ServiceMeasureTab({
   serviceMeasureData: unknown;
   allBranchesServiceMeasureData: unknown;
   tgtVsActualData: unknown;
-  classification: string;
+  classification: string[];
   isLoadingInventoryDays: boolean;
   isLoadingServiceMeasure: boolean;
   isLoadingTgtVsActual: boolean;
@@ -1382,7 +1418,9 @@ function ServiceMeasureTab({
               { key: 'skuC', label: 'SKU-C%', color: clsColors.C },
               { key: 'skuN', label: 'SKU-N%', color: clsColors.N },
             ].filter(
-              (l) => !classification || l.key === `sku${classification}`
+              (l) =>
+                classification.length === 0 ||
+                classification.some((c) => l.key === `sku${c}`)
             )}
             height={330}
             labelFormatter={(v) => `${v}%`}
@@ -1779,6 +1817,9 @@ function DispatchWipTab({
 
 export default function ScorecardDashboard() {
   const { mainTab, filters } = useAppSelector((state) => state.salesDashboard);
+  // The SKUs every report is filtered by: the ones picked, or with none picked,
+  // all of the selected division's. Division reaches the reports only this way.
+  const sku = useEffectiveSku(filters.division, filters.sku);
 
   // ── Load queue ────────────────────────────────────────────────────────────
   // Queries run tab by tab, in tab order: all of Summary's together, then —
@@ -1790,7 +1831,7 @@ export default function ScorecardDashboard() {
   const restartKey = JSON.stringify([
     filters.classification,
     filters.branch,
-    filters.sku,
+    sku,
     filters.dateFrom,
     filters.dateTo,
   ]);
@@ -1816,9 +1857,9 @@ export default function ScorecardDashboard() {
   };
 
   const params = {
-    ...(filters.classification && { classification: filters.classification }),
+    ...(filters.classification.length > 0 && { classification: filters.classification }),
     ...(filters.branch.length > 0 && { branch: filters.branch }),
-    ...(filters.sku.length > 0 && { sku: filters.sku }),
+    ...(sku.length > 0 && { sku }),
     ...(filters.dateFrom && { startDate: filters.dateFrom }),
     ...(filters.dateTo && { endDate: filters.dateTo }),
   };
@@ -1902,10 +1943,10 @@ export default function ScorecardDashboard() {
     ['supplyChain'],
     useGetTotalSku(
       {
-        ...(filters.classification && {
+        ...(filters.classification.length > 0 && {
           classification: filters.classification,
         }),
-        ...(filters.sku.length > 0 && { sku: filters.sku }),
+        ...(sku.length > 0 && { sku }),
       },
       { enabled: loadSummary }
     )
@@ -2047,10 +2088,10 @@ export default function ScorecardDashboard() {
   const { data: allBranchesServiceMeasureData } = serviceMeasure(
     useGetServiceMeasure(
       {
-        ...(filters.classification && {
+        ...(filters.classification.length > 0 && {
           classification: filters.classification,
         }),
-        ...(filters.sku.length > 0 && { sku: filters.sku }),
+        ...(sku.length > 0 && { sku }),
         ...(filters.dateFrom && { startDate: filters.dateFrom }),
         ...(filters.dateTo && { endDate: filters.dateTo }),
       },
@@ -2214,7 +2255,8 @@ export default function ScorecardDashboard() {
   const skusThresholdData = thresholdRows
     .filter(
       (r) =>
-        !filters.classification || r.classification === filters.classification
+        filters.classification.length === 0 ||
+        filters.classification.includes(r.classification)
     )
     .map((r) => ({
       class: r.classification,
@@ -2237,8 +2279,8 @@ export default function ScorecardDashboard() {
     .filter(
       (cls) =>
         cls === 'Total' ||
-        !filters.classification ||
-        cls === filters.classification
+        filters.classification.length === 0 ||
+        filters.classification.includes(cls)
     )
     .map((cls) => ({
       cls,
