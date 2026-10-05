@@ -10,7 +10,11 @@ type DisplayMode = 'TP' | 'EFP'
 export type UploadCountFilter = '' | 'uploaded' | 'not-uploaded'
 
 interface Filters {
-    classification: string
+    // Multi select. Not a parameter on any report endpoint — it is applied by
+    // narrowing the reports to the divisions' SKUs (see useEffectiveSku).
+    division: string[]
+    // Multi select; every report endpoint takes it as a list (IN (...)).
+    classification: string[]
     // On RD Status this holds franchise branch CODES; other tabs use it for branch_id.
     branch: string[]
     sku: string[]
@@ -44,7 +48,8 @@ const initialState: SalesDashboardState = {
     activeTab: 'visualizations',
     displayMode: 'TP',
     filters: {
-        classification: '',
+        division: [],
+        classification: [],
         branch: [],
         sku: [],
         distributor: [],
@@ -76,7 +81,8 @@ export const salesDashboardSlice = createSlice({
         resetFilters: (state) => {
             const now = new Date()
             state.filters = {
-                classification: '',
+                division: [],
+                classification: [],
                 branch: [],
                 sku: [],
                 distributor: [],
