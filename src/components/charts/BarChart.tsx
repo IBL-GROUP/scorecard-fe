@@ -372,12 +372,17 @@ export function BarChart({
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         content={(props: any) => {
                           const { x, y, width, value, index } = props;
+                          // Recharts keeps rendering the previous data's labels
+                          // while it animates to new data, so when the new set is
+                          // shorter (e.g. a SKU filter reapplied) `index` can point
+                          // past the end of filteredData. Skip those stale labels.
+                          const entry =
+                            index !== undefined ? filteredData[index] : undefined;
+                          if (index !== undefined && !entry) return null;
                           const color = isStacked
                             ? '#fff'
-                            : bar.cellColor && index !== undefined
-                              ? bar.cellColor(
-                                  filteredData[index] as Record<string, unknown>
-                                )
+                            : bar.cellColor && entry
+                              ? bar.cellColor(entry as Record<string, unknown>)
                               : bar.color;
                           return (
                             <text
