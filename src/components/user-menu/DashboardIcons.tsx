@@ -60,11 +60,22 @@ const MarketingIcon = ({ size = 16 }: IconProps) => (
   </svg>
 );
 
+/** RD Status — a regional distributor's warehouse sending its data up. */
+const RdStatusIcon = ({ size = 16 }: IconProps) => (
+  <svg {...svgProps(size)}>
+    <path d="M3 10l9-6 9 6" />
+    <path d="M5 9v11h14V9" />
+    <path d="M12 17v-6" />
+    <path d="M9.5 13.5L12 11l2.5 2.5" />
+  </svg>
+);
+
 const ICONS_BY_RESOURCE: Record<string, (props: IconProps) => JSX.Element> = {
   SALES_PULSE: SalesIcon,
   SUPPLYCHAIN_PULSE: SupplyChainIcon,
   DISTRIBUTION_PULSE: DistributionIcon,
   MARKETING_ADVANCE_ACTIVITY: MarketingIcon,
+  RD_STATUS: RdStatusIcon,
 };
 
 /** The icon for a dashboard; a plain grid for one the portal has no art for. */
