@@ -1,6 +1,6 @@
 import { Avatar, Badge, Box, Menu, Portal, Text, chakra } from '@chakra-ui/react';
 import { useMemo } from 'react';
-import { FiBookOpen, FiLogOut, FiSettings } from 'react-icons/fi';
+import { FiBookOpen, FiGrid, FiLogOut, FiSettings } from 'react-icons/fi';
 import { DashboardIcon } from './DashboardIcons';
 import {
   USER_MANUAL_URL,
@@ -47,6 +47,11 @@ export function UserMenu() {
     displayName.data ?? (session ? nameFromUserName(session.userName) : 'Unknown user');
 
   const handleSelect = ({ value }: { value: string }) => {
+    if (value === 'portalHome') {
+      // The portal's own dashboard page — every dashboard, in one place.
+      window.location.href = joinPortalPath('dashboard');
+      return;
+    }
     if (value === 'userManual') {
       // A new tab, so the dashboard behind it keeps its filters and its loaded
       // data — the manual is read alongside the screen it describes.
@@ -107,6 +112,15 @@ export function UserMenu() {
                 </Text>
               )}
             </Box>
+
+            <Menu.Separator />
+
+            {/* Back to the One Thunder portal's dashboard page. Fixed, not from
+                the user's dashboards — it is where every dashboard is listed. */}
+            <Menu.Item value="portalHome" {...itemProps}>
+              <FiGrid size={16} />
+              <Box flex="1">Dashboard</Box>
+            </Menu.Item>
 
             <Menu.Separator />
 

@@ -25,6 +25,15 @@ const SESSION_ID_KEY = 'searle_usage_session_scorecard';
  */
 const DASHBOARD = 'Supply Chain Pulse';
 
+/**
+ * Label of the dashboard tab on screen (Summary, Achievement…), sent with every
+ * beat so the authenticator can split the time by tab.
+ */
+function currentTab(): string {
+  const { mainTab } = store.getState().salesDashboard;
+  return MAIN_TABS.find((t) => t.value === mainTab)?.label ?? mainTab;
+}
+
 /** One id per tab, so two tabs on the same dashboard are counted separately. */
 function usageSessionId(): string {
   let id = sessionStorage.getItem(SESSION_ID_KEY);
@@ -47,6 +56,7 @@ function send(event: 'ping' | 'end') {
   const body = JSON.stringify({
     session_id: usageSessionId(),
     dashboard: DASHBOARD,
+    tab: currentTab(),
     event,
   });
 
@@ -77,8 +87,7 @@ export function recordExport(table?: string): void {
   const token = getToken();
   if (!token) return;
 
-  const { mainTab } = store.getState().salesDashboard;
-  const tab = MAIN_TABS.find((t) => t.value === mainTab)?.label ?? mainTab;
+  const tab = currentTab();
   const report = [tab, table && table !== tab ? table : null]
     .filter(Boolean)
     .join(' › ');
@@ -122,12 +131,25 @@ export function startUsageTracking(): () => void {
 
   const onPageHide = () => stop(true);
 
+  // Beat straight away on a tab switch. The server credits the time since the
+  // previous beat to the tab THAT beat named, so this beat closes the old tab's
+  // interval and starts the new one — without it up to 30s would land on the
+  // wrong tab.
+  let lastTab = currentTab();
+  const unsubscribe = store.subscribe(() => {
+    const tab = currentTab();
+    if (tab === lastTab) return;
+    lastTab = tab;
+    if (timer !== null) beat();
+  });
+
   if (document.visibilityState === 'visible') start();
 
   document.addEventListener('visibilitychange', onVisibilityChange);
   window.addEventListener('pagehide', onPageHide);
 
   return () => {
+    unsubscribe();
     document.removeEventListener('visibilitychange', onVisibilityChange);
     window.removeEventListener('pagehide', onPageHide);
     stop(true);
