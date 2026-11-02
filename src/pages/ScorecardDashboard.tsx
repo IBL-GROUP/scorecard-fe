@@ -176,8 +176,9 @@ const COVER_DAYS = [
   },
 ];
 
-type CoverDaysCardRow = (typeof COVER_DAYS)[number] & {
-  value_efp: number;
+type CoverDaysCardRow = Omit<(typeof COVER_DAYS)[number], 'value'> & {
+  value: number | string;
+  value_efp: number | string;
 };
 
 const CHART_COLORS = ['#87805E', '#5AC8D8', '#16476A'] as const;
@@ -201,6 +202,30 @@ const INV_API_BRANCHES = [
 ] as const;
 
 type CoverDaysInventoryView = 'TP' | 'EFP';
+
+/**
+ * How far through the selected window the figures are: the days from the start
+ * date to the end date (capped at today), out of the days in every month the
+ * window touches, which is the span the full Budget / Target is summed over.
+ */
+function getDaysGone(dateFrom?: string, dateTo?: string) {
+  const dayNumber = (d: Date) =>
+    Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86_400_000;
+
+  const from = parseFilterDate(dateFrom || dateTo);
+  const to = parseFilterDate(dateTo || dateFrom);
+  const totalDays =
+    dayNumber(new Date(to.getFullYear(), to.getMonth() + 1, 0)) -
+    dayNumber(new Date(from.getFullYear(), from.getMonth(), 1)) +
+    1;
+  const elapsedEnd = Math.min(dayNumber(to), dayNumber(new Date()));
+  const daysGone = Math.max(
+    1,
+    Math.min(elapsedEnd - dayNumber(from) + 1, totalDays)
+  );
+
+  return { daysGone, totalDays };
+}
 
 function parseFilterDate(value?: string) {
   if (!value) return new Date();
@@ -905,7 +930,7 @@ function SupplyChainTab({
         >
           <Flex h="100%" gap={0}>
             <Box
-              w="175px"
+              w="210px"
               flexShrink={0}
               display="flex"
               flexDirection="column"
@@ -933,7 +958,7 @@ function SupplyChainTab({
                 color={'#726A95'}
                 displayAchieved={iblSalesDisplay?.achieved}
                 displayTarget={iblSalesDisplay?.target}
-                targetLabel="Budget"
+                targetLabel="Month Budget"
                 isLoading={isLoadingForecastIbl}
               />
             </Box>
@@ -982,7 +1007,7 @@ function SupplyChainTab({
         >
           <Flex h="100%" gap={0}>
             <Box
-              w="175px"
+              w="210px"
               flexShrink={0}
               display="flex"
               flexDirection="column"
@@ -1010,6 +1035,7 @@ function SupplyChainTab({
                 color={'#726A95'}
                 displayAchieved={tsclSalesDisplay?.achieved}
                 displayTarget={tsclSalesDisplay?.target}
+                targetLabel="Month Target"
                 isLoading={isLoadingForecastTscl}
               />
             </Box>
@@ -2149,8 +2175,8 @@ export default function ScorecardDashboard() {
     inv_val: string | number;
     inv_val_efp?: string | number;
     trg_value: string | number;
-    cover_days: string | number;
-    cover_days_efp?: string | number;
+    cover_days: string | number | null;
+    cover_days_efp?: string | number | null;
     daily_target: string | number;
     quantity?: string | number;
   };
@@ -2166,6 +2192,11 @@ export default function ScorecardDashboard() {
     v: string | number | undefined,
     maximumFractionDigits = 0
   ) => Number(v ?? 0).toLocaleString('en-US', { maximumFractionDigits });
+
+  // cover_days is null when the month has no target loaded: stock is there but
+  // the days can't be worked out, which is different from a real 0.
+  const fmtCoverDays = (v: string | number | null | undefined) =>
+    v === null ? '—' : Math.round(Number(v ?? 0));
 
   const totalInv = coverDayApiRows.reduce(
     (s, r) => s + Number(r.inv_val ?? 0),
@@ -2189,11 +2220,11 @@ export default function ScorecardDashboard() {
       ...COVER_DAYS[0],
       value:
         coverDayTotalRow?.cover_days !== undefined
-          ? Math.round(Number(coverDayTotalRow.cover_days))
+          ? fmtCoverDays(coverDayTotalRow.cover_days)
           : totalCoverDays,
       value_efp:
         coverDayTotalRow?.cover_days_efp !== undefined
-          ? Math.round(Number(coverDayTotalRow.cover_days_efp))
+          ? fmtCoverDays(coverDayTotalRow.cover_days_efp)
           : totalCoverDaysEfp,
       inv: coverDayTotalRow
         ? fmtNumber(coverDayTotalRow.inv_val)
@@ -2205,40 +2236,40 @@ export default function ScorecardDashboard() {
     },
     {
       ...COVER_DAYS[1],
-      value: Math.round(Number(findCls('A')?.cover_days ?? 0)),
-      value_efp: Math.round(Number(findCls('A')?.cover_days_efp ?? 0)),
+      value: fmtCoverDays(findCls('A')?.cover_days),
+      value_efp: fmtCoverDays(findCls('A')?.cover_days_efp),
       inv: fmtNumber(findCls('A')?.inv_val),
       inv_efp: fmtNumber(findCls('A')?.inv_val_efp),
       quantity: fmtNumber(findCls('A')?.quantity),
     },
     {
       ...COVER_DAYS[2],
-      value: Math.round(Number(findCls('B')?.cover_days ?? 0)),
-      value_efp: Math.round(Number(findCls('B')?.cover_days_efp ?? 0)),
+      value: fmtCoverDays(findCls('B')?.cover_days),
+      value_efp: fmtCoverDays(findCls('B')?.cover_days_efp),
       inv: fmtNumber(findCls('B')?.inv_val),
       inv_efp: fmtNumber(findCls('B')?.inv_val_efp),
       quantity: fmtNumber(findCls('B')?.quantity),
     },
     {
       ...COVER_DAYS[3],
-      value: Math.round(Number(findCls('C')?.cover_days ?? 0)),
-      value_efp: Math.round(Number(findCls('C')?.cover_days_efp ?? 0)),
+      value: fmtCoverDays(findCls('C')?.cover_days),
+      value_efp: fmtCoverDays(findCls('C')?.cover_days_efp),
       inv: fmtNumber(findCls('C')?.inv_val),
       inv_efp: fmtNumber(findCls('C')?.inv_val_efp),
       quantity: fmtNumber(findCls('C')?.quantity),
     },
     {
       ...COVER_DAYS[4],
-      value: Math.round(Number(findCls('N')?.cover_days ?? 0)),
-      value_efp: Math.round(Number(findCls('N')?.cover_days_efp ?? 0)),
+      value: fmtCoverDays(findCls('N')?.cover_days),
+      value_efp: fmtCoverDays(findCls('N')?.cover_days_efp),
       inv: fmtNumber(findCls('N')?.inv_val),
       inv_efp: fmtNumber(findCls('N')?.inv_val_efp),
       quantity: fmtNumber(findCls('N')?.quantity),
     },
     {
       ...COVER_DAYS[5],
-      value: Math.round(Number(findCls('Others')?.cover_days ?? 0)),
-      value_efp: Math.round(Number(findCls('Others')?.cover_days_efp ?? 0)),
+      value: fmtCoverDays(findCls('Others')?.cover_days),
+      value_efp: fmtCoverDays(findCls('Others')?.cover_days_efp),
       inv: fmtNumber(findCls('Others')?.inv_val),
       inv_efp: fmtNumber(findCls('Others')?.inv_val_efp),
       quantity: fmtNumber(findCls('Others')?.quantity),
@@ -2296,6 +2327,12 @@ export default function ScorecardDashboard() {
       pct: row ? Math.round(Number(row.ibl_vs_tscl_pct)) : 0,
     }));
 
+  // No target loaded for the selection: a dash, not a 0 that reads as a figure.
+  const fmtTarget = (v: string | number | null | undefined) =>
+    Number(v) > 0
+      ? Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 })
+      : '—';
+
   const tsclAccuracy = (() => {
     const row = (
       forecastAccuracyMonthlyData as {
@@ -2306,7 +2343,9 @@ export default function ScorecardDashboard() {
         }[];
       }
     )?.data?.[0];
-    return row ? Math.round(Number(row.pct) * 100 * 10) / 10 : null;
+    return Number(row?.target_value) > 0
+      ? Math.round(Number(row?.pct) * 100 * 10) / 10
+      : null;
   })();
 
   const tsclSalesDisplay = (() => {
@@ -2320,36 +2359,19 @@ export default function ScorecardDashboard() {
       achieved: Number(row.amount).toLocaleString('en-US', {
         maximumFractionDigits: 0,
       }),
-      target: Number(row.target_value).toLocaleString('en-US', {
-        maximumFractionDigits: 0,
-      }),
+      target: fmtTarget(row.target_value),
     };
   })();
 
   const tsclDaysGoneInfo = (() => {
-    const refDate = parseFilterDate(filters.dateTo || filters.dateFrom);
-    const year = refDate.getFullYear();
-    const month = refDate.getMonth();
-    const monthEnd = new Date(year, month + 1, 0);
-    const totalDays = monthEnd.getDate();
-    const today = new Date();
-    const isCurrentMonth =
-      year === today.getFullYear() && month === today.getMonth();
-    const cappedDay = isCurrentMonth
-      ? Math.min(refDate.getDate(), today.getDate())
-      : refDate.getDate();
-    const daysGone = Math.max(1, Math.min(cappedDay, totalDays));
+    const { daysGone, totalDays } = getDaysGone(filters.dateFrom, filters.dateTo);
 
     const row = (
       forecastAccuracyMonthlyDaysGoneData as {
         data?: { amount: number; target_value: string | number }[];
       }
     )?.data?.[0];
-    const target = row
-      ? Number(row.target_value).toLocaleString('en-US', {
-          maximumFractionDigits: 0,
-        })
-      : '-';
+    const target = fmtTarget(row?.target_value);
 
     return {
       daysGone,
@@ -2368,7 +2390,9 @@ export default function ScorecardDashboard() {
         }[];
       }
     )?.data?.[0];
-    return row ? Math.round(Number(row.pct) * 100 * 10) / 10 : null;
+    return Number(row?.target_value) > 0
+      ? Math.round(Number(row?.pct) * 100 * 10) / 10
+      : null;
   })();
 
   const iblSalesDisplay = (() => {
@@ -2382,41 +2406,24 @@ export default function ScorecardDashboard() {
       achieved: Number(row.amount).toLocaleString('en-US', {
         maximumFractionDigits: 0,
       }),
-      target: Number(row.target_value).toLocaleString('en-US', {
-        maximumFractionDigits: 0,
-      }),
+      target: fmtTarget(row.target_value),
     };
   })();
 
   const iblDaysGoneInfo = (() => {
-    const refDate = parseFilterDate(filters.dateTo || filters.dateFrom);
-    const year = refDate.getFullYear();
-    const month = refDate.getMonth();
-    const monthEnd = new Date(year, month + 1, 0);
-    const totalDays = monthEnd.getDate();
-    const today = new Date();
-    const isCurrentMonth =
-      year === today.getFullYear() && month === today.getMonth();
-    const cappedDay = isCurrentMonth
-      ? Math.min(refDate.getDate(), today.getDate())
-      : refDate.getDate();
-    const daysGone = Math.max(1, Math.min(cappedDay, totalDays));
+    const { daysGone, totalDays } = getDaysGone(filters.dateFrom, filters.dateTo);
 
     const row = (
       forecastAccuracyYearlyData as {
-        data?: { target_value: string | number }[];
+        data?: { target_to_date: string | number }[];
       }
     )?.data?.[0];
-    const totalBudget = Number(row?.target_value ?? 0);
-    const proratedTarget =
-      totalDays > 0 ? (totalBudget / totalDays) * daysGone : 0;
+    const proratedTarget = Number(row?.target_to_date ?? 0);
 
     return {
       daysGone,
       totalDays,
-      target: proratedTarget.toLocaleString('en-US', {
-        maximumFractionDigits: 0,
-      }),
+      target: fmtTarget(proratedTarget),
     };
   })();
 

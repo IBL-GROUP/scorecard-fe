@@ -2,7 +2,7 @@ import { Box, Flex, Skeleton, Text, VStack } from '@chakra-ui/react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 export interface GaugeChartProps {
-  value: number; // achieved %
+  value: number | null; // achieved %, null when there is no target to measure against
   target: number; // target %
   title: string;
   subtitle?: string;
@@ -34,12 +34,12 @@ export function GaugeChart({
     );
   }
 
-  const diff = value - target;
+  const diff = (value ?? 0) - target;
   const isAbove = diff >= 0;
   const statusColor = isAbove ? '#059669' : '#dc2626';
   const statusSymbol = isAbove ? '▲' : '▼';
 
-  const data = [{ value }, { value: 100 - value }];
+  const data = [{ value: value ?? 0 }, { value: 100 - (value ?? 0) }];
 
   return (
     <VStack gap={0} align="center" justify="center" h="100%" w="100%">
@@ -88,7 +88,7 @@ export function GaugeChart({
           justifyContent="center"
         >
           <Text fontSize="22px" fontWeight="800" color={color} lineHeight={1}>
-            {value}%
+            {value === null ? '—' : `${value}%`}
           </Text>
         </Box>
       </Box>
@@ -101,11 +101,12 @@ export function GaugeChart({
             fontWeight="600"
             textTransform="uppercase"
             letterSpacing="wide"
+            whiteSpace="nowrap"
           >
             {targetLabel}
           </Text>
           <Text fontSize="12px" color="gray.600" fontWeight="700">
-            {displayTarget ?? `${target}%`}
+            {displayTarget ?? '—'}
           </Text>
         </Box>
         <Box w="1px" bg="gray.200" alignSelf="stretch" />
@@ -116,18 +117,21 @@ export function GaugeChart({
             fontWeight="600"
             textTransform="uppercase"
             letterSpacing="wide"
+            whiteSpace="nowrap"
           >
             Achieved
           </Text>
           <Text fontSize="12px" color={color} fontWeight="700">
-            {displayAchieved ?? `${value}%`}
+            {displayAchieved ?? '—'}
           </Text>
         </Box>
       </Flex>
-      <Text fontSize="12px" fontWeight="700" color={statusColor} mt={0.5}>
-        {statusSymbol} {Math.abs(diff).toFixed(1)}%{' '}
-        {isAbove ? 'above' : 'below'} target
-      </Text>
+      {value !== null && (
+        <Text fontSize="12px" fontWeight="700" color={statusColor} mt={0.5}>
+          {statusSymbol} {Math.abs(diff).toFixed(1)}%{' '}
+          {isAbove ? 'above' : 'below'} target
+        </Text>
+      )}
     </VStack>
   );
 }
