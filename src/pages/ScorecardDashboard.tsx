@@ -951,7 +951,7 @@ function SupplyChainTab({
                 </Flex>
               </Box>
               <GaugeChart
-                value={iblAccuracy ?? 0}
+                value={iblAccuracy}
                 target={100}
                 title=""
                 subtitle=""
@@ -988,11 +988,13 @@ function SupplyChainTab({
                 labelFormatter={(v) => `${Math.round(Number(v))}%`}
                 showLabels
                 xTickMargin={4}
+                showOthers
                 xLabelColors={{
                   A: clsColors.A,
                   B: clsColors.B,
                   C: clsColors.C,
                   N: clsColors.N,
+                  Others: clsColors.O,
                 }}
               />
             </Box>
@@ -1028,7 +1030,7 @@ function SupplyChainTab({
                 </Flex>
               </Box>
               <GaugeChart
-                value={tsclAccuracy ?? 0}
+                value={tsclAccuracy}
                 target={100}
                 title=""
                 subtitle=""
@@ -1065,11 +1067,13 @@ function SupplyChainTab({
                 labelFormatter={(v) => `${Math.round(Number(v))}%`}
                 showLabels
                 xTickMargin={4}
+                showOthers
                 xLabelColors={{
                   A: clsColors.A,
                   B: clsColors.B,
                   C: clsColors.C,
                   N: clsColors.N,
+                  Others: clsColors.O,
                 }}
               />
             </Box>
@@ -1108,7 +1112,7 @@ function SupplyChainTab({
                 },
               ]}
               showLabels
-              // showOthers
+              showOthers
               showTotal
               yTickFormatter={(v) => `${v}%`}
               labelFormatter={(v) => `${v}%`}
@@ -1117,6 +1121,7 @@ function SupplyChainTab({
                 B: clsColors.B,
                 C: clsColors.C,
                 N: clsColors.N,
+                Others: clsColors.O,
               }}
             />
           </Box>

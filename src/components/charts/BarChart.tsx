@@ -80,7 +80,7 @@ function renderXTick(
             fill="#fff"
             style={{ fontSize: '12px', fontWeight: 700 }}
           >
-            {full}
+            {full === 'Others' ? 'O' : full}
           </text>
         </g>
       );

@@ -146,7 +146,7 @@ export function SalesSummaryCard({
             const lc = labelColor(row.label);
             const pc = pctColor(row.up);
             const isLast = idx === rows.length - 1;
-            const isCls = ['A', 'B', 'C', 'N'].includes(row.label);
+            const isCls = ['A', 'B', 'C', 'N', 'Others'].includes(row.label);
             return (
               <Flex
                 key={row.label}
@@ -170,7 +170,7 @@ export function SalesSummaryCard({
                       fontSize="12px"
                       fontWeight="700"
                     >
-                      {row.label}
+                      {row.label === 'Others' ? 'O' : row.label}
                     </Box>
                   ) : (
                     <Text fontSize="13px" fontWeight="500" color={lc}>
