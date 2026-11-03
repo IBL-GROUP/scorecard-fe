@@ -1,0 +1,383 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "authenticator-be — consumer contract (as used by scorecard-fe)",
+    "version": "1.0.0-baseline",
+    "description": "The subset of authenticator-be this dashboard calls. Owned by searle-authenticator-be; documented here from the client code on 2026-11-03. Validated by scripts/validate-specs.mjs (rules S12, S13)."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4002/api",
+      "description": "Local"
+    },
+    {
+      "url": "https://dev-login.onethunder.iblgrp.com/api",
+      "description": "Dev"
+    }
+  ],
+  "paths": {
+    "/auth/ticket/redeem": {
+      "post": {
+        "operationId": "redeemTicket",
+        "tags": [
+          "Authenticator"
+        ],
+        "summary": "Exchange a single-use ticket for a JWT",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ticket": {
+                    "type": "string",
+                    "description": "Single-use ticket from ?t="
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string",
+                      "description": "Access JWT"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          }
+        },
+        "x-requirements": [
+          "FR-AUTH-001",
+          "FR-AUTH-002"
+        ],
+        "security": []
+      }
+    },
+    "/auth/ticket": {
+      "post": {
+        "operationId": "mintTicket",
+        "tags": [
+          "Authenticator"
+        ],
+        "summary": "Mint a single-use ticket to hand the session to another dashboard",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "target": {
+                    "type": "string",
+                    "description": "Destination URL; audit log only"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ticket": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          }
+        },
+        "x-requirements": [
+          "FR-NAV-003",
+          "SEC-NAV-001"
+        ]
+      }
+    },
+    "/me/permissions": {
+      "get": {
+        "operationId": "getMyPermissions",
+        "tags": [
+          "Authenticator"
+        ],
+        "summary": "The caller's roles and permission codes",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "roles": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "role_id": {
+                                "type": "string"
+                              },
+                              "role_code": {
+                                "type": "string"
+                              },
+                              "role_name": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "permissions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "example": "ONE_THU.DASHBOARD.SUPPLYCHAIN_PULSE.SUMMARY.VIEW"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          }
+        },
+        "x-requirements": [
+          "FR-PERM-001",
+          "DR-PERM-001"
+        ]
+      }
+    },
+    "/profile": {
+      "get": {
+        "operationId": "getProfile",
+        "tags": [
+          "Authenticator"
+        ],
+        "summary": "The caller's display name",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "display_name": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          }
+        },
+        "x-requirements": [
+          "FR-NAV-001"
+        ]
+      }
+    },
+    "/dashboards/user-reports": {
+      "get": {
+        "operationId": "getUserDashboards",
+        "tags": [
+          "Authenticator"
+        ],
+        "summary": "Dashboards the caller may open, in menu order",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "menu_id": {
+                            "type": "string"
+                          },
+                          "resource_code": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          },
+                          "icon": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          }
+        },
+        "x-requirements": [
+          "FR-NAV-002",
+          "DR-NAV-001"
+        ]
+      }
+    },
+    "/usage/heartbeat": {
+      "post": {
+        "operationId": "usageHeartbeat",
+        "tags": [
+          "Authenticator"
+        ],
+        "summary": "Record viewing time for a dashboard tab",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "session_id": {
+                    "type": "string"
+                  },
+                  "dashboard": {
+                    "type": "string",
+                    "enum": [
+                      "Supply Chain Pulse"
+                    ]
+                  },
+                  "tab": {
+                    "type": "string"
+                  },
+                  "event": {
+                    "type": "string",
+                    "enum": [
+                      "ping",
+                      "end"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Not authenticated"
+          }
+        },
+        "x-requirements": [
+          "FR-USG-001",
+          "FR-USG-002",
+          "DR-USG-001"
+        ]
+      }
+    },
+    "/usage/export": {
+      "post": {
+        "operationId": "usageExport",
+        "tags": [
+          "Authenticator"
+        ],
+        "summary": "Record an Excel export",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "dashboard": {
+                    "type": "string",
+                    "enum": [
+                      "Supply Chain Pulse"
+                    ]
+                  },
+                  "report": {
+                    "type": "string",
+                    "example": "Service Measure › Inventory Days"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Not authenticated"
+          }
+        },
+        "x-requirements": [
+          "FR-USG-004"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

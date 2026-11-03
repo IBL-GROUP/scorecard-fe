@@ -35,6 +35,20 @@ authenticator front end (`:5173`), which issues the handoff ticket.
 
 There is no test suite.
 
+### Specifications
+
+This repo is **specification-first**: [`specs/`](specs/README.md) is the source
+of truth for what the dashboard must do. Read the relevant spec before changing
+behaviour, and update it in the same PR (see
+[the workflow](specs/standards/spec-first-workflow.md)). AI agents follow
+[`AGENTS.md`](AGENTS.md).
+
+```bash
+npm run specs:validate   # structure, requirement IDs, traceability, API contracts (runs in CI)
+npm run specs:matrix     # regenerate specs/traceability.md after editing requirements
+npm run specs:test       # tests for the validator
+```
+
 The dev server is pinned to **5175** with `strictPort`, and the app is built
 with `base: '/scorecard-dashboard/'` (the router uses the same basename). The
 portal links to dashboards by that fixed path.

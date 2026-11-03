@@ -1,0 +1,38 @@
+name: Specs and build
+
+on:
+  push:
+    branches: [main, sandbox]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  specs:
+    name: Validate specifications
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # No npm install needed: the validator has no dependencies.
+      - name: Validator tests
+        run: npm run specs:test
+      - name: Validate specs/ (structure, IDs, traceability, API contracts)
+        run: npm run specs:validate
+
+  build:
+    name: Type check and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: tsc + vite build
+        run: npm run build
+      # `npm run lint` is not run until the ESLint 9 config migration lands (GAP-013).

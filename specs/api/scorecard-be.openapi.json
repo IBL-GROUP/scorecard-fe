@@ -1,0 +1,2547 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "scorecard-be — consumer contract (as used by scorecard-fe)",
+    "version": "1.0.0-baseline",
+    "description": "The scorecard-be endpoints this frontend calls, with the fields it reads. Reverse-engineered from src/api/* and checked against scorecard-be routes and TECHNICAL_DOCUMENT.md §6 on 2026-11-03. scorecard-be owns the SQL and the formulas (see specs/domains/supply-chain-metrics.md). Changing a field the frontend reads means updating this file in the same PR. Validated by scripts/validate-specs.mjs (rules S12, S13)."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3005/api",
+      "description": "Local"
+    },
+    {
+      "url": "https://dev-scorecard.onethunder.iblgrp.com/api",
+      "description": "Dev"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "x-client-paths-not-served": [
+    {
+      "path": "/auth/login",
+      "gap": "GAP-015"
+    },
+    {
+      "path": "/auth/logout",
+      "gap": "GAP-015"
+    },
+    {
+      "path": "/auth/register",
+      "gap": "GAP-015"
+    },
+    {
+      "path": "/auth/profile",
+      "gap": "GAP-015"
+    },
+    {
+      "path": "/auth/refresh",
+      "gap": "GAP-015"
+    },
+    {
+      "path": "/users",
+      "gap": "GAP-015"
+    },
+    {
+      "path": "/daily-sales-avg",
+      "gap": "GAP-015"
+    }
+  ],
+  "paths": {
+    "/sales-summary": {
+      "get": {
+        "operationId": "getSalesSummary",
+        "tags": [
+          "Summary"
+        ],
+        "summary": "Sales per classification for the window",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          },
+          {
+            "$ref": "#/components/parameters/classification"
+          },
+          {
+            "$ref": "#/components/parameters/sku"
+          },
+          {
+            "$ref": "#/components/parameters/branch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/SalesSummaryRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-SUM-002",
+          "BR-MET-001"
+        ]
+      }
+    },
+    "/total-sku": {
+      "get": {
+        "operationId": "getTotalSku",
+        "tags": [
+          "Summary"
+        ],
+        "summary": "Mapping codes per classification (filters accepted but not applied, GAP-005)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/classification"
+          },
+          {
+            "$ref": "#/components/parameters/sku"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/TotalSkuRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-SUM-001"
+        ]
+      }
+    },
+    "/cover-days": {
+      "get": {
+        "operationId": "getCoverDays",
+        "tags": [
+          "Summary"
+        ],
+        "summary": "Cover days per classification",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          },
+          {
+            "$ref": "#/components/parameters/classification"
+          },
+          {
+            "$ref": "#/components/parameters/sku"
+          },
+          {
+            "$ref": "#/components/parameters/branch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CoverDaysRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-SUM-003",
+          "BR-MET-002"
+        ]
+      }
+    },
+    "/cover-days/total": {
+      "get": {
+        "operationId": "getCoverDaysTotal",
+        "tags": [
+          "Summary"
+        ],
+        "summary": "Cover days for all classifications combined (one row)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          },
+          {
+            "$ref": "#/components/parameters/classification"
+          },
+          {
+            "$ref": "#/components/parameters/sku"
+          },
+          {
+            "$ref": "#/components/parameters/branch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CoverDaysRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-SUM-003",
+          "BR-MET-002"
+        ]
+      }
+    },
+    "/cover-days/closing-inv": {
+      "get": {
+        "operationId": "getCoverDaysClosingInv",
+        "tags": [
+          "Summary"
+        ],
+        "summary": "Latest stock closing date (no parameters)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ClosingInvRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-SUM-003"
+        ]
+      }
+    },
+    "/cover-days/benchmarks": {
+      "get": {
+        "operationId": "getCoverDaysBenchmarks",
+        "tags": [
+          "Summary"
+        ],
+        "summary": "Benchmark days and threshold per classification in force on endDate",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/endDate"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/BenchmarkRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-SUM-001",
+          "BR-SVC-002",
+          "BR-MET-003"
+        ]
+      }
+    },
+    "/forecast-accuracy-monthly": {
+      "get": {
+        "operationId": "getForecastAccuracyMonthly",
+        "tags": [
+          "Summary"
+        ],
+        "summary": "TP sales vs IBL target for the month of endDate",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          },
+          {
+            "$ref": "#/components/parameters/classification"
+          },
+          {
+            "$ref": "#/components/parameters/sku"
+          },
+          {
+            "$ref": "#/components/parameters/branch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/AccuracyRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-SUM-004",
+          "BR-MET-004"
+        ]
+      }
+    },
+    "/forecast-accuracy-monthly/daysgone": {
+      "get": {
+        "operationId": "getForecastAccuracyMonthlyDaysGone",
+        "tags": [
+          "Summary"
+        ],
+        "summary": "IBL target with target_date in the window (client caps endDate at today)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          },
+          {
+            "$ref": "#/components/parameters/classification"
+          },
+          {
+            "$ref": "#/components/parameters/sku"
+          },
+          {
+            "$ref": "#/components/parameters/branch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/DaysGoneRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-SUM-004"
+        ]
+      }
+    },
+    "/forecast-accuracy-yearly": {
+      "get": {
+        "operationId": "getForecastAccuracyYearly",
+        "tags": [
+          "Summary"
+        ],
+        "summary": "EFP sales vs TSCL budget for the month of endDate (one month despite the name)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          },
+          {
+            "$ref": "#/components/parameters/classification"
+          },
+          {
+            "$ref": "#/components/parameters/sku"
+          },
+          {
+            "$ref": "#/components/parameters/branch"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Sent by the client but not read by the backend (GAP-010)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/BudgetAccuracyRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-SUM-005",
+          "BR-MET-005"
+        ],
+        "description": "Sales window ends at endDate − 1 day (GAP-004)."
+      }
+    },
+    "/forecast-accuracy-category-monthly": {
+      "get": {
+        "operationId": "getForecastAccuracyCategoryMonthly",
+        "tags": [
+          "Summary"
+        ],
+        "summary": "IBL accuracy per class per month, 3 months ending with endDate",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          },
+          {
+            "$ref": "#/components/parameters/classification"
+          },
+          {
+            "$ref": "#/components/parameters/sku"
+          },
+          {
+            "$ref": "#/components/parameters/branch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CategoryAccuracyRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-SUM-006"
+        ]
+      }
+    },
+    "/forecast-accuracy-category-yearly": {
+      "get": {
+        "operationId": "getForecastAccuracyCategoryYearly",
+        "tags": [
+          "Summary"
+        ],
+        "summary": "TSCL budget accuracy per class per month, 3 months ending with endDate",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          },
+          {
+            "$ref": "#/components/parameters/classification"
+          },
+          {
+            "$ref": "#/components/parameters/sku"
+          },
+          {
+            "$ref": "#/components/parameters/branch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CategoryAccuracyRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-SUM-006"
+        ]
+      }
+    },
+    "/ibl-vs-tscl": {
+      "get": {
+        "operationId": "getIblVsTscl",
+        "tags": [
+          "Summary"
+        ],
+        "summary": "IBL target vs TSCL budget per class, with a Total row",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          },
+          {
+            "$ref": "#/components/parameters/classification"
+          },
+          {
+            "$ref": "#/components/parameters/sku"
+          },
+          {
+            "$ref": "#/components/parameters/branch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/IblVsTsclRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-SUM-007",
+          "BR-MET-006"
+        ]
+      }
+    },
+    "/inventory-days": {
+      "get": {
+        "operationId": "getInventoryDays",
+        "tags": [
+          "ServiceMeasure"
+        ],
+        "summary": "Cover days per classification × item × branch",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          },
+          {
+            "$ref": "#/components/parameters/classification"
+          },
+          {
+            "$ref": "#/components/parameters/sku"
+          },
+          {
+            "$ref": "#/components/parameters/branch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/InventoryDaysRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-SVC-001"
+        ],
+        "description": "Stock snapshot hard-coded to April 2026 (GAP-001)."
+      }
+    },
+    "/above-below-threshold": {
+      "get": {
+        "operationId": "getAboveBelowThreshold",
+        "tags": [
+          "ServiceMeasure"
+        ],
+        "summary": "SKU counts above/below the class threshold (classification ignored, GAP-005)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          },
+          {
+            "$ref": "#/components/parameters/classification"
+          },
+          {
+            "$ref": "#/components/parameters/sku"
+          },
+          {
+            "$ref": "#/components/parameters/branch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ThresholdRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-SVC-004",
+          "DR-SVC-001"
+        ]
+      }
+    },
+    "/service-measure": {
+      "get": {
+        "operationId": "getServiceMeasure",
+        "tags": [
+          "ServiceMeasure"
+        ],
+        "summary": "% of SKUs above threshold per branch",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          },
+          {
+            "$ref": "#/components/parameters/classification"
+          },
+          {
+            "$ref": "#/components/parameters/sku"
+          },
+          {
+            "$ref": "#/components/parameters/branch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ServiceMeasureRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-SVC-002",
+          "BR-MET-007"
+        ],
+        "description": "Stock snapshot hard-coded to April 2026 (GAP-001)."
+      }
+    },
+    "/tgt-vs-actual": {
+      "get": {
+        "operationId": "getTgtVsActual",
+        "tags": [
+          "ServiceMeasure"
+        ],
+        "summary": "Threshold vs actual cover days per class",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          },
+          {
+            "$ref": "#/components/parameters/classification"
+          },
+          {
+            "$ref": "#/components/parameters/sku"
+          },
+          {
+            "$ref": "#/components/parameters/branch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/TgtVsActualRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-SVC-003"
+        ]
+      }
+    },
+    "/dispatch-vs-order": {
+      "get": {
+        "operationId": "getDispatchVsOrder",
+        "tags": [
+          "DispatchWip"
+        ],
+        "summary": "Ordered vs delivered quantity per material (branch ignored, GAP-005)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          },
+          {
+            "$ref": "#/components/parameters/branch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/DispatchVsOrderRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-DSP-001"
+        ]
+      }
+    },
+    "/wip": {
+      "get": {
+        "operationId": "getWip",
+        "tags": [
+          "DispatchWip"
+        ],
+        "summary": "WIP orders at the latest record date in the window",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/WipRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-DSP-002"
+        ]
+      }
+    },
+    "/rpm": {
+      "get": {
+        "operationId": "getRpm",
+        "tags": [
+          "DispatchWip"
+        ],
+        "summary": "Raw & packing material stock at the latest execution date",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/RpmRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-DSP-003"
+        ]
+      }
+    },
+    "/rd-status": {
+      "get": {
+        "operationId": "getRdStatus",
+        "tags": [
+          "RdStatus"
+        ],
+        "summary": "Current vs last stock upload per active RD",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Validated (400 if malformed) but not used; always today (GAP-006)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/RdStatusRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-RD-001",
+          "DR-RD-001"
+        ]
+      }
+    },
+    "/filters": {
+      "get": {
+        "operationId": "getFilters",
+        "tags": [
+          "Filters"
+        ],
+        "summary": "SKU options with classification and division",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/FilterItemRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-FILT-004",
+          "DR-FILT-002"
+        ]
+      }
+    },
+    "/filters/branches": {
+      "get": {
+        "operationId": "getFilterBranches",
+        "tags": [
+          "Filters"
+        ],
+        "summary": "Hub branch mapping rows (excludes 8206, 8210)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/FilterBranchRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-requirements": [
+          "FR-FILT-004"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT from authenticator-be, verified with JWT_ACCESS_SECRET"
+      }
+    },
+    "parameters": {
+      "startDate": {
+        "name": "startDate",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "format": "date"
+        },
+        "description": "Window start, inclusive. Not validated (GAP-007)"
+      },
+      "endDate": {
+        "name": "endDate",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "format": "date"
+        },
+        "description": "Window end, inclusive. Also selects the target month"
+      },
+      "classification": {
+        "name": "classification",
+        "in": "query",
+        "style": "form",
+        "explode": true,
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "N",
+              "Others"
+            ]
+          }
+        }
+      },
+      "sku": {
+        "name": "sku",
+        "in": "query",
+        "style": "form",
+        "explode": true,
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "description": "Item / mapping codes. Division is applied by expanding to SKUs (FR-FILT-006)"
+      },
+      "branch": {
+        "name": "branch",
+        "in": "query",
+        "style": "form",
+        "explode": true,
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing, invalid or expired token; the client redirects to the portal (ERR-AUTH-002)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Invalid parameter",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "ServerError": {
+        "description": "Query failed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Envelope": {
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "count": {
+            "type": "integer"
+          },
+          "data": {
+            "type": "array",
+            "items": {}
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "SalesSummaryRow": {
+        "type": "object",
+        "properties": {
+          "classification": {
+            "type": "string",
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "N",
+              "Others"
+            ]
+          },
+          "sku": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "amount": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          }
+        }
+      },
+      "CoverDaysRow": {
+        "type": "object",
+        "properties": {
+          "classification": {
+            "type": "string",
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "N",
+              "Others"
+            ]
+          },
+          "inv_val": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "inv_val_efp": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "quantity": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "trg_value": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "daily_target": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "cover_days": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "null when the month has no target loaded",
+            "nullable": true
+          },
+          "cover_days_efp": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings",
+            "nullable": true
+          }
+        }
+      },
+      "ClosingInvRow": {
+        "type": "object",
+        "properties": {
+          "closing_date": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "BenchmarkRow": {
+        "type": "object",
+        "properties": {
+          "classification": {
+            "type": "string"
+          },
+          "days": {
+            "type": "number",
+            "nullable": true,
+            "description": "Benchmark cover days; 0 or null = not set"
+          },
+          "threshold": {
+            "type": "number",
+            "nullable": true,
+            "description": "Inventory-days threshold; 0 or null = not set"
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "AccuracyRow": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "target_value": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "pct": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Ratio (amount ÷ target), not ×100"
+          }
+        }
+      },
+      "BudgetAccuracyRow": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "target_value": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "pct": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Ratio, 2 decimals"
+          },
+          "target_to_date": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Budget prorated to the elapsed days of every month the window touches (GAP-010)"
+          }
+        }
+      },
+      "DaysGoneRow": {
+        "type": "object",
+        "properties": {
+          "target_value": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          }
+        }
+      },
+      "CategoryAccuracyRow": {
+        "type": "object",
+        "properties": {
+          "classification": {
+            "type": "string"
+          },
+          "month": {
+            "type": "string",
+            "example": "July 2026",
+            "description": "May carry trailing spaces; the client trims it"
+          },
+          "amount": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "target_value": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "pct": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Percent ×100, 2 decimals"
+          }
+        }
+      },
+      "InventoryDaysRow": {
+        "type": "object",
+        "description": "One row per classification × item, one cover-days column per branch",
+        "properties": {
+          "classification": {
+            "type": "string"
+          },
+          "item_desc": {
+            "type": "string"
+          },
+          "bahawalpur": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings",
+            "nullable": true
+          },
+          "dss_korangi": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings",
+            "nullable": true
+          },
+          "faisalabad": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings",
+            "nullable": true
+          },
+          "gujranwala": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings",
+            "nullable": true
+          },
+          "hyderabad": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings",
+            "nullable": true
+          },
+          "islamabad": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings",
+            "nullable": true
+          },
+          "karachi": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings",
+            "nullable": true
+          },
+          "korangi": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings",
+            "nullable": true
+          },
+          "lahore": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings",
+            "nullable": true
+          },
+          "mingora": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings",
+            "nullable": true
+          },
+          "multan": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings",
+            "nullable": true
+          },
+          "peshawar": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings",
+            "nullable": true
+          },
+          "quetta": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings",
+            "nullable": true
+          },
+          "sukkur": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings",
+            "nullable": true
+          },
+          "total": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Average across branches with a value"
+          }
+        }
+      },
+      "ThresholdRow": {
+        "type": "object",
+        "properties": {
+          "classification": {
+            "type": "string"
+          },
+          "No Of SKUs > Threshold": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "No Of SKUs < Threshold": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          }
+        }
+      },
+      "IblVsTsclRow": {
+        "type": "object",
+        "properties": {
+          "classification": {
+            "type": "string",
+            "description": "A, B, C, N, Others or Total"
+          },
+          "ibl_target": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "tscl_target": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "ibl_vs_tscl_pct": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          }
+        }
+      },
+      "ServiceMeasureRow": {
+        "type": "object",
+        "properties": {
+          "branch": {
+            "type": "string"
+          },
+          "SKU-A%": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "SKU-B%": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "SKU-C%": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "SKU-N%": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          }
+        }
+      },
+      "TgtVsActualRow": {
+        "type": "object",
+        "properties": {
+          "classification": {
+            "type": "string"
+          },
+          "cover_days_tgt": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "cover_days": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          }
+        }
+      },
+      "DispatchVsOrderRow": {
+        "type": "object",
+        "properties": {
+          "material_name": {
+            "type": "string"
+          },
+          "channel_type": {
+            "type": "string"
+          },
+          "total_order_qty": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "total_delivery_qty": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "delivery_pct": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          }
+        }
+      },
+      "WipRow": {
+        "type": "object",
+        "properties": {
+          "storage_loc": {
+            "type": "string"
+          },
+          "storage_loc_desc": {
+            "type": "string"
+          },
+          "plant": {
+            "type": "string"
+          },
+          "plnt_desc": {
+            "type": "string"
+          },
+          "material_type_description": {
+            "type": "string"
+          },
+          "Material Name": {
+            "type": "string"
+          },
+          "order_number": {
+            "type": "string"
+          },
+          "item_qty": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "good_received_qty": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "Quantity": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "WIP Value": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          }
+        }
+      },
+      "RpmRow": {
+        "type": "object",
+        "description": "Value and quantity per stock type; only the main columns are listed",
+        "additionalProperties": true,
+        "properties": {
+          "materialname": {
+            "type": "string"
+          },
+          "producttype": {
+            "type": "string"
+          },
+          "plant": {
+            "type": "string"
+          },
+          "plantname": {
+            "type": "string"
+          },
+          "storagelocation": {
+            "type": "string"
+          },
+          "storagelocationname": {
+            "type": "string"
+          },
+          "unrestricted_val": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "quality_inspection_val": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "blocked_val": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "restricted_val": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "returns_val": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "stock_in_transit_val": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "total_val": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "unrestricted_qty": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "total_qty": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          }
+        }
+      },
+      "RdStatusRow": {
+        "type": "object",
+        "properties": {
+          "ibl_distributor_code": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "distributor_desc": {
+            "type": "string",
+            "nullable": true
+          },
+          "branch_code": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings",
+            "nullable": true
+          },
+          "branch_desc": {
+            "type": "string",
+            "nullable": true
+          },
+          "stock_qty": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "stock_value": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "last_stock_qty": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "last_stock_value": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "last_stock_date": {
+            "type": "string",
+            "nullable": true
+          },
+          "day_diff": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          }
+        }
+      },
+      "FilterItemRow": {
+        "type": "object",
+        "properties": {
+          "item_code": {
+            "type": "string"
+          },
+          "item_description": {
+            "type": "string"
+          },
+          "classification": {
+            "type": "string",
+            "nullable": true
+          },
+          "division": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "FilterBranchRow": {
+        "type": "object",
+        "properties": {
+          "hub_branch_code": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          },
+          "hub_branch_desc": {
+            "type": "string"
+          },
+          "storage_location_code": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Postgres numerics may arrive as strings"
+          }
+        }
+      },
+      "TotalSkuRow": {
+        "type": "object",
+        "properties": {
+          "classification": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  }
+}
