@@ -44,6 +44,8 @@ export const clsColors = {
   B: '#059669',
   C: '#fca311',
   N: '#7c3aed',
+  // Others, as the O badge on the Cover Days card.
+  O: '#64748b',
   Other: '#6b7280',
   Abg: '#dbeafe',
   Bbg: '#d1fae5',
