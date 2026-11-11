@@ -36,6 +36,7 @@ requirements. See the [migration plan](migration-plan.md).
 | | [migration-plan.md](migration-plan.md) | What is done, and what comes next |
 | **Assessment** | [assessment/repository-assessment.md](assessment/repository-assessment.md) | Modules, interfaces, tests and doc state at baseline |
 | **Product** | [product/product-overview.md](product/product-overview.md) | Users, capabilities, open product questions |
+| | [product/glossary.md](product/glossary.md) | What a business, code or API term means (cover days, benchmark, IBL, TSCL, EFP, RD…) |
 | **Architecture** | [architecture/system-context.md](architecture/system-context.md) | Systems around the app, environments |
 | | [architecture/frontend-architecture.md](architecture/frontend-architecture.md) | Component tree, layers, data flow |
 | | [architecture/adr/](architecture/adr/ADR-0001-specification-first.md) | Architecture decision records |

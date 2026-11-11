@@ -19,27 +19,27 @@ means at least one of its test cases points at a test file.
 
 | Area | Requirements | With a test case | Automated | Acceptance criteria | Open gaps |
 |---|---|---|---|---|---|
-| MET | 8 | 0 | 0 | 0 | 1 |
+| MET | 8 | 0 | 0 | 0 | 3 |
 | DASH | 0 | 0 | 0 | 0 | 6 |
 | AUTH | 19 | 14 | 0 | 3 | 0 |
 | PERM | 13 | 9 | 0 | 2 | 2 |
 | LOAD | 10 | 9 | 0 | 2 | 1 |
 | FILT | 14 | 11 | 0 | 2 | 5 |
-| SUM | 14 | 13 | 1 | 2 | 3 |
+| SUM | 14 | 13 | 1 | 2 | 4 |
 | SVC | 9 | 6 | 0 | 2 | 1 |
 | DSP | 6 | 5 | 0 | 1 | 0 |
 | RD | 9 | 6 | 0 | 1 | 2 |
 | USG | 10 | 7 | 0 | 1 | 0 |
 | NAV | 11 | 8 | 0 | 1 | 0 |
 | TBL | 5 | 4 | 0 | 1 | 1 |
-| SPEC | 15 | 15 | 15 | 3 | 2 |
-| **Total** | 143 | 107 | 16 | 21 | 24 |
+| SPEC | 15 | 15 | 15 | 3 | 3 |
+| **Total** | 143 | 107 | 16 | 21 | 28 |
 
 ## MET — Supply-chain metrics (domain)
 
 Spec: [domains/supply-chain-metrics.md](domains/supply-chain-metrics.md)
 
-Open gaps: GAP-007
+Open gaps: GAP-007, GAP-025, GAP-026
 
 | Requirement | Status | Implementation | Test cases | Automated | Acceptance criteria | API operations |
 |---|---|---|---|---|---|---|
@@ -154,7 +154,7 @@ Open gaps: GAP-005, GAP-008, GAP-009, GAP-011, GAP-020
 
 Spec: [features/FEAT-SUM-summary-tab.md](features/FEAT-SUM-summary-tab.md)
 
-Open gaps: GAP-004, GAP-010, GAP-012
+Open gaps: GAP-004, GAP-010, GAP-012, GAP-027
 
 | Requirement | Status | Implementation | Test cases | Automated | Acceptance criteria | API operations |
 |---|---|---|---|---|---|---|
@@ -275,7 +275,7 @@ Open gaps: GAP-024
 
 Spec: [features/FEAT-SPEC-spec-tooling.md](features/FEAT-SPEC-spec-tooling.md)
 
-Open gaps: GAP-013, GAP-014
+Open gaps: GAP-013, GAP-014, GAP-028
 
 | Requirement | Status | Implementation | Test cases | Automated | Acceptance criteria | API operations |
 |---|---|---|---|---|---|---|

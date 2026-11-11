@@ -16,6 +16,10 @@ change, however small.
 3. Read the relevant requirements (`FR-`, `BR-`, `SEC-` …), and check
    [`specs/gaps.md`](specs/gaps.md) for open questions in that area.
 4. For API work, read the operation in `specs/api/*.openapi.json`.
+5. Use [`specs/product/glossary.md`](specs/product/glossary.md) for the meaning
+   of business terms (cover days, benchmark, threshold, IBL, TSCL, EFP, RD…).
+   Never guess a term marked **Unconfirmed**. A change that introduces a new
+   term adds it to the glossary in the same change.
 
 ## 2. Identify missing or conflicting requirements, and stop
 
