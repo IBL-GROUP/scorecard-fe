@@ -1,5 +1,12 @@
 import { Box, Flex, Skeleton, Text } from '@chakra-ui/react';
+import { InfoMark, type InfoPoint } from '@/components/info-mark';
 import { clsColors } from '@/constants/theme';
+
+/** The "?" on Sales Summary (routes.sales.summary.js): sales by class at TP. */
+const SALES_SUMMARY_INFO: InfoPoint[] = [
+  { label: 'What it is', value: 'Sales and SKUs sold, classification wise' },
+  { label: 'Calculation', value: 'Sales = units × TP; % = class sales ÷ total sales × 100' },
+];
 
 interface SalesRow {
   label: string;
@@ -64,16 +71,18 @@ export function SalesSummaryCard({
 
   return (
     <Box bg="white" borderRadius="xl" p={4} boxShadow="md" h="full">
-      <Text
-        fontSize="13px"
-        fontWeight="800"
-        color="gray.700"
-        textTransform="uppercase"
-        letterSpacing="wide"
-        mb={3}
-      >
-        Sales Summary
-      </Text>
+      <Flex align="center" mb={3}>
+        <Text
+          fontSize="13px"
+          fontWeight="800"
+          color="gray.700"
+          textTransform="uppercase"
+          letterSpacing="wide"
+        >
+          Sales Summary
+        </Text>
+        <InfoMark about="Sales Summary" points={SALES_SUMMARY_INFO} />
+      </Flex>
       {/* Header */}
       <Flex
         align="center"

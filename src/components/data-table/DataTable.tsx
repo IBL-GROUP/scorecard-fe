@@ -8,6 +8,7 @@ import {
   Table,
   Text,
 } from '@chakra-ui/react';
+import { InfoMark, type InfoPoint } from '@/components/info-mark';
 import {
   Children,
   cloneElement,
@@ -38,6 +39,8 @@ export interface SubRowData {
 
 export interface DataTableProps {
   title?: string;
+  /** Shown as a "?" after the title, explaining the table. */
+  info?: InfoPoint[];
   /** Export filename when the table renders without a visible title. */
   exportName?: string;
   headerGradient: string;
@@ -78,6 +81,7 @@ function compareValues(a: string, b: string): number {
 
 export function DataTable({
   title,
+  info,
   exportName,
   // headerGradient,
   headers,
@@ -259,6 +263,7 @@ export function DataTable({
                 {title}
               </Text>
             )}
+            {title && info?.length ? <InfoMark about={title} points={info} /> : null}
           </HStack>
           <HStack
             gap={2}
