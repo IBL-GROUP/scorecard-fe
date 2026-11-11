@@ -55,6 +55,7 @@ import { useGetRpm } from '@/api/rpm';
 import { useGetServiceMeasure } from '@/api/serviceMeasure';
 import { useGetTgtVsActual } from '@/api/tgtVsActual';
 import { useGetTotalSku } from '@/api/totalSku';
+import { InfoMark } from '@/components/info-mark';
 import { RegionalDistributorTab } from '@/components/regional-distributor';
 import {
   useGetRdStatus,
@@ -436,15 +437,25 @@ function CoverDaysSection({
   return (
     <Box bg="white" borderRadius="xl" p={4} boxShadow="md" h="full">
       <Flex justify="space-between" align="center" gap={3} mb={3}>
-        <Text
-          fontSize="13px"
-          fontWeight="800"
-          color="gray.700"
-          textTransform="uppercase"
-          letterSpacing="wide"
-        >
-          Cover Days (IBL)
-        </Text>
+        <Flex align="center">
+          <Text
+            fontSize="13px"
+            fontWeight="800"
+            color="gray.700"
+            textTransform="uppercase"
+            letterSpacing="wide"
+          >
+            Cover Days (IBL)
+          </Text>
+          {/* routes.cover.days.js /total: stock value ÷ (month target ÷ days in month). */}
+          <InfoMark
+            about="Cover Days (IBL)"
+            points={[
+              { label: 'What it is', value: 'Days IBL’s stock will last, classification wise' },
+              { label: 'Calculation', value: 'Stock value (TP or EFP) × 30 ÷ month target' },
+            ]}
+          />
+        </Flex>
         <ToggleGroup
           options={[
             { label: 'TP', value: 'TP' },
@@ -924,6 +935,11 @@ function SupplyChainTab({
         <ChartCard
           colSpan={6}
           title="Budget Accuracy TSCL"
+          info={[
+            { label: 'Month budget', value: 'In-Market' },
+            { label: 'Achieved', value: 'In-Market sales' },
+            { label: 'Measured on', value: 'EFP (units × EFP)' },
+          ]}
           height="280px"
           isLoading={isLoadingForecastIbl}
           variant="gauge-bar"
@@ -1003,6 +1019,11 @@ function SupplyChainTab({
         <ChartCard
           colSpan={6}
           title="Forecast Accuracy IBL"
+          info={[
+            { label: 'Month target', value: 'In-Market' },
+            { label: 'Achieved', value: 'In-Market sales' },
+            { label: 'Measured on', value: 'TP (units × TP)' },
+          ]}
           height="280px"
           isLoading={isLoadingForecastTscl}
           variant="gauge-bar"
@@ -1082,6 +1103,11 @@ function SupplyChainTab({
         <ChartCard
           colSpan={3}
           title="Forecast Vs Budget %"
+          // routes.ibl.vs.tscl.js: IBL target ÷ TSCL budget × 100, per class.
+          info={[
+            { label: 'What it is', value: 'IBL target against TSCL budget, classification wise' },
+            { label: 'Calculation', value: 'IBL target ÷ TSCL budget × 100' },
+          ]}
           height="280px"
           isLoading={isLoadingPctSkus}
         >
@@ -1304,6 +1330,11 @@ function ServiceMeasureTab({
         <GridItem colSpan={{ base: 12, lg: 9 }}>
           <DataTable
             title="Inventory Days"
+            // routes.inventory.days.js: stock value ÷ (month target ÷ days in month).
+            info={[
+              { label: 'What it is', value: 'Days each branch’s stock will last, by class' },
+              { label: 'Calculation', value: 'Stock value (TP) × 30 ÷ month target' },
+            ]}
             headerGradient={gradients.tableBlue}
             headers={tableHeaders}
             searchable={false}
@@ -1435,6 +1466,11 @@ function ServiceMeasureTab({
         <ChartCard
           colSpan={6}
           title="Service Measure by Branch"
+          // routes.service.measure.js: SKUs over the class threshold ÷ SKUs with a target.
+          info={[
+            { label: 'What it is', value: 'Share of SKUs with enough stock, per branch and class' },
+            { label: 'Calculation', value: 'SKUs above threshold days ÷ total SKUs × 100' },
+          ]}
           height="330px"
           isLoading={isLoadingServiceMeasure}
           variant="line"
@@ -1460,6 +1496,11 @@ function ServiceMeasureTab({
         <ChartCard
           colSpan={3}
           title="Cover Days Threshold vs Actual"
+          // routes.tgt.vs.actual.js: threshold from cover_days vs stock ÷ daily target.
+          info={[
+            { label: 'What it is', value: 'Threshold days (TGT) against actual cover days, by class' },
+            { label: 'Calculation', value: 'Actual = stock value (TP) × 30 ÷ month target' },
+          ]}
           height="319px"
           isLoading={isLoadingTgtVsActual}
         >
@@ -1490,6 +1531,11 @@ function ServiceMeasureTab({
         <ChartCard
           colSpan={3}
           title="SKUs Against Threshold"
+          // routes.above-below-threshold.js: each SKU's cover days vs its class threshold.
+          info={[
+            { label: 'What it is', value: 'Number of SKUs above and below threshold days, by class' },
+            { label: 'Calculation', value: 'SKU cover days = stock value (TP) × 30 ÷ month target' },
+          ]}
           titleNode={
             <>
               SKU<span style={{ textTransform: 'lowercase' }}>s</span> VS

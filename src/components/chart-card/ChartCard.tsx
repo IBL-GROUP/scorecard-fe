@@ -1,10 +1,13 @@
 import { Box, Flex, GridItem, Skeleton, Text } from '@chakra-ui/react';
 import type { ReactNode } from 'react';
+import { InfoMark, type InfoPoint } from '@/components/info-mark';
 import { colors } from '@/constants/theme';
 
 export interface ChartCardProps {
   title: string;
   titleNode?: ReactNode;
+  /** Shown as a "?" after the title; hovering or focusing it lists these points. */
+  info?: InfoPoint[];
   children: ReactNode;
   colSpan?: number;
   height?: string;
@@ -26,6 +29,7 @@ const LINE_SVG_POINTS = LINE_DOTS.map((bottom, i) => {
 export function ChartCard({
   title,
   titleNode,
+  info,
   children,
   colSpan = 4,
   height = 'auto',
@@ -54,15 +58,20 @@ export function ChartCard({
           borderBottom="1px solid"
           borderColor="gray.200"
         >
-          <Text
-            fontSize="14px"
-            fontWeight="bold"
-            color="gray.800"
-            textTransform="uppercase"
-            letterSpacing="wide"
-          >
-            {titleNode ?? title}
-          </Text>
+          {/* Above the chart legends, which are lifted up into this row (zIndex 1)
+              across the card's full width and would otherwise cover the "?". */}
+          <Flex align="center" minW={0} position="relative" zIndex={2}>
+            <Text
+              fontSize="14px"
+              fontWeight="bold"
+              color="gray.800"
+              textTransform="uppercase"
+              letterSpacing="wide"
+            >
+              {titleNode ?? title}
+            </Text>
+            {info?.length ? <InfoMark about={title} points={info} /> : null}
+          </Flex>
           {headerRight}
         </Box>
         <Box h={height} position="relative">
