@@ -1489,7 +1489,8 @@
             "type": "string"
           },
           "error": {
-            "type": "string"
+            "type": "string",
+            "description": "Detail. For bad input (4xx) the server says what is wrong. For unexpected failures the 2.0 server (BigQuery) returns only `Internal error (ref xxxxxxxx)`; the detail is in the server log under that reference (story S5). 1.0 returned the database message here."
           }
         }
       },
@@ -1991,7 +1992,8 @@
                 "type": "string"
               }
             ],
-            "description": "Average across branches with a value"
+            "description": "Average across branches with a value; null when no branch has a value (no target for the item)",
+            "nullable": true
           }
         }
       },
@@ -2134,7 +2136,8 @@
                 "type": "string"
               }
             ],
-            "description": "Postgres numerics may arrive as strings"
+            "description": "Postgres numerics may arrive as strings. Null when no cover_days benchmark is in force on endDate.",
+            "nullable": true
           },
           "cover_days": {
             "oneOf": [
@@ -2178,7 +2181,8 @@
                 "type": "string"
               }
             ],
-            "description": "Postgres numerics may arrive as strings"
+            "description": "Postgres numerics may arrive as strings. Null when every deliverd_qty in the group is null.",
+            "nullable": true
           },
           "delivery_pct": {
             "oneOf": [
@@ -2189,7 +2193,8 @@
                 "type": "string"
               }
             ],
-            "description": "Postgres numerics may arrive as strings"
+            "description": "Postgres numerics may arrive as strings. Null when total_delivery_qty is null.",
+            "nullable": true
           }
         }
       },
@@ -2281,7 +2286,9 @@
             "type": "string"
           },
           "storagelocation": {
-            "type": "string"
+            "type": "string",
+            "nullable": true,
+            "description": "Null when the source row has no storage location."
           },
           "storagelocationname": {
             "type": "string"

@@ -102,3 +102,4 @@ and `usageExport` in [`authenticator-be.openapi.json`](../api/authenticator-be.o
 | Date | Change | Author | PR |
 |---|---|---|---|
 | 2026-11-03 | Baseline reverse-engineered from code | Spec-first migration | — |
+| 2026-11-11 | 2.0 (story S3) sends the same heartbeat and export events under the same dashboard name, with 2.0 tab labels (`src/v2/features/usage.ts`, FR-EXEC-022). No requirement here changed | Claude Code (stories S3, S4) | — |

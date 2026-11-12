@@ -89,6 +89,7 @@ Rules:
 | NAV | User menu, dashboard switching and user manual | `specs/features/FEAT-NAV-user-menu.md` |
 | TBL | Data tables and Excel export | `specs/features/FEAT-TBL-data-tables.md` |
 | SPEC | Specification tooling (this system) | `specs/features/FEAT-SPEC-spec-tooling.md` |
+| EXEC | Supply Chain Pulse 2.0 executive dashboard | `specs/features/FEAT-EXEC-executive-dashboard.md` |
 
 A new feature registers its area here **in the same PR** that adds its spec.
 

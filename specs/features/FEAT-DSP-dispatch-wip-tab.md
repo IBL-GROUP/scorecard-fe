@@ -93,3 +93,5 @@ Not applicable. No agreed targets.
 | Date | Change | Author | PR |
 |---|---|---|---|
 | 2026-11-03 | Baseline reverse-engineered from code | Spec-first migration | — |
+| 2026-11-11 | Contract: `DispatchVsOrderRow.total_delivery_qty`, `delivery_pct` and `RpmRow.storagelocation` marked nullable (null when the source has no value). Documents existing behaviour; no requirement changed | Story S2 (BigQuery backend) | — |
+| 2026-11-11 | 2.0 (story S4) shows these tables on Fulfilment & Operations with the "dates only" marker (FR-EXEC-008, FR-EXEC-023). No requirement here changed | Claude Code (stories S3, S4) | — |

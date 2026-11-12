@@ -196,6 +196,37 @@ These are defined in the conventions. They are listed here only for lookup.
 | Area | The 2–6 letter code in a requirement ID (`SUM`, `MET`…), registered in CONVENTIONS §3. | [CONVENTIONS §3](../CONVENTIONS.md) |
 | `path#symbol` | How a requirement cites the code that implements it. | [CONVENTIONS §5](../CONVENTIONS.md) |
 
+## 11. Supply Chain Pulse 2.0 (executive dashboard)
+
+Terms introduced by PRD v2 and the S1 prototype ([FEAT-EXEC](../features/FEAT-EXEC-executive-dashboard.md)). All are **Proposed** until the S1 review (GAP-031).
+
+| Term | Meaning | Code / API | See |
+|---|---|---|---|
+| Attainment to date | Sales (or EFP sales) so far as a share of the target (or budget) prorated to today. 100% = on pace. Windows over one month are built month by month. | `attainmentToDate` | BR-EXEC-001, BR-EXEC-002 |
+| Projected month-end | Where the month lands if today's daily run-rate holds: (sales ÷ days gone × total days) ÷ month target. | `projectedMonthEnd` | BR-EXEC-001 |
+| Run-rate required | Sales needed per remaining day to reach the month target, beside the current daily run-rate. | `runRate` | RV-05 in PRD v2 |
+| Coverage index | Total cover days as a share of the target-weighted benchmark. Too low is stock-out risk, too high is excess. | `coverageIndex` | BR-EXEC-004 |
+| Excess inventory value | Stock above benchmark cover, valued at cost: max(0, cover − benchmark) × daily target × cost ÷ TP. | `excessByClass` | BR-EXEC-005 |
+| Cover shortfall value | Planned sales (TP) that stock cannot cover up to the threshold: (threshold − cover) × daily target. | `shortfallByClass` | BR-EXEC-005 |
+| Service level / stock-out risk | Network share of SKUs above (or below) their class threshold, from the above/below counts. | `serviceLevel` | BR-EXEC-006 |
+| Fill rate | Delivered ÷ ordered quantity across materials (quantity-based; dispatch rows carry no price). | `fillRate` | BR-EXEC-006 |
+| Material on hold | Raw and packing material that cannot be used today (blocked, quality inspection, restricted, returns) as a share of RMPM value. | `rmpmSummary` | BR-EXEC-006 |
+| Production completion | Good received quantity ÷ item quantity across WIP production orders. | `wipSummary` | BR-EXEC-006 |
+| Supply-chain working capital | Finished goods at cost + WIP value + RMPM value. | `workingCapital` | BR-EXEC-007 |
+| Range activation | SKUs that sold ÷ SKUs in the range, per class. | `rangeActivation` | RV-10 in PRD v2 |
+| Plan alignment index | The 1.0 Forecast Vs Budget % (IBL target ÷ TSCL budget) with a RAG band. | `ibl_vs_tscl_pct` | BR-MET-006 |
+| RD reporting compliance | RDs that reported stock today ÷ all active RDs. | `rdSummary` | BR-EXEC-006 |
+| Stale stock value | Last-reported stock value of RDs that have not reported today: distributor stock we cannot currently see. | `rdSummary` | DH-03 in PRD v2 |
+| RAG band | The Green / Amber / Red ranges for a KPI, held in one configuration. Shown as colour plus icon plus word (On track / Watch / Act). | `kpiThresholds` | BR-EXEC-008 |
+| Top Risks & Opportunities | The ranked exception list on the Overview, built by rules from loaded data. | `buildRisks` | BR-EXEC-009 |
+| Operational Detail | The collapsible section at the foot of each 2.0 tab that keeps the 1.0 tables. | `OperationalDetail` | FR-EXEC-011 |
+| Detail sheet | The panel that slides in from the right when an item is clicked, showing its detail. Deeper items stack on top (design-system SheetStack). | `DetailLayer` | FR-EXEC-017 |
+| Planner view | A switch in the 2.0 user menu. On, the Operational Detail tables open expanded on every tab; off (the default, "executive view"), they open collapsed. Remembered per user. | `setPersona` | FR-EXEC-021 |
+| Not available yet | What a 2.0 tile or card says when scorecard-be answers `503 SOURCE_PENDING`: its source table has not been moved to BigQuery yet. Not an error. | `isSourcePending` | FR-EXEC-020 |
+| Live mode / demo mode | 2.0 runs on live data through the portal session and scorecard-be v2 (live), or on generated data in the browser with no sign-in (demo, `VITE_DEMO_DATA=true`). | `DEMO_DATA` | FR-EXEC-002, FR-EXEC-019 |
+| Chip (local filter) | A dismissible filter set by clicking a chart; it narrows the current tab only. | `ChipBar` | FR-EXEC-012 |
+| Demo data | Generated numbers answered in the browser (VITE_DEMO_DATA=true) for the S1 prototype. Not company data. | `demoAdapter` | FR-EXEC-002 |
+
 ## Maintaining this page
 
 - A spec, feature or code change that introduces a new business term adds it

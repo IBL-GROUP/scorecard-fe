@@ -25,6 +25,7 @@
 10. [Branch Reference](#10-branch-reference)
 11. [Database Objects](#11-database-objects)
 12. [Known Issues](#12-known-issues)
+13. [BigQuery Backend (2.0, read-only)](#13-bigquery-backend-20-read-only)
 
 ---
 
@@ -718,3 +719,60 @@ No longer used (listed in earlier versions of this document):
 | 7 | Validation | `startDate` / `endDate` are not validated; `/forecast-accuracy-monthly` defaults to March 2026 | A missing date gives empty results or a 500 |
 | 8 | Backend config | `DB2_*` (`franchise_db`) is connected at startup but unused; its warning about RD Status is wrong | Dead configuration |
 | 9 | Frontend | `dailySalesAvg` hook targets `/daily-sales-avg`, which does not exist; TP/EFP toggle is commented out | Dead code |
+
+---
+
+## 13. BigQuery Backend (2.0, read-only)
+
+Added 11 November 2026 for Supply Chain Pulse 2.0, story S2. Sections 1–12
+still describe the 1.0 PostgreSQL server, which is unchanged and keeps running.
+Full detail: `scorecard-be/v2/README.md` and `scorecard-be/v2/SOURCE_MAP.md`
+(branch `api-refresh-2.0`).
+
+### What it is
+
+- A second Express server in `scorecard-be/v2/` (`npm run start:v2`, port
+  `3012`). It serves the same paths, parameters and response shapes as
+  section 6, except `/me`, which the frontend never calls.
+- It reads BigQuery project `data-light-house-prod`, dataset `EDW`
+  (location `europe-west6`). It **never writes**: a guard refuses anything but
+  one `SELECT`/`WITH` statement, only query jobs are created, and the service
+  account should hold only BigQuery Data Viewer + Job User.
+- Every query has a 3 GB `maximumBytesBilled` cap. Results are cached in memory
+  for 10 minutes, and identical requests in flight share one BigQuery job.
+- Auth is the same as 1.0 (section 4): the authenticator JWT, checked by
+  `middleware/auth.js`. Non-GET methods get `405`.
+- The SQL is the 1.0 SQL rewritten for BigQuery. The known issues in section
+  12 (#1, #4, #5, #6, #7) are **kept on purpose**, so 1.0 and 2.0 agree.
+
+### Table mapping (section 11 → BigQuery `EDW`)
+
+| 1.0 (PostgreSQL) | 2.0 (BigQuery) | Status |
+|---|---|---|
+| `vw_mv_tscl_data_` | `vw_mv_tsc_data` | Confirmed by the data team |
+| `mv_tscl_spl_targets` | `vw_tscl_spl_targets` | Confirmed |
+| `mv_tscl_budget` | `vw_tscl_budget` | Confirmed (budget loaded only to June 2026) |
+| `vw_daily_stock_movement_history` | `vw_daily_stock_movement_history` | Confirmed |
+| `cover_days` | `cover_days` | Confirmed |
+| `mv_scoreboard_hub_mapping` | `hub_mapping` | Confirmed |
+| `active_rds_list` | `active_rds` | Confirmed |
+| `vw_dispatch_vs_orders` | `vw_dispatch_vs_order` | Confirmed |
+| `sap_tpkg_traw_data` | `vw_sap_tpkg_traw_data` | Confirmed (loaded only to 30 June 2026) |
+| `vw_items_class`, `sap_items_detail` | same names | Same name, all columns present |
+| `tscl_efp` | `tscl_efp` | Same name; `"SALE E.F.P"` read as `sales_efp` (to confirm) |
+| `sales_inv_locations` | `hub_mapping` | Confirmed 12 Nov 2026. Read with 1.0's names: `storage_location_code` → `inv_sloc`, `location` → `inv_sloc_desc` |
+| `sap_wip_data` | `vw_wip_sap_data` (not created yet) | Route ported; `/wip` answers `503` until the data team creates the view (same columns as before), then works without a change |
+| `primary_secondary_stock` | `vw_primaray_secondary_stock` | Branch code and name to be added by the data team; `/rd-status` answers `503` until then |
+
+A `503` looks like `{ "success": false, "code": "SOURCE_PENDING", "message": "...", "pending": [...] }`.
+`/api/health` lists the sources still pending.
+
+### Rollback
+
+The 2.0 server runs **beside** 1.0; nothing in 1.0 changes. To go back, point
+the frontend at the 1.0 server again:
+
+1. Set `VITE_API_BASE_URL` back to the 1.0 API URL (port `3005`) in the
+   frontend's environment, and rebuild or redeploy the frontend.
+2. Optionally stop the 2.0 process (`npm run start:v2`). No data needs to be
+   restored: 2.0 never writes to BigQuery or PostgreSQL.

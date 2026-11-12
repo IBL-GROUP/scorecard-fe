@@ -111,3 +111,4 @@ Not applicable. Permission gating is specified in [FEAT-PERM](FEAT-PERM-permissi
 | Date | Change | Author | PR |
 |---|---|---|---|
 | 2026-11-03 | Baseline reverse-engineered from code | Spec-first migration | — |
+| 2026-11-11 | 2.0 (story S3) keeps this tab-by-tab queue: every 2.0 query passes its tab's `enabled` flag and is tracked per tab (`src/v2/features/data.ts#useDashboardData`, FR-EXEC-014). No requirement here changed | Claude Code (stories S3, S4) | — |

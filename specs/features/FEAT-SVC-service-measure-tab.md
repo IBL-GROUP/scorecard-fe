@@ -104,3 +104,6 @@ Not applicable beyond FR-PERM-005.
 | Date | Change | Author | PR |
 |---|---|---|---|
 | 2026-11-03 | Baseline reverse-engineered from code | Spec-first migration | — |
+| 2026-11-11 | Contract: `TgtVsActualRow.cover_days_tgt` marked nullable (null when no benchmark is in force on endDate). Documents existing behaviour; no requirement changed | Story S2 (BigQuery backend) | — |
+| 2026-11-11 | 2.0 (story S4) shows these figures on Inventory & Working Capital (FR-EXEC-007, FR-EXEC-023). No requirement here changed | Claude Code (stories S3, S4) | — |
+| 2026-11-12 | Contract: `InventoryDaysRow.total` marked nullable (null when no branch has cover days for the item, i.e. no target). Documents existing behaviour (PostgreSQL `AVG` of no values is also null); no requirement changed. In the 2.0 backend, `sales_inv_locations` is now read from `EDW.hub_mapping` (data team, 12 Nov 2026), so `/inventory-days`, `/service-measure` and the `branch` filter return data | Story S2 (BigQuery backend) | — |

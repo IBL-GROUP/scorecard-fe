@@ -10,7 +10,15 @@
     "preview": "vite preview",
     "specs:validate": "node scripts/validate-specs.mjs",
     "specs:matrix": "node scripts/validate-specs.mjs --write-matrix",
-    "specs:test": "node --test scripts/validate-specs.test.mjs"
+    "specs:test": "node --test scripts/validate-specs.test.mjs",
+    "dev:v2": "vite --mode v2demo",
+    "build:v2demo": "tsc && vite build --mode v2demo",
+    "test": "vitest run",
+    "dev:v2live": "vite --mode v2live",
+    "build:v2live": "tsc && vite build --mode v2live",
+    "test:e2e": "playwright test",
+    "test:e2e:report": "playwright show-report e2e-report",
+    "security:bundle": "node scripts/check-bundle-secrets.mjs"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.31.0",
@@ -29,6 +37,8 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.10.1",
+    "@playwright/test": "1.64.1",
     "@tanstack/react-query-devtools": "^5.62.12",
     "@types/node": "^22.10.5",
     "@types/react": "^18.3.18",
@@ -40,6 +50,7 @@
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.18",
     "typescript": "^5.7.3",
-    "vite": "^6.0.7"
+    "vite": "^6.0.7",
+    "vitest": "3.2.4"
   }
 }

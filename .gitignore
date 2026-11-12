@@ -25,3 +25,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright end-to-end tests (story S5)
+dist-e2e
+e2e-results
+e2e-report

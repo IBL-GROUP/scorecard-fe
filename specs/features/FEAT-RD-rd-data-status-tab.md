@@ -101,3 +101,4 @@ Not applicable beyond FR-PERM-005.
 | Date | Change | Author | PR |
 |---|---|---|---|
 | 2026-11-03 | Baseline reverse-engineered from code | Spec-first migration | — |
+| 2026-11-11 | 2.0 (story S4) shows these figures on Distribution & Data Health (FR-EXEC-009). With scorecard-be v2, `/rd-status` answers "not available yet" until distributor stock with branch is in BigQuery (FR-EXEC-020). No requirement here changed | Claude Code (stories S3, S4) | — |

@@ -105,3 +105,4 @@ Not applicable. No agreed targets.
 | Date | Change | Author | PR |
 |---|---|---|---|
 | 2026-11-03 | Baseline reverse-engineered from code | Spec-first migration | — |
+| 2026-11-11 | 2.0 (story S3) has its own user menu with a Planner view switch (`src/v2/shell/UserMenu.tsx#UserMenu`, FR-EXEC-021); it reuses `src/api/account.ts`. No requirement here changed | Claude Code (stories S3, S4) | — |

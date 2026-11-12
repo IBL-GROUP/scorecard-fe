@@ -119,3 +119,4 @@ sections (GAP-002). Role administration belongs to the authenticator.
 | Date | Change | Author | PR |
 |---|---|---|---|
 | 2026-11-03 | Baseline reverse-engineered from code | Spec-first migration | — |
+| 2026-11-11 | 2.0 (story S3) reads the same permission codes (`src/api/permissions.ts`) and maps the four sections to its five tabs (FR-EXEC-013, FR-EXEC-019). No requirement here changed | Claude Code (stories S3, S4) | — |

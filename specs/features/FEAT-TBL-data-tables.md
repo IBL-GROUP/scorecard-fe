@@ -93,3 +93,4 @@ Not applicable.
 | Date | Change | Author | PR |
 |---|---|---|---|
 | 2026-11-03 | Baseline reverse-engineered from code | Spec-first migration | — |
+| 2026-11-11 | 2.0 (story S4) uses the new design-system table; its exports include the Total row (GAP-024 resolved for 2.0, FR-EXEC-022). No requirement here changed | Claude Code (stories S3, S4) | — |

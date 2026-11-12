@@ -119,3 +119,4 @@ Not applicable. No specific targets have been agreed.
 | Date | Change | Author | PR |
 |---|---|---|---|
 | 2026-11-03 | Baseline reverse-engineered from code | Spec-first migration | — |
+| 2026-11-11 | 2.0 (story S3) has its own filter bar, `src/v2/shell/FilterBar.tsx` (FR-EXEC-004); Division still expands to SKU codes as FR-FILT-006. No requirement here changed | Claude Code (stories S3, S4) | — |

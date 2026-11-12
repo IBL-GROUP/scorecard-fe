@@ -51,6 +51,7 @@ requirements. See the [migration plan](migration-plan.md).
 | | [features/FEAT-SVC-service-measure-tab.md](features/FEAT-SVC-service-measure-tab.md) | Service Measure tab |
 | | [features/FEAT-DSP-dispatch-wip-tab.md](features/FEAT-DSP-dispatch-wip-tab.md) | Dispatch & WIP tab |
 | | [features/FEAT-RD-rd-data-status-tab.md](features/FEAT-RD-rd-data-status-tab.md) | RD Data Status tab |
+| | [features/FEAT-EXEC-executive-dashboard.md](features/FEAT-EXEC-executive-dashboard.md) | Supply Chain Pulse 2.0 executive dashboard (S1 prototype) |
 | | [features/FEAT-TBL-data-tables.md](features/FEAT-TBL-data-tables.md) | Search, sort, Excel export |
 | | [features/FEAT-USG-usage-tracking.md](features/FEAT-USG-usage-tracking.md) | Heartbeats and export events |
 | | [features/FEAT-NAV-user-menu.md](features/FEAT-NAV-user-menu.md) | User menu, dashboard switching, manual |

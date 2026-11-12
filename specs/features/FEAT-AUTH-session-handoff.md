@@ -140,3 +140,4 @@ GAP-014).
 | Date | Change | Author | PR |
 |---|---|---|---|
 | 2026-11-03 | Baseline reverse-engineered from code | Spec-first migration | — |
+| 2026-11-11 | 2.0 (story S3) reuses this session handoff unchanged (`src/utils/session.ts`) behind its own gate, `src/v2/auth/AuthGate.tsx#AuthGate` (FR-EXEC-019). No requirement here changed | Claude Code (stories S3, S4) | — |
