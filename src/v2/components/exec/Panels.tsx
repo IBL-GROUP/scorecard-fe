@@ -1,14 +1,17 @@
 import { Box, Flex, Grid, Text, type GridProps } from '@chakra-ui/react';
-import type { ReactNode } from 'react';
+import { Children, type ReactNode } from 'react';
 import { FiAlertCircle, FiChevronDown, FiChevronRight, FiClock, FiLock, FiX } from 'react-icons/fi';
 import { colors } from '@/v2/constants/theme';
 import { useStore, type Chip } from '@/v2/features/store';
+import { anyShown } from '@/v2/features/catalog';
 import { SECTION_LABEL, type Section, type TabKey } from '@/v2/features/tabs';
 import { EmptyChart } from '@/v2/components/charts/EmptyChart';
 import { ExportNameContext } from '@/v2/components/data-table/DataTable';
 
-/** A zone of the inverted pyramid (PRD 5.1). */
+/** A zone of the inverted pyramid (PRD 5.1). Hidden in "1.0 only" mode when none of its items carry a 1.0 metric. */
 export function Zone({ label, children }: { label: string; children: ReactNode }) {
+  const { metricMode, shows } = useStore();
+  if (metricMode !== 'all' && !anyShown(children, shows)) return null;
   return (
     <Box as="section" aria-label={label} mb={4}>
       <Text fontSize="11px" letterSpacing=".06em" textTransform="uppercase" color={colors.mutedText} fontWeight={600} mb="6px">
@@ -21,8 +24,13 @@ export function Zone({ label, children }: { label: string; children: ReactNode }
 
 /** KPI banner: up to 6 tiles; wraps to 3 per row on tablet and 1 on phone (PRD 5.5). */
 export function TileRow({ children, max = 6 }: { children: ReactNode; max?: number }) {
+  const { metricMode, shows } = useStore();
+  // In "1.0 only" mode the row is as wide as the tiles left in it.
+  const n = metricMode === 'all' ? max : Children.toArray(children).filter((c) => anyShown(c, shows)).length;
+  if (!n) return null;
+  const cols = (k: number) => `repeat(${Math.min(k, n)}, minmax(0,1fr))`;
   return (
-    <Grid className="sp-stagger" gap={3} templateColumns={{ base: '1fr', sm: 'repeat(2, minmax(0,1fr))', md: 'repeat(3, minmax(0,1fr))', xl: `repeat(${max}, minmax(0,1fr))` }}>
+    <Grid className="sp-stagger" gap={3} templateColumns={{ base: '1fr', sm: cols(2), md: cols(3), xl: cols(max) }}>
       {children}
     </Grid>
   );
@@ -30,6 +38,8 @@ export function TileRow({ children, max = 6 }: { children: ReactNode; max?: numb
 
 /** 12-column grid for ChartCards (colSpan per card). */
 export function CardGrid({ children, ...rest }: { children: ReactNode } & GridProps) {
+  const { metricMode, shows } = useStore();
+  if (metricMode !== 'all' && !anyShown(children, shows)) return null;
   return (
     <Grid templateColumns={{ base: '1fr', lg: 'repeat(12, minmax(0,1fr))' }} gap={3} {...rest}>
       {children}
@@ -86,8 +96,9 @@ export function openDetail(id: string, setZone4: (id: string, open: boolean) => 
 
 /** Zone 4: a collapsible block holding a 1.0 table (PRD 3.1). */
 export function OperationalDetail({ id, kpi, title, subtitle, children }: { id: string; kpi: string; title: string; subtitle?: string; children: ReactNode }) {
-  const { isZone4Open, setZone4 } = useStore();
+  const { isZone4Open, setZone4, shows } = useStore();
   const open = isZone4Open(id);
+  if (!shows(kpi)) return null;
   return (
     <Box data-detail={id} data-kpi={kpi} scrollMarginTop="140px" bg={colors.cardBg} border="1px solid" borderColor={colors.border} borderRadius="4px" mb={3}>
       <Flex

@@ -1,7 +1,9 @@
 // What each tab must show, for the S1 coverage check (TC-S1-02, TC-S1-03).
 // PRD v2 section 4 items per tab, and the 36 retained 1.0 metrics of
-// section 2.4 with the 2.0 item(s) that carry each one.
+// section 2.4 with the 2.0 item(s) that carry each one. The same list drives
+// the header's "1.0 only" switch (FR-EXEC-024).
 
+import { Children, isValidElement, type ReactNode } from 'react';
 import type { TabKey } from './tabs';
 
 const range = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => `${prefix}-${String(i + 1).padStart(2, '0')}`);
@@ -52,6 +54,49 @@ export const RETAINED_1_0: { n: number; metric: string; ids: string[] }[] = [
   { n: 35, metric: 'Per-RD list', ids: ['DH-14'] },
   { n: 36, metric: 'Upload status per RD', ids: ['DH-14', 'DH-01'] },
 ];
+
+/** PRD IDs that carry a retained 1.0 metric: what "1.0 only" mode shows (FR-EXEC-024). */
+export const V1_IDS: ReadonlySet<string> = new Set(RETAINED_1_0.flatMap((m) => m.ids));
+
+export type MetricMode = 'all' | 'v1';
+
+/**
+ * Whether an item tagged with PRD ID(s) `kpi` (space-separated) is shown in
+ * `mode`. "all" shows everything; "v1" shows an item only when one of its IDs
+ * carries a 1.0 metric. An untagged item is 2.0-only.
+ */
+export function isShown(mode: MetricMode, kpi?: string | null): boolean {
+  if (mode === 'all') return true;
+  return !!kpi && kpi.split(/\s+/).some((id) => V1_IDS.has(id));
+}
+
+/** Whether a tab has anything to show in `mode`. */
+export const tabHasItems = (mode: MetricMode, tab: TabKey) => mode === 'all' || PRD_ITEMS[tab].some((id) => V1_IDS.has(id));
+
+const PRD_ID = /^(EX|RV|IN|OP|DH)-\d{2}$/;
+
+/** The PRD ID(s) an element is tagged with: ExecTile `id`, ChartCard `dataKpi`, OperationalDetail `kpi`. */
+function tagOf(props: Record<string, unknown>): string | undefined {
+  for (const k of ['kpi', 'dataKpi', 'data-kpi']) if (typeof props[k] === 'string') return props[k] as string;
+  if (typeof props.id === 'string' && PRD_ID.test(props.id)) return props.id;
+  return undefined;
+}
+
+/**
+ * Whether anything in `node` is shown under `shows` (FR-EXEC-024). A tagged
+ * element decides for itself; an untagged one is searched through its
+ * children; an untagged leaf (Top Risks, Data trust) is a 2.0-only item.
+ */
+export function anyShown(node: ReactNode, shows: (kpi?: string | null) => boolean): boolean {
+  let found = false;
+  Children.forEach(node, (c) => {
+    if (found || !isValidElement(c)) return;
+    const props = c.props as Record<string, unknown>;
+    const tag = tagOf(props);
+    found = tag !== undefined ? shows(tag) : anyShown(props.children as ReactNode, shows);
+  });
+  return found;
+}
 
 /** PRD IDs currently rendered in the page (elements carrying data-kpi). */
 export function renderedIds(): Set<string> {

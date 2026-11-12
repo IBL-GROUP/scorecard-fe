@@ -1,5 +1,5 @@
-// The 2.0 app shell: navbar (tabs, "Data as of" stamp EX-11, theme switch,
-// user menu), global filter bar, the active tab, and (demo mode) the demo controls.
+// The 2.0 app shell: navbar (tabs, "Data as of" stamp EX-11, "All metrics /
+// 1.0 only" switch, theme switch, user menu), global filter bar, the active tab, and (demo mode) the demo controls.
 
 import { Box, Flex, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
@@ -12,6 +12,7 @@ import { useDashboardData } from '@/v2/features/data';
 import { useActiveTab, useNav, scrollToKpi } from '@/v2/features/nav';
 import { useStore } from '@/v2/features/store';
 import { TABS } from '@/v2/features/tabs';
+import { tabHasItems, type MetricMode } from '@/v2/features/catalog';
 import { trust } from '@/v2/features/derive';
 import { rag } from '@/v2/features/kpiThresholds';
 import { RagDot } from '@/v2/components/exec/Rag';
@@ -42,6 +43,62 @@ function DataAsOf({ closing, freshness }: { closing: string | null; freshness: n
   );
 }
 
+const METRIC_MODES: { mode: MetricMode; label: string; short: string }[] = [
+  { mode: 'all', label: 'All metrics', short: 'All' },
+  { mode: 'v1', label: '1.0 only', short: '1.0' },
+];
+
+/**
+ * "All metrics" shows every 2.0 KPI and chart; "1.0 only" shows just the items
+ * that carry a Supply Chain Pulse 1.0 metric. Remembered per user (FR-EXEC-024).
+ */
+export function MetricModeSwitch() {
+  const { metricMode, setMetricMode } = useStore();
+  return (
+    <Flex
+      role="group"
+      aria-label="Metrics shown"
+      title="All metrics: every 2.0 KPI and chart. 1.0 only: just the KPIs and metrics Supply Chain Pulse 1.0 has."
+      border="1px solid"
+      borderColor={colors.border}
+      borderRadius="999px"
+      p="2px"
+      gap="2px"
+      flexShrink={0}
+      data-metric-mode={metricMode}
+    >
+      {METRIC_MODES.map((o) => {
+        const on = metricMode === o.mode;
+        return (
+          <Box
+            key={o.mode}
+            as="button"
+            aria-pressed={on}
+            aria-label={o.label}
+            onClick={() => setMetricMode(o.mode)}
+            px="10px"
+            py="3px"
+            borderRadius="999px"
+            fontSize="12px"
+            fontWeight={on ? 700 : 500}
+            bg={on ? colors.brandSoft : 'transparent'}
+            color={on ? colors.brand : colors.bodyText}
+            whiteSpace="nowrap"
+            _hover={on ? undefined : { bg: colors.navbarHover }}
+          >
+            <Text as="span" display={{ base: 'none', lg: 'inline' }}>
+              {o.label}
+            </Text>
+            <Text as="span" display={{ base: 'inline', lg: 'none' }}>
+              {o.short}
+            </Text>
+          </Box>
+        );
+      })}
+    </Flex>
+  );
+}
+
 export function Shell() {
   const tab = useActiveTab();
   const nav = useNav();
@@ -50,7 +107,9 @@ export function Shell() {
   const { colorMode, toggleColorMode } = useColorMode();
   const [demoOpen, setDemoOpen] = useState(false);
   const data = useDashboardData(tab);
-  const visibleTabs = TABS.filter((t) => t.anyOf.some((s) => st.can(s)));
+  // A tab is listed when the user holds one of its sections and, in "1.0 only"
+  // mode, it carries a 1.0 metric (every tab does today).
+  const visibleTabs = TABS.filter((t) => t.anyOf.some((s) => st.can(s)) && tabHasItems(st.metricMode, t.key));
   const t = trust(data.tabs.overview);
 
   // One message when any figure fails to load (the rest of the page keeps working).
@@ -141,6 +200,7 @@ export function Shell() {
           <Box display={{ base: 'none', xl: 'block' }}>
             <DataAsOf closing={t.closing} freshness={t.freshness} />
           </Box>
+          <MetricModeSwitch />
           <Box as="button" onClick={toggleColorMode} aria-label="Switch light or dark mode" color={colors.mutedText} p="6px" borderRadius="4px" _hover={{ bg: colors.navbarHover }}>
             {colorMode === 'light' ? <FiMoon /> : <FiSun />}
           </Box>

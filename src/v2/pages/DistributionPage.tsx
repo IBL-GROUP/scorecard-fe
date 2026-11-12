@@ -29,6 +29,7 @@ const fmtDate = (s: string | null | undefined) =>
   s ? new Date(`${s.slice(0, 10)}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : DASH;
 
 function TrustPanel({ t, isLoading, locked }: { t: ReturnType<typeof trust>; isLoading: boolean; locked: boolean }) {
+  const { shows } = useStore();
   const fRag = rag(t.freshness, 'freshnessDays');
   const uRag = rag(t.unclassified, 'unclassifiedPct');
   const versions = [...new Set(t.bench.map((b) => b.effective_date).filter(Boolean))];
@@ -46,6 +47,8 @@ function TrustPanel({ t, isLoading, locked }: { t: ReturnType<typeof trust>; isL
       {children}
     </Box>
   );
+  // 2.0-only: hidden in "1.0 only" mode (FR-EXEC-024).
+  if (!shows('DH-07 DH-08 DH-09 DH-10')) return null;
   return (
     <Box data-kpi="DH-07 DH-08 DH-09 DH-10" scrollMarginTop="140px" bg={colors.cardBg} border="1px solid" borderColor={colors.border} borderTop={`3px solid ${colors.brand}`} borderRadius="4px" px={4} py="8px" minW={0}>
       <Text fontSize="13px" fontWeight={700} color={colors.darkText} mb="2px">

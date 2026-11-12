@@ -7,6 +7,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { presetWindow, todayIso, type CompareKey, type PresetKey, type Window } from './period';
 import { ALL_SECTIONS, type Section, type TabKey } from './tabs';
+import { isShown, type MetricMode } from './catalog';
 
 export interface Filters {
   division: string[];
@@ -44,6 +45,16 @@ export interface LiveUser {
 const USER_KEY = 'sc2.demoUser';
 const ZONE4_KEY = 'sc2.zone4';
 const PERSONA_KEY = 'sc2.persona';
+const METRIC_MODE_KEY = 'sc2.metricMode';
+
+/** The header's "All metrics / 1.0 only" choice, remembered per user (FR-EXEC-024). Default: all. */
+function readMetricMode(id: string): MetricMode {
+  try {
+    return localStorage.getItem(`${METRIC_MODE_KEY}.${id}`) === 'v1' ? 'v1' : 'all';
+  } catch {
+    return 'all';
+  }
+}
 
 function readPersona(id: string): Persona {
   try {
@@ -78,6 +89,8 @@ interface State {
   user: AppUser;
   /** Operational Detail sections the user opened or closed, by id. */
   zone4: Record<string, boolean>;
+  /** "all" = every 2.0 item; "v1" = only items carrying a 1.0 metric (FR-EXEC-024). */
+  metricMode: MetricMode;
 }
 
 interface Store extends State {
@@ -92,6 +105,9 @@ interface Store extends State {
   isZone4Open: (id: string) => boolean;
   setZone4: (id: string, open: boolean) => void;
   can: (s: Section) => boolean;
+  setMetricMode: (m: MetricMode) => void;
+  /** Whether an item tagged with PRD ID(s) is shown in the current metric mode. */
+  shows: (kpi?: string | null) => boolean;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -116,6 +132,7 @@ export function StoreProvider({ children, live }: { children: ReactNode; live?: 
       chips: {},
       user,
       zone4: zone4Of(user),
+      metricMode: readMetricMode(user.id),
     };
   });
 
@@ -126,7 +143,12 @@ export function StoreProvider({ children, live }: { children: ReactNode; live?: 
     setState((s) =>
       s.user.id === live.id && s.user.name === live.name && s.user.sections.join() === live.sections.join()
         ? s
-        : { ...s, user: { ...fromLive(live) }, zone4: s.user.id === live.id ? s.zone4 : zone4Of(fromLive(live)) },
+        : {
+            ...s,
+            user: { ...fromLive(live) },
+            zone4: s.user.id === live.id ? s.zone4 : zone4Of(fromLive(live)),
+            metricMode: s.user.id === live.id ? s.metricMode : readMetricMode(live.id),
+          },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveKey]);
@@ -149,7 +171,7 @@ export function StoreProvider({ children, live }: { children: ReactNode; live?: 
   );
   const setUser = useCallback((u: AppUser) => {
     writeJson(USER_KEY, u);
-    setState((s) => ({ ...s, user: u, zone4: zone4Of(u) }));
+    setState((s) => ({ ...s, user: u, zone4: zone4Of(u), metricMode: readMetricMode(u.id) }));
   }, []);
   const setPersona = useCallback((p: Persona) => {
     setState((s) => {
@@ -171,6 +193,17 @@ export function StoreProvider({ children, live }: { children: ReactNode; live?: 
     });
   }, []);
 
+  const setMetricMode = useCallback((m: MetricMode) => {
+    setState((s) => {
+      try {
+        localStorage.setItem(`${METRIC_MODE_KEY}.${s.user.id}`, m);
+      } catch {
+        /* storage blocked: the choice lasts for this visit */
+      }
+      return { ...s, metricMode: m };
+    });
+  }, []);
+
   const value = useMemo<Store>(
     () => ({
       ...state,
@@ -185,8 +218,10 @@ export function StoreProvider({ children, live }: { children: ReactNode; live?: 
       // Collapsed by default for executives, expanded for planners (PRD 3.1).
       isZone4Open: (id) => state.zone4[id] ?? state.user.persona === 'planner',
       can: (sec) => state.user.sections.includes(sec),
+      setMetricMode,
+      shows: (kpi) => isShown(state.metricMode, kpi),
     }),
-    [state, setPreset, setCustom, setCompare, applyFilters, setChip, setUser, setPersona, setZone4],
+    [state, setPreset, setCustom, setCompare, applyFilters, setChip, setUser, setPersona, setZone4, setMetricMode],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

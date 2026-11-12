@@ -33,8 +33,8 @@ means at least one of its test cases points at a test file.
 | NAV | 11 | 8 | 0 | 1 | 0 |
 | TBL | 5 | 4 | 0 | 1 | 0 |
 | SPEC | 15 | 15 | 15 | 3 | 2 |
-| EXEC | 46 | 42 | 25 | 6 | 3 |
-| **Total** | 189 | 149 | 41 | 27 | 29 |
+| EXEC | 47 | 43 | 26 | 7 | 3 |
+| **Total** | 190 | 150 | 42 | 28 | 29 |
 
 ## MET — Supply-chain metrics (domain)
 
@@ -325,6 +325,7 @@ Open gaps: GAP-029, GAP-030, GAP-031
 | FR-EXEC-021 | Proposed | `src/v2/shell/UserMenu.tsx#UserMenu`<br>`src/v2/features/store.tsx#setPersona` | TC-EXEC-018 | No | AC-EXEC-006 | — |
 | FR-EXEC-022 | Proposed | `src/v2/features/usage.ts#startUsageTracking`<br>`src/v2/features/usage.ts#recordExport`<br>`src/v2/components/data-table/DataTable.tsx#handleExport` | TC-EXEC-019, TC-EXEC-026 | Yes | — | — |
 | FR-EXEC-023 | Proposed | `src/v2/pages/InventoryPage.tsx#focusInvDays`<br>`src/v2/pages/FulfilmentPage.tsx#openDetail` | TC-EXEC-020, TC-EXEC-024 | Yes | — | — |
+| FR-EXEC-024 | Proposed | `src/v2/shell/Shell.tsx#MetricModeSwitch`<br>`src/v2/features/store.tsx#setMetricMode`<br>`src/v2/features/catalog.ts#isShown`<br>`src/v2/features/catalog.ts#anyShown`<br>`src/v2/components/exec/Panels.tsx#Zone` | TC-EXEC-030, TC-EXEC-031 | Yes | AC-EXEC-007 | — |
 | NFR-EXEC-001 | Proposed | `src/v2/components/exec/Panels.tsx#TileRow` | TC-EXEC-011, TC-EXEC-029 | Yes | — | — |
 | NFR-EXEC-002 | Proposed | `src/v2/constants/theme.ts#themeCss` | TC-EXEC-011 | No | — | — |
 | NFR-EXEC-003 | Proposed | `src/v2/components/exec/ExecTile.tsx#ExecTile`<br>`src/v2/components/exec/Rag.tsx#RagBadge`<br>`src/v2/components/exec/Rag.tsx#RagDot`<br>`src/v2/components/select/MultiSelect.tsx#MultiSelect`<br>`src/v2/components/data-table/DataTable.tsx#DataTable`<br>`src/v2/constants/theme.ts#light` | TC-EXEC-028 | Yes | — | — |

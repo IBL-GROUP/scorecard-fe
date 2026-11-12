@@ -4,6 +4,7 @@ import { FiMaximize2 } from 'react-icons/fi';
 import { ExpandedContext, InfoTip, Overlay } from '@/v2/components/overlay';
 import type { HelpText } from '@/v2/constants/help';
 import { colors } from '@/v2/constants/theme';
+import { useStore } from '@/v2/features/store';
 
 export interface ChartCardProps {
   title: string;
@@ -50,7 +51,10 @@ export function ChartCard({
   dataKpi,
 }: ChartCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const { shows } = useStore();
   const skeletonH = height === 'auto' ? '100%' : height;
+  // "1.0 only" in the header hides cards that carry no 1.0 metric (FR-EXEC-024).
+  if (!shows(dataKpi)) return null;
 
   return (
     <GridItem colSpan={colSpan} minH={0} minW={0} data-kpi={dataKpi} scrollMarginTop="140px">

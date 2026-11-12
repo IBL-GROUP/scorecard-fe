@@ -10,6 +10,7 @@ import { SECTION_LABEL, type Section } from '@/v2/features/tabs';
 import { RagBadge } from './Rag';
 import { useDetail } from '@/v2/features/detail';
 import { useNav } from '@/v2/features/nav';
+import { useStore } from '@/v2/features/store';
 import { TABS, type TabKey } from '@/v2/features/tabs';
 import { Sparkline } from './charts';
 
@@ -79,6 +80,7 @@ export function ExecTile(p: ExecTileProps) {
   const help = baseHelp && p.band ? { ...baseHelp, source: `${baseHelp.source}` } : baseHelp;
   const detail = useDetail();
   const nav = useNav();
+  const { shows } = useStore();
   // Clicking a tile opens its detail sheet (design-system SheetStack).
   const action = p.goTo
     ? { label: `Open in ${TABS.find((t) => t.key === p.goTo!.tab)?.label ?? 'its tab'}`, run: () => nav(p.goTo!.tab, p.goTo!.focus) }
@@ -88,6 +90,8 @@ export function ExecTile(p: ExecTileProps) {
   const clickable = !p.locked && !p.isLoading && !p.error;
   const openSheet = () =>
     detail.open({ kind: 'kpi', id: p.id, label: p.label, value: p.value, valueSuffix: p.valueSuffix, rag: p.rag, band: p.band, bandUnit: p.bandUnit, variance: p.variance, delta: p.delta, caption: p.caption, action });
+  // "1.0 only" in the header hides tiles that carry no 1.0 metric (FR-EXEC-024).
+  if (!shows(p.id)) return null;
   return (
     <Flex
       data-kpi={p.id}

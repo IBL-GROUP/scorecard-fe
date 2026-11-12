@@ -28,6 +28,9 @@ export const compareLabel = (c: 'prev' | 'ly') => (c === 'ly' ? 'vs same period 
 
 function RiskList({ risks, loading, onOpen }: { risks: Risk[]; loading: boolean; onOpen: (r: Risk) => void }) {
   const help = helpFor('EX-10');
+  const { shows } = useStore();
+  // 2.0-only: hidden in "1.0 only" mode (FR-EXEC-024).
+  if (!shows('EX-10')) return null;
   return (
     <Box data-kpi="EX-10" scrollMarginTop="140px" bg={colors.cardBg} border="1px solid" borderColor={colors.border} borderRadius="4px" px={4} py={3}>
       <Flex align="center" gap="8px" mb={2}>
@@ -92,7 +95,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
   const d = data.tabs.overview;
   const nav = useNav();
   const detail = useDetail();
-  const { compare } = useStore();
+  const { compare, metricMode } = useStore();
   // A risk about a class, branch or channel opens its sheet; others go to the tab.
   const openRisk = (r: Risk) => {
     if (r.chip?.key === 'cls') detail.open({ kind: 'class', cls: r.chip.value });
@@ -164,7 +167,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
 
   return (
     <Box>
-      {trustRed && (
+      {trustRed && metricMode === 'all' && (
         <Flex mb={3} px={4} py="8px" borderRadius="4px" bg={colors.badSoft} color={colors.bad} fontSize="13px" fontWeight={600} align="center" gap="8px" role="alert">
           Some figures may be incomplete: see Data Health.
           <Box as="button" ml="auto" textDecoration="underline" onClick={() => nav('distribution', 'DH-07')}>
