@@ -751,18 +751,18 @@ Full detail: `scorecard-be/v2/README.md` and `scorecard-be/v2/SOURCE_MAP.md`
 |---|---|---|
 | `vw_mv_tscl_data_` | `vw_mv_tsc_data` | Confirmed by the data team |
 | `mv_tscl_spl_targets` | `vw_tscl_spl_targets` | Confirmed |
-| `mv_tscl_budget` | `vw_tscl_budget` | Confirmed (budget loaded only to June 2026) |
+| `mv_tscl_budget` | `vw_tscl_budget` | Confirmed (budget to June 2026; July 2026 onwards to be loaded, data team 12 Nov 2026) |
 | `vw_daily_stock_movement_history` | `vw_daily_stock_movement_history` | Confirmed |
 | `cover_days` | `cover_days` | Confirmed |
 | `mv_scoreboard_hub_mapping` | `hub_mapping` | Confirmed |
 | `active_rds_list` | `active_rds` | Confirmed |
 | `vw_dispatch_vs_orders` | `vw_dispatch_vs_order` | Confirmed |
-| `sap_tpkg_traw_data` | `vw_sap_tpkg_traw_data` | Confirmed (loaded only to 30 June 2026) |
+| `sap_tpkg_traw_data` | `vw_sap_tpkg_traw_data` | Confirmed; `executiondate` is the stock date. The 11 Nov 2026 load put 134 snapshots under one `executiondate`, so `/rpm` totals are wrong until the data team corrects it |
 | `vw_items_class`, `sap_items_detail` | same names | Same name, all columns present |
-| `tscl_efp` | `tscl_efp` | Same name; `"SALE E.F.P"` read as `sales_efp` (to confirm) |
+| `tscl_efp` | `tscl_efp` | Same name; `"SALE E.F.P"` is `sales_efp` (confirmed 12 Nov 2026) |
 | `sales_inv_locations` | `hub_mapping` | Confirmed 12 Nov 2026. Read with 1.0's names: `storage_location_code` → `inv_sloc`, `location` → `inv_sloc_desc` |
 | `sap_wip_data` | `vw_wip_sap_data` (not created yet) | Route ported; `/wip` answers `503` until the data team creates the view (same columns as before), then works without a change |
-| `primary_secondary_stock` | `vw_primaray_secondary_stock` | Branch code and name to be added by the data team; `/rd-status` answers `503` until then |
+| `primary_secondary_stock` | `vw_primaray_secondary_stock` | Confirmed 12 Nov 2026. No branch column: the branch is the hub branch of the distributor's `SUBINVENTORY_CODE` in `hub_mapping` |
 
 A `503` looks like `{ "success": false, "code": "SOURCE_PENDING", "message": "...", "pending": [...] }`.
 `/api/health` lists the sources still pending.

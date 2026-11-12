@@ -2421,7 +2421,7 @@
                 "type": "string"
               }
             ],
-            "description": "Postgres numerics may arrive as strings",
+            "description": "Postgres numerics may arrive as strings. 2.0 (BigQuery): the hub branch of the distributor's sub-inventory, from hub_mapping.",
             "nullable": true
           },
           "branch_desc": {
@@ -2448,7 +2448,8 @@
                 "type": "string"
               }
             ],
-            "description": "Postgres numerics may arrive as strings"
+            "description": "Postgres numerics may arrive as strings. Null when the source has no value for the distributor.",
+            "nullable": true
           },
           "last_stock_qty": {
             "oneOf": [
@@ -2470,7 +2471,8 @@
                 "type": "string"
               }
             ],
-            "description": "Postgres numerics may arrive as strings"
+            "description": "Postgres numerics may arrive as strings. Null when the source has no value for the distributor.",
+            "nullable": true
           },
           "last_stock_date": {
             "type": "string",

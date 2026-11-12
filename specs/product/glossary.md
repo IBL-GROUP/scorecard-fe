@@ -81,7 +81,7 @@ become authoritative once the product owner reviews this page (GAP-028).
 | Hub branch code | The key the branch filter options are de-duplicated on. | `hub_branch_code` | FR-FILT-004 |
 | RD | Regional distributor: a distributor that reports its own stock. Only RDs in the active list appear on RD Data Status. | `active_rds_list` | [FEAT-RD](../features/FEAT-RD-rd-data-status-tab.md) |
 | Distributor code / RD Code | The identifier of an RD. | `ibl_distributor_code` | DR-RD-001 |
-| RD branch (Branch Code / Branch) | The branch serving a distributor, from the distributor (franchise) data. **Not** the warehouse branch above, but it shares the same `filters.branch` state (GAP-020). | `branch_code`, `branch_desc` | FR-RD-002, GAP-020 |
+| RD branch (Branch Code / Branch) | The branch serving a distributor, from the distributor (franchise) data. **Not** the warehouse branch above, but it shares the same `filters.branch` state (GAP-020). In 2.0 (BigQuery) it is the **hub branch** (one of the 14) of the distributor's sub-inventory, from `hub_mapping` (decided 12 Nov 2026, data-team question F3). | `branch_code`, `branch_desc` | FR-RD-002, GAP-020 |
 | Plant | A production site. A filter inside the WIP and RMPM detail dialogs. | `plant`, `plantname` | FR-DSP-002 |
 
 ## 4. Periods, prices and plans

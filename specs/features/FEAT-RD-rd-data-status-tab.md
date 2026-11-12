@@ -102,3 +102,4 @@ Not applicable beyond FR-PERM-005.
 |---|---|---|---|
 | 2026-11-03 | Baseline reverse-engineered from code | Spec-first migration | — |
 | 2026-11-11 | 2.0 (story S4) shows these figures on Distribution & Data Health (FR-EXEC-009). With scorecard-be v2, `/rd-status` answers "not available yet" until distributor stock with branch is in BigQuery (FR-EXEC-020). No requirement here changed | Claude Code (stories S3, S4) | — |
+| 2026-11-12 | 2.0 back end (BigQuery): `/rd-status` now served from `EDW.vw_primaray_secondary_stock`; the branch is the hub branch of each distributor's `SUBINVENTORY_CODE` in `hub_mapping` (glossary "RD branch"). Contract: `RdStatusRow.stock_value` and `last_stock_value` marked nullable (null when the source has no value). No requirement here changed | Story S2 (BigQuery backend) | — |
