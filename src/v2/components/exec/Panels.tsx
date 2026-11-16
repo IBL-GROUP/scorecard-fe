@@ -88,10 +88,21 @@ export function ViewDetails({ detailId }: { detailId: string }) {
   );
 }
 
-/** Expand an Operational Detail section and scroll to it. */
+const revealers = new Set<(detailId: string) => void>();
+
+/** Called with an Operational Detail ID before it is scrolled to: the topic layout opens the Details sheet holding it (FR-EXEC-025). */
+export function onRevealDetail(fn: (detailId: string) => void) {
+  revealers.add(fn);
+  return () => {
+    revealers.delete(fn);
+  };
+}
+
+/** Expand an Operational Detail section, open the Details sheet holding it, and scroll to it. */
 export function openDetail(id: string, setZone4: (id: string, open: boolean) => void) {
   setZone4(id, true);
-  setTimeout(() => document.querySelector(`[data-detail="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  revealers.forEach((fn) => fn(id));
+  setTimeout(() => document.querySelector(`[data-detail="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 160);
 }
 
 /** Zone 4: a collapsible block holding a 1.0 table (PRD 3.1). */

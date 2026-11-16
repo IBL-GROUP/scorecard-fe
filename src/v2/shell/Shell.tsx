@@ -2,7 +2,7 @@
 // 1.0 only" switch, theme switch, user menu), global filter bar, the active tab, and (demo mode) the demo controls.
 
 import { Box, Flex, Text } from '@chakra-ui/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollRestoration, useSearchParams } from 'react-router-dom';
 import { FiMoon, FiSettings, FiSun } from 'react-icons/fi';
 import { colors } from '@/v2/constants/theme';
@@ -14,6 +14,7 @@ import { useStore } from '@/v2/features/store';
 import { TABS } from '@/v2/features/tabs';
 import { tabHasItems, type MetricMode } from '@/v2/features/catalog';
 import { trust } from '@/v2/features/derive';
+import { useFitScreen } from '@/v2/features/fit';
 import { rag } from '@/v2/features/kpiThresholds';
 import { RagDot } from '@/v2/components/exec/Rag';
 import { FilterBar } from './FilterBar';
@@ -107,6 +108,18 @@ export function Shell() {
   const { colorMode, toggleColorMode } = useColorMode();
   const [demoOpen, setDemoOpen] = useState(false);
   const data = useDashboardData(tab);
+  const fit = useFitScreen();
+  // The header height, for the fixed-screen tab and the Details sheets below it (FR-EXEC-025).
+  const headerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const set = () => document.documentElement.style.setProperty('--sp-top', `${el.getBoundingClientRect().height}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
   // A tab is listed when the user holds one of its sections and, in "1.0 only"
   // mode, it carries a 1.0 metric (every tab does today).
   const visibleTabs = TABS.filter((t) => t.anyOf.some((s) => st.can(s)) && tabHasItems(st.metricMode, t.key));
@@ -154,7 +167,7 @@ export function Shell() {
   return (
     <Box minH="100vh" bg={colors.pageBg}>
       <ScrollRestoration />
-      <Box position="sticky" top={0} zIndex={30}>
+      <Box position="sticky" top={0} zIndex={30} ref={headerRef}>
         <Flex bg={colors.navbarBg} borderBottom="1px solid" borderColor={colors.border} px={{ base: 4, md: 6 }} h="52px" align="center" gap={4}>
           <Flex align="baseline" gap="8px" flexShrink={0}>
             <Text fontWeight={800} color={colors.brand} fontSize="16px">
@@ -214,7 +227,17 @@ export function Shell() {
         <FilterBar data={data} tab={activeTab} />
       </Box>
 
-      <Box as="main" px={{ base: 4, md: 6 }} py={4} maxW="1680px" mx="auto">
+      <Box
+        as="main"
+        px={{ base: 4, md: 6 }}
+        py={fit ? 3 : 4}
+        maxW="1920px"
+        mx="auto"
+        // Desktop: the tab fills the window below the header and the page does not scroll (NFR-EXEC-004).
+        h={fit ? 'calc(100vh - var(--sp-top, 110px))' : undefined}
+        overflow={fit ? 'hidden' : undefined}
+        data-fit={fit || undefined}
+      >
         <Box display={{ base: 'block', xl: 'none' }} mb={3}>
           <DataAsOf closing={t.closing} freshness={t.freshness} />
         </Box>

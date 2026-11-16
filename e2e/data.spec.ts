@@ -50,21 +50,22 @@ for (const [preset, presetLabel] of PRESETS) {
   }
 }
 
-/** Every Zone 4 section and the tab it lives on. */
-const DETAILS: [tab: string, id: string][] = [
-  ['revenue', 'rev-acc'],
-  ['inventory', 'inv-days'],
-  ['fulfilment', 'dispatch'],
-  ['fulfilment', 'wip'],
-  ['fulfilment', 'rmpm'],
-  ['distribution', 'rd-list'],
+/** Every Zone 4 section, its tab, and the topic whose Details sheet holds it (FR-EXEC-025). */
+const DETAILS: [tab: string, id: string, topic: string][] = [
+  ['revenue', 'rev-acc', 'Attainment'],
+  ['inventory', 'inv-days', 'Service'],
+  ['fulfilment', 'dispatch', 'Orders'],
+  ['fulfilment', 'wip', 'Production'],
+  ['fulfilment', 'rmpm', 'Materials & service'],
+  ['distribution', 'rd-list', 'Stock in hand'],
 ];
 
-for (const [tab, id] of DETAILS) {
+for (const [tab, id, topic] of DETAILS) {
   test(`TC-S5-07 TC-EXEC-026 export every table in Zone 4 "${id}": file has the Total row; one export event per file`, async ({ page }) => {
     const t = await stubServices(page, { planner: true });
     await page.goto(`./?tab=${tab}`);
     await settled(page);
+    await page.getByRole('button', { name: `${topic}: details`, exact: true }).click();
     const detail = page.locator(`[data-detail="${id}"]`);
     const toggle = detail.locator('> button[aria-expanded]');
     if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();

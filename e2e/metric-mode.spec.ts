@@ -6,9 +6,11 @@ import { realErrors, settled, stubServices } from './stubs';
 
 const TABS = Object.keys(PRD_ITEMS) as TabKey[];
 
-/** Every PRD ID on the page right now (tiles, cards, Operational Detail, header stamp). */
+/** Every PRD ID on the page (tiles, cards, Operational Detail, header stamp), or one click away in a topic's Details sheet (FR-EXEC-025). */
 const renderedIds = (page: Page) =>
-  page.$$eval('[data-kpi]', (els) => [...new Set(els.flatMap((e) => (e.getAttribute('data-kpi') ?? '').split(/\s+/).filter(Boolean)))]);
+  page.$$eval('[data-kpi], [data-kpi-more]', (els) => [
+    ...new Set(els.flatMap((e) => `${e.getAttribute('data-kpi') ?? ''} ${e.getAttribute('data-kpi-more') ?? ''}`.split(/\s+/).filter(Boolean))),
+  ]);
 
 const modeSwitch = (page: Page) => page.getByRole('group', { name: 'Metrics shown' });
 

@@ -98,9 +98,39 @@ export function anyShown(node: ReactNode, shows: (kpi?: string | null) => boolea
   return found;
 }
 
-/** PRD IDs currently rendered in the page (elements carrying data-kpi). */
+/**
+ * What a topic panel's Details sheet holds (FR-EXEC-025): the PRD IDs of the
+ * tagged elements in `node` that `shows` lets through (searching inside them
+ * too, e.g. the Days Gone pill inside a gauge card), and the IDs of its
+ * Operational Detail sections (elements carrying both `kpi` and `id`).
+ */
+export function contentsOf(node: ReactNode, shows: (kpi?: string | null) => boolean): { ids: string[]; sections: string[] } {
+  const ids = new Set<string>();
+  const sections = new Set<string>();
+  const walk = (n: ReactNode) =>
+    Children.forEach(n, (c) => {
+      if (!isValidElement(c)) return;
+      const props = c.props as Record<string, unknown>;
+      const tag = tagOf(props);
+      if (tag !== undefined) {
+        if (!shows(tag)) return;
+        tag.split(/\s+/).forEach((id) => id && ids.add(id));
+        if (typeof props.kpi === 'string' && typeof props.id === 'string') sections.add(props.id);
+      }
+      walk(props.children as ReactNode);
+    });
+  walk(node);
+  return { ids: [...ids], sections: [...sections] };
+}
+
+/**
+ * PRD IDs on the page: on screen (`data-kpi`), or one click away in a closed
+ * topic Details sheet (`data-kpi-more` on its Details button, FR-EXEC-025).
+ */
 export function renderedIds(): Set<string> {
   const out = new Set<string>();
-  document.querySelectorAll('[data-kpi]').forEach((el) => (el.getAttribute('data-kpi') ?? '').split(/\s+/).forEach((id) => id && out.add(id)));
+  document
+    .querySelectorAll('[data-kpi], [data-kpi-more]')
+    .forEach((el) => `${el.getAttribute('data-kpi') ?? ''} ${el.getAttribute('data-kpi-more') ?? ''}`.split(/\s+/).forEach((id) => id && out.add(id)));
   return out;
 }

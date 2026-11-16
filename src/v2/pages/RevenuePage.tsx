@@ -9,7 +9,9 @@ import { ChartCard } from '@/v2/components/chart-card';
 import { DataTable } from '@/v2/components/data-table';
 import { Segmented } from '@/v2/components/segmented';
 import { ExecTile } from '@/v2/components/exec/ExecTile';
-import { CardGrid, CardState, ChipBar, OperationalDetail, TileRow, ViewDetails, Zone } from '@/v2/components/exec/Panels';
+import { CardGrid, CardState, ChipBar, OperationalDetail, ViewDetails } from '@/v2/components/exec/Panels';
+import { AreaLayout } from '@/v2/components/exec/AreaLayout';
+import { AreaRisks } from './OverviewPage';
 import { RAG_META, RagBadge } from '@/v2/components/exec/Rag';
 import { axis, Gauge, grid, Legend, tooltipStyle } from '@/v2/components/exec/charts';
 import { clsColor } from '@/v2/constants/classColors';
@@ -92,338 +94,377 @@ export function RevenuePage({ data }: { data: DashboardData }) {
   const alignment = p.iblRows.filter((r) => (num(r.tscl_target) ?? 0) > 0).map((r) => ({ cls: r.classification, pct: num(r.ibl_vs_tscl_pct) ?? 0, gap: (num(r.ibl_target) ?? 0) - (num(r.tscl_target) ?? 0) })).filter((r) => r.cls === 'Total' || visibleClasses.includes(r.cls));
 
   return (
-    <Box>
-      <ChipBar tab="revenue" />
-      <Zone label="Verdict">
-        <TileRow max={6}>
-          <ExecTile id="RV-01" label="Sales (TP)" value={pkr(sales.total)} delta={{ value: change(sales.total, salesCmp.total), label: cl }} {...st.sales} />
-          <ExecTile
-            id="RV-02"
-            label="Sales attainment to date"
-            value={pct1(p.attIbl)}
-            rag={rag(p.attIbl, 'attainment')}
-            band="attainment"
-            variance={p.varIbl == null ? undefined : `vs pace: ${p.varIbl >= 0 ? '+' : '−'}PKR ${money(Math.abs(p.varIbl))}`}
-            delta={{ value: p.attIbl != null && p.attIblCmp != null ? p.attIbl - p.attIblCmp : null, unit: 'pts', label: cl }}
-            spark={p.spark}
-            {...st.att}
-          />
-          <ExecTile id="RV-03" label={p.projectedFinal ? 'Month-end attainment (final)' : 'Projected month-end'} value={pct1(p.projected)} rag={rag(p.projected, 'projected')} band="projected" {...st.att} caption={p.single ? undefined : 'Shown for a single month only'}>
-            {p.projected != null && (
-              <Box position="relative" h="10px" bg={colors.sunkBg} borderRadius="3px" mt="2px" title="Bar = projection, line = 100%">
-                <Box h="100%" w={`${Math.min(100, (p.projected / Math.max(130, p.projected)) * 100)}%`} bg={colors.sales} borderRadius="3px" className="sp-grow" />
-                <Box position="absolute" top="-3px" bottom="-3px" w="2px" bg={colors.target} left={`${(100 / Math.max(130, p.projected)) * 100}%`} />
-              </Box>
-            )}
-          </ExecTile>
-          <ExecTile
-            id="RV-04"
-            label="Budget attainment to date"
-            value={pct1(p.attBud)}
-            rag={rag(p.attBud, 'attainment')}
-            band="attainment"
-            variance={p.varBud == null ? undefined : `vs pace: ${p.varBud >= 0 ? '+' : '−'}PKR ${money(Math.abs(p.varBud))}`}
-            delta={{ value: p.attBud != null && p.attBudCmp != null ? p.attBud - p.attBudCmp : null, unit: 'pts', label: cl }}
-            {...st.bud}
-          />
-          <ExecTile
-            id="RV-05"
-            label="Run-rate required"
-            value={p.runRate.required == null ? '—' : `${money(p.runRate.required)}/day`}
-            caption={p.runRate.current == null ? undefined : `Running ${money(p.runRate.current)}/day`}
-            variance={p.runRate.required != null && p.runRate.current != null ? (p.runRate.current >= p.runRate.required ? 'On course for target' : `Need ${money(p.runRate.required - p.runRate.current)}/day more`) : undefined}
-            {...st.att}
-          />
-          <ExecTile id="RV-16" label="Days gone" value={`${p.days.pct}%`} caption={`${p.days.daysGone} of ${p.days.totalDays} days`} isLoading={false} />
-        </TileRow>
-      </Zone>
-
-      <Zone label="Why">
-        <CardGrid mb={3}>
-          <ChartCard title="Forecast Accuracy IBL" subtitle={p.single ? 'Full month, vs IBL target (1.0 gauge)' : MULTI_MONTH_NOTE} colSpan={6} height="auto" isLoading={st.att.isLoading} help={helpFor('RV-14')} dataKpi="RV-14" expandable={false}>
-            {CardState({ locked: st.att.locked, error: st.att.error }) ?? (
-              <Grid templateColumns={{ base: '1fr', md: '200px 1fr' }} gap={3} alignItems="center">
-                <Gauge value={p.gaugeIbl} label="Achieved of month target" rag={rag(p.gaugeIbl == null ? null : (p.gaugeIbl / p.days.pct) * 100, 'attainment')} />
-                <Box fontSize="13px" color={colors.bodyText}>
-                  <Text>
-                    Achieved: <b>{pkr(p.S)}</b>
-                  </Text>
-                  <Text>
-                    Month target: <b>{p.T && p.T > 0 ? pkr(p.T) : '—'}</b>
-                  </Text>
-                  <Text>
-                    Days-gone target: <b>{pkr(p.Ttd)}</b>
-                  </Text>
-                  <Flex mt={2} align="center" gap="6px" data-kpi="RV-16">
-                    <Box px="8px" py="1px" borderRadius="999px" bg={colors.targetSoft} color={colors.target} fontSize="12px" fontWeight={700}>
-                      Days Gone {p.days.pct}%
-                    </Box>
-                  </Flex>
+    <AreaLayout
+      top={<ChipBar tab="revenue" />}
+      topics={[
+        {
+          key: 'attainment',
+          title: 'Attainment',
+          tiles: [
+            <ExecTile key="RV-02"
+              id="RV-02"
+              label="Sales attainment to date"
+              value={pct1(p.attIbl)}
+              rag={rag(p.attIbl, 'attainment')}
+              band="attainment"
+              variance={p.varIbl == null ? undefined : `vs pace: ${p.varIbl >= 0 ? '+' : '−'}PKR ${money(Math.abs(p.varIbl))}`}
+              delta={{ value: p.attIbl != null && p.attIblCmp != null ? p.attIbl - p.attIblCmp : null, unit: 'pts', label: cl }}
+              spark={p.spark}
+              {...st.att}
+            />,
+            <ExecTile key="RV-03" id="RV-03" label={p.projectedFinal ? 'Month-end attainment (final)' : 'Projected month-end'} value={pct1(p.projected)} rag={rag(p.projected, 'projected')} band="projected" {...st.att} caption={p.single ? undefined : 'Shown for a single month only'}>
+              {p.projected != null && (
+                <Box position="relative" h="10px" bg={colors.sunkBg} borderRadius="3px" mt="2px" title="Bar = projection, line = 100%">
+                  <Box h="100%" w={`${Math.min(100, (p.projected / Math.max(130, p.projected)) * 100)}%`} bg={colors.sales} borderRadius="3px" className="sp-grow" />
+                  <Box position="absolute" top="-3px" bottom="-3px" w="2px" bg={colors.target} left={`${(100 / Math.max(130, p.projected)) * 100}%`} />
                 </Box>
-              </Grid>
-            )}
-          </ChartCard>
-          <ChartCard title="Budget Accuracy TSCL" subtitle={p.single ? 'Full month, vs TSCL budget (1.0 gauge)' : MULTI_MONTH_NOTE} colSpan={6} height="auto" isLoading={st.bud.isLoading} help={helpFor('RV-15')} dataKpi="RV-15" expandable={false}>
-            {CardState({ locked: st.bud.locked, error: st.bud.error }) ?? (
-              <Grid templateColumns={{ base: '1fr', md: '200px 1fr' }} gap={3} alignItems="center">
-                <Gauge value={p.gaugeBud} label="Achieved of month budget" rag={rag(p.gaugeBud == null ? null : (p.gaugeBud / p.days.pct) * 100, 'attainment')} />
-                <Box fontSize="13px" color={colors.bodyText}>
-                  <Text>
-                    EFP sales: <b>{pkr(p.Se)}</b>
-                  </Text>
-                  <Text>
-                    Month budget: <b>{p.B && p.B > 0 ? pkr(p.B) : '—'}</b>
-                  </Text>
-                  <Text>
-                    Days-gone budget: <b>{pkr(p.Btd)}</b>
-                  </Text>
-                  <Flex mt={2}>
-                    <Box px="8px" py="1px" borderRadius="999px" bg={colors.targetSoft} color={colors.target} fontSize="12px" fontWeight={700}>
-                      Days Gone {p.days.pct}%
-                    </Box>
-                  </Flex>
-                </Box>
-              </Grid>
-            )}
-          </ChartCard>
-        </CardGrid>
-        <CardGrid>
-          <ChartCard
-            title={trendBasis === 'target' ? 'Attainment by class vs target, 6 months' : 'Attainment by class vs budget, 6 months'}
-            subtitle="100% = on plan · amber band 90–100% · this month pace-adjusted"
-            colSpan={7}
-            height="300px"
-            isLoading={trendBasis === 'target' ? st.cat.isLoading : st.catY.isLoading}
-            help={helpFor(trendBasis === 'target' ? 'RV-06' : 'RV-07')}
-            dataKpi="RV-06 RV-07"
-            headerRight={<Segmented size="xs" value={trendBasis} onChange={setTrendBasis} options={[{ value: 'target', label: 'vs Target' }, { value: 'budget', label: 'vs Budget' }]} />}
-          >
-            {CardState({ locked: st.cat.locked, error: trendBasis === 'target' ? st.cat.error : st.catY.error, empty: !trend.length }) ?? (
-              <Flex direction="column" h="100%">
-                <Box flex={1} minH={0}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={trend.map((r) => ({ ...r, label: monthLabel(r.month as string) }))} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
-                      <CartesianGrid {...grid} vertical={false} />
-                      <XAxis dataKey="label" {...axis} />
-                      <YAxis {...axis} domain={['dataMin - 5', 'dataMax + 5']} allowDecimals={false} tickFormatter={(v) => `${Math.round(Number(v))}%`} />
-                      <ReferenceArea y1={90} y2={100} fill={colors.warnSoft} fillOpacity={0.6} />
-                      <ReferenceLine y={100} stroke={colors.target} strokeDasharray="4 3" />
-                      <Tooltip {...tooltipStyle} formatter={(v) => pct1(Number(v))} />
-                      {visibleClasses.map((c) => (
-                        <Line key={c} type="monotone" dataKey={c} stroke={clsColor(c)} strokeWidth={1.6} dot={{ r: 2 }} connectNulls name={`Class ${c}`} />
-                      ))}
-                      {!onlyCls && <Line type="monotone" dataKey="Total" stroke={colors.darkText} strokeWidth={2.8} dot={{ r: 3 }} connectNulls name="All classes" />}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </Box>
-                <Legend items={[...visibleClasses.map((c) => ({ label: c, color: clsColor(c) })), ...(onlyCls ? [] : [{ label: 'All classes', color: colors.darkText }])]} />
-              </Flex>
-            )}
-          </ChartCard>
-          <ChartCard title="Variance to plan by class" subtitle={`This month, plan prorated to ${p.days.pct}% of days gone`} colSpan={5} height="300px" isLoading={st.cat.isLoading} help={helpFor('RV-08')} dataKpi="RV-08">
-            {CardState({ locked: st.cat.locked, error: st.cat.error, empty: !variance.steps.length }) ?? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={waterfall} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid {...grid} vertical={false} />
-                  <XAxis dataKey="name" {...axis} interval={0} fontSize={10.5} />
-                  <YAxis {...axis} tickFormatter={(v) => money(Number(v))} domain={[waterfallMin, 'auto']} allowDataOverflow />
-                  <Tooltip
-                    {...tooltipStyle}
-                    formatter={(_v, _n, item) => {
-                      const row = item.payload as { value: number; signed?: number };
-                      return [row.signed != null ? `${row.signed >= 0 ? '+' : '−'}PKR ${money(Math.abs(row.signed))}` : pkr(row.value), ''];
-                    }}
-                  />
-                  <Bar dataKey="base" stackId="w" fill="transparent" isAnimationActive={false} />
-                  <Bar dataKey="value" stackId="w">
-                    {waterfall.map((w) => (
-                      <Cell key={w.name} fill={w.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCard>
-        </CardGrid>
-      </Zone>
-
-      <Zone label="Where">
-        <CardGrid>
-          <ChartCard title="Sales Summary" subtitle="By class (1.0 card)" colSpan={4} height="auto" isLoading={st.sales.isLoading} help={helpFor('RV-13')} dataKpi="RV-13" expandable={false}>
-            {CardState({ locked: st.sales.locked, error: st.sales.error, empty: !sales.rows.length }) ?? (
-              <Box as="table" w="100%" fontSize="13px">
-                <thead>
-                  <tr>
-                    {['Class', 'SKUs', 'Sales', 'Share'].map((h) => (
-                      <Box as="th" key={h} textAlign={h === 'Class' ? 'left' : 'right'} color={colors.mutedText} fontWeight={500} py="4px">
-                        {h}
-                      </Box>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sales.rows
-                    .filter((r) => visibleClasses.includes(r.cls))
-                    .map((r) => (
-                      <Box as="tr" key={r.cls} cursor="pointer" _hover={{ bg: colors.hoverBg }} onClick={() => detail.open({ kind: 'class', cls: r.cls })} title="Click for details">
-                        <Box as="td" py="5px">
-                          <Flex align="center" gap="6px">
-                            <Box w="10px" h="10px" borderRadius="2px" bg={clsColor(r.cls)} />
-                            {r.cls}
-                          </Flex>
-                        </Box>
-                        <Box as="td" textAlign="right">
-                          {full(r.skus)}
-                        </Box>
-                        <Box as="td" textAlign="right" title={full(r.amount)}>
-                          {full(r.amount)}
-                        </Box>
-                        <Box as="td" textAlign="right" position="relative">
-                          <Box position="absolute" right={0} top="20%" bottom="20%" w={`${r.share}%`} maxW="100%" bg={colors.salesSoft} zIndex={0} borderRadius="2px" />
-                          <Text as="span" position="relative">
-                            {r.share.toFixed(1)}%
-                          </Text>
-                        </Box>
-                      </Box>
-                    ))}
-                  <Box as="tr" bg={colors.tableTotalStart} fontWeight={700}>
-                    <Box as="td" py="5px">
-                      Total
-                    </Box>
-                    <Box as="td" textAlign="right">
-                      {full(sales.rows.reduce((t, r) => t + r.skus, 0))}
-                    </Box>
-                    <Box as="td" textAlign="right">
-                      {full(sales.total)}
-                    </Box>
-                    <Box as="td" textAlign="right">
-                      100%
-                    </Box>
+              )}
+            </ExecTile>,
+            <ExecTile key="RV-16" id="RV-16" label="Days gone" value={`${p.days.pct}%`} caption={`${p.days.daysGone} of ${p.days.totalDays} days`} isLoading={false} />,
+          ],
+          lead: (
+            <ChartCard
+              title={trendBasis === 'target' ? 'Attainment by class vs target, 6 months' : 'Attainment by class vs budget, 6 months'}
+              subtitle="100% = on plan · amber band 90–100% · this month pace-adjusted"
+              colSpan={7}
+              height="300px"
+              isLoading={trendBasis === 'target' ? st.cat.isLoading : st.catY.isLoading}
+              help={helpFor(trendBasis === 'target' ? 'RV-06' : 'RV-07')}
+              dataKpi="RV-06 RV-07"
+              headerRight={<Segmented size="xs" value={trendBasis} onChange={setTrendBasis} options={[{ value: 'target', label: 'vs Target' }, { value: 'budget', label: 'vs Budget' }]} />}
+            >
+              {CardState({ locked: st.cat.locked, error: trendBasis === 'target' ? st.cat.error : st.catY.error, empty: !trend.length }) ?? (
+                <Flex direction="column" h="100%">
+                  <Box flex={1} minH={0}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={trend.map((r) => ({ ...r, label: monthLabel(r.month as string) }))} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
+                        <CartesianGrid {...grid} vertical={false} />
+                        <XAxis dataKey="label" {...axis} />
+                        <YAxis {...axis} domain={['dataMin - 5', 'dataMax + 5']} allowDecimals={false} tickFormatter={(v) => `${Math.round(Number(v))}%`} />
+                        <ReferenceArea y1={90} y2={100} fill={colors.warnSoft} fillOpacity={0.6} />
+                        <ReferenceLine y={100} stroke={colors.target} strokeDasharray="4 3" />
+                        <Tooltip {...tooltipStyle} formatter={(v) => pct1(Number(v))} />
+                        {visibleClasses.map((c) => (
+                          <Line key={c} type="monotone" dataKey={c} stroke={clsColor(c)} strokeWidth={1.6} dot={{ r: 2 }} connectNulls name={`Class ${c}`} />
+                        ))}
+                        {!onlyCls && <Line type="monotone" dataKey="Total" stroke={colors.darkText} strokeWidth={2.8} dot={{ r: 3 }} connectNulls name="All classes" />}
+                      </LineChart>
+                    </ResponsiveContainer>
                   </Box>
-                </tbody>
-              </Box>
-            )}
-          </ChartCard>
-          <ChartCard title="Sales mix" subtitle={`This period vs ${compare === 'ly' ? 'same period LY' : 'previous period'}`} colSpan={4} height="220px" isLoading={st.sales.isLoading} help={helpFor('RV-09')} dataKpi="RV-09">
-            {CardState({ locked: st.sales.locked, error: st.sales.error, empty: !sales.rows.length }) ?? (
-              <Flex direction="column" h="100%">
-                <Box flex={1} minH={0}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={mix} layout="vertical" margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
-                      <XAxis type="number" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} allowDataOverflow {...axis} unit="%" />
-                      <YAxis type="category" dataKey="period" {...axis} width={96} />
-                      <Tooltip {...tooltipStyle} formatter={(v) => pct1(Number(v))} />
-                      {CLASSES.map((c) => (
-                        <Bar key={c} dataKey={c} stackId="m" fill={clsColor(c)} name={`Class ${c}`} />
-                      ))}
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Box>
-                <Legend items={CLASSES.map((c) => ({ label: c, color: clsColor(c) }))} />
-              </Flex>
-            )}
-          </ChartCard>
-          <ChartCard title="Range activation" subtitle="SKUs that sold ÷ SKUs in the range" colSpan={4} height="220px" isLoading={st.range.isLoading} help={helpFor('RV-10')} dataKpi="RV-10" headerRight={<Text fontSize="12px" color={colors.mutedText}>Total {pct0(range.total)}</Text>}>
-            {CardState({ locked: st.range.locked, error: st.range.error, empty: !range.rows.some((r) => r.inRange > 0) }) ?? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={range.rows.filter((r) => visibleClasses.includes(r.cls))} layout="vertical" margin={{ top: 4, right: 36, left: 0, bottom: 0 }}>
-                  <XAxis type="number" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} allowDataOverflow {...axis} unit="%" />
-                  <YAxis type="category" dataKey="cls" {...axis} width={30} />
-                  <Tooltip {...tooltipStyle} formatter={(v, _n, item) => [`${pct1(Number(v))} (${(item.payload as { sold: number }).sold} of ${(item.payload as { inRange: number }).inRange})`, 'Activated']} />
-                  <Bar dataKey="pct" radius={[0, 3, 3, 0]} label={{ position: 'right', fontSize: 11, fill: colors.bodyText, formatter: (v: unknown) => pct0(Number(v)) }}>
-                    {range.rows.filter((r) => visibleClasses.includes(r.cls)).map((r) => (
-                      <Cell key={r.cls} fill={clsColor(r.cls)} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCard>
-          <ChartCard title="Plan alignment: forecast vs budget" subtitle="IBL target ÷ TSCL budget · green band 95–105%" colSpan={7} height="240px" isLoading={st.ibl.isLoading} help={helpFor('RV-11')} dataKpi="RV-11">
-            {CardState({ locked: st.ibl.locked, error: st.ibl.error, empty: !alignment.length, emptyText: 'No TSCL budget is loaded for this month' }) ?? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={alignment.map((a) => ({ ...a, diff: a.pct - 100 }))} layout="vertical" margin={{ top: 4, right: 48, left: 8, bottom: 0 }}>
-                  <CartesianGrid {...grid} horizontal={false} />
-                  <XAxis type="number" {...axis} domain={[-25, 25]} ticks={[-20, -10, 0, 10, 20]} allowDataOverflow tickFormatter={(v) => `${100 + Number(v)}%`} />
-                  <YAxis type="category" dataKey="cls" {...axis} width={44} />
-                  <ReferenceArea x1={-5} x2={5} fill={colors.goodSoft} fillOpacity={0.7} />
-                  <ReferenceLine x={0} stroke={colors.target} />
-                  <Tooltip {...tooltipStyle} formatter={(_v, _n, item) => {
-                    const row = item.payload as { pct: number; gap: number };
-                    return [`${pct1(row.pct)} · gap ${row.gap >= 0 ? '+' : '−'}PKR ${money(Math.abs(row.gap))}`, 'Forecast ÷ budget'];
-                  }} />
-                  <Bar dataKey="diff" label={{ position: 'right', fontSize: 11, fill: colors.bodyText, formatter: (v: unknown) => pct0(100 + Number(v)) }}>
-                    {alignment.map((a) => (
-                      <Cell key={a.cls} fill={RAG_META[rag(a.pct, 'planAlignment') ?? 'green'].color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCard>
-          <ChartCard title="Class leaders and laggards" subtitle={`This month · ${monthLabel(p.currentMonth, 'long')}`} colSpan={5} height="auto" isLoading={st.cat.isLoading} help={helpFor('RV-12')} dataKpi="RV-12" expandable={false} headerRight={<ViewDetails detailId="rev-acc" />}>
-            {CardState({ locked: st.cat.locked, error: st.cat.error, empty: !ranking.length }) ?? (
-              <Grid templateColumns="1fr 1fr" gap={4}>
-                {[
-                  { title: 'Ahead', list: ranking.slice(0, 2) },
-                  { title: 'Behind', list: [...ranking].reverse().slice(0, 2) },
-                ].map((g) => (
-                  <Box key={g.title}>
-                    <Text fontSize="11px" color={colors.mutedText} textTransform="uppercase" mb={1}>
-                      {g.title}
-                    </Text>
-                    {g.list.map((r) => {
-                      const prorated = p.days.totalDays > 0 ? (r.pct / p.days.daysGone) * p.days.totalDays : r.pct;
-                      const status = rag(p.projectedFinal ? r.pct : prorated, 'attainment');
-                      return (
-                        <Flex key={r.cls} align="center" gap="8px" py="4px" cursor="pointer" _hover={{ bg: colors.hoverBg }} onClick={() => detail.open({ kind: 'class', cls: r.cls })}>
-                          <Box w="10px" h="10px" borderRadius="2px" bg={clsColor(r.cls)} />
-                          <Text fontWeight={600} fontSize="13px">
-                            Class {r.cls}
-                          </Text>
-                          <Text fontSize="13px" ml="auto">
-                            {pct0(r.pct)}
-                          </Text>
-                          <RagBadge rag={status} size="sm" />
+                  <Legend items={[...visibleClasses.map((c) => ({ label: c, color: clsColor(c) })), ...(onlyCls ? [] : [{ label: 'All classes', color: colors.darkText }])]} />
+                </Flex>
+              )}
+            </ChartCard>
+          ),
+          details: (
+            <>
+              <CardGrid mb={3}>
+                <ChartCard title="Forecast Accuracy IBL" subtitle={p.single ? 'Full month, vs IBL target (1.0 gauge)' : MULTI_MONTH_NOTE} colSpan={12} height="auto" isLoading={st.att.isLoading} help={helpFor('RV-14')} dataKpi="RV-14" expandable={false}>
+                  {CardState({ locked: st.att.locked, error: st.att.error }) ?? (
+                    <Grid templateColumns={{ base: '1fr', md: '200px 1fr' }} gap={3} alignItems="center">
+                      <Gauge value={p.gaugeIbl} label="Achieved of month target" rag={rag(p.gaugeIbl == null ? null : (p.gaugeIbl / p.days.pct) * 100, 'attainment')} />
+                      <Box fontSize="13px" color={colors.bodyText}>
+                        <Text>
+                          Achieved: <b>{pkr(p.S)}</b>
+                        </Text>
+                        <Text>
+                          Month target: <b>{p.T && p.T > 0 ? pkr(p.T) : '—'}</b>
+                        </Text>
+                        <Text>
+                          Days-gone target: <b>{pkr(p.Ttd)}</b>
+                        </Text>
+                        <Flex mt={2} align="center" gap="6px" data-kpi="RV-16">
+                          <Box px="8px" py="1px" borderRadius="999px" bg={colors.targetSoft} color={colors.target} fontSize="12px" fontWeight={700}>
+                            Days Gone {p.days.pct}%
+                          </Box>
                         </Flex>
-                      );
-                    })}
-                  </Box>
-                ))}
-              </Grid>
-            )}
-          </ChartCard>
-        </CardGrid>
-      </Zone>
-
-      <Zone label="Operational detail">
-        <OperationalDetail id="rev-acc" kpi="RV-06 RV-07" title="Accuracy by class by month" subtitle="IBL target and TSCL budget, the last 6 months">
-          <Grid templateColumns={{ base: '1fr', xl: '1fr 1fr' }} gap={3}>
-            {[
-              { title: 'vs IBL target', cells: p.cells },
-              { title: 'vs TSCL budget', cells: budgetCells },
-            ].map((t) => (
-              <DataTable
-                key={t.title}
-                title={t.title}
-                headerGradient={colors.tableHeaderBg}
-                headers={['Month', 'Class', 'Sales', 'Target', 'Accuracy %']}
-                searchable={false}
-                pageSize={40}
-                rows={t.cells
-                  .filter((c) => visibleClasses.includes(c.cls))
-                  .map((c) => ({
-                    onClick: () => detail.open({ kind: 'class', cls: c.cls }),
-                    cells: [monthLabel(c.month, 'long'), c.cls, full(c.amount), full(c.target), c.target > 0 ? `${((c.amount / c.target) * 100).toFixed(1)}%` : '—'],
-                  }))}
-              />
-            ))}
-          </Grid>
-          <Text fontSize="11.5px" color={colors.mutedText} mt={2} px={2}>
-            Budget ranking this month: {budgetRanking.map((r) => `${r.cls} ${pct0(r.pct)}`).join(' · ') || '—'}
-          </Text>
-        </OperationalDetail>
-      </Zone>
-    </Box>
+                      </Box>
+                    </Grid>
+                  )}
+                </ChartCard>
+              </CardGrid>
+              <OperationalDetail id="rev-acc" kpi="RV-06 RV-07" title="Accuracy by class by month" subtitle="IBL target and TSCL budget, the last 6 months">
+                <Grid templateColumns={{ base: '1fr', xl: '1fr 1fr' }} gap={3}>
+                  {[
+                    { title: 'vs IBL target', cells: p.cells },
+                    { title: 'vs TSCL budget', cells: budgetCells },
+                  ].map((t) => (
+                    <DataTable
+                      key={t.title}
+                      title={t.title}
+                      headerGradient={colors.tableHeaderBg}
+                      headers={['Month', 'Class', 'Sales', 'Target', 'Accuracy %']}
+                      searchable={false}
+                      pageSize={40}
+                      rows={t.cells
+                        .filter((c) => visibleClasses.includes(c.cls))
+                        .map((c) => ({
+                          onClick: () => detail.open({ kind: 'class', cls: c.cls }),
+                          cells: [monthLabel(c.month, 'long'), c.cls, full(c.amount), full(c.target), c.target > 0 ? `${((c.amount / c.target) * 100).toFixed(1)}%` : '—'],
+                        }))}
+                    />
+                  ))}
+                </Grid>
+                <Text fontSize="11.5px" color={colors.mutedText} mt={2} px={2}>
+                  Budget ranking this month: {budgetRanking.map((r) => `${r.cls} ${pct0(r.pct)}`).join(' · ') || '—'}
+                </Text>
+              </OperationalDetail>
+            </>
+          ),
+        },
+        {
+          key: 'budget',
+          title: 'Budget',
+          tiles: [
+            <ExecTile key="RV-04"
+              id="RV-04"
+              label="Budget attainment to date"
+              value={pct1(p.attBud)}
+              rag={rag(p.attBud, 'attainment')}
+              band="attainment"
+              variance={p.varBud == null ? undefined : `vs pace: ${p.varBud >= 0 ? '+' : '−'}PKR ${money(Math.abs(p.varBud))}`}
+              delta={{ value: p.attBud != null && p.attBudCmp != null ? p.attBud - p.attBudCmp : null, unit: 'pts', label: cl }}
+              {...st.bud}
+            />,
+            <ExecTile key="RV-05"
+              id="RV-05"
+              label="Run-rate required"
+              value={p.runRate.required == null ? '—' : `${money(p.runRate.required)}/day`}
+              caption={p.runRate.current == null ? undefined : `Running ${money(p.runRate.current)}/day`}
+              variance={p.runRate.required != null && p.runRate.current != null ? (p.runRate.current >= p.runRate.required ? 'On course for target' : `Need ${money(p.runRate.required - p.runRate.current)}/day more`) : undefined}
+              {...st.att}
+            />,
+          ],
+          lead: (
+            <ChartCard title="Variance to plan by class" subtitle={`This month, plan prorated to ${p.days.pct}% of days gone`} colSpan={5} height="300px" isLoading={st.cat.isLoading} help={helpFor('RV-08')} dataKpi="RV-08">
+              {CardState({ locked: st.cat.locked, error: st.cat.error, empty: !variance.steps.length }) ?? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={waterfall} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid {...grid} vertical={false} />
+                    <XAxis dataKey="name" {...axis} interval={0} fontSize={10.5} />
+                    <YAxis {...axis} tickFormatter={(v) => money(Number(v))} domain={[waterfallMin, 'auto']} allowDataOverflow />
+                    <Tooltip
+                      {...tooltipStyle}
+                      formatter={(_v, _n, item) => {
+                        const row = item.payload as { value: number; signed?: number };
+                        return [row.signed != null ? `${row.signed >= 0 ? '+' : '−'}PKR ${money(Math.abs(row.signed))}` : pkr(row.value), ''];
+                      }}
+                    />
+                    <Bar dataKey="base" stackId="w" fill="transparent" isAnimationActive={false} />
+                    <Bar dataKey="value" stackId="w">
+                      {waterfall.map((w) => (
+                        <Cell key={w.name} fill={w.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </ChartCard>
+          ),
+          details: (
+            <>
+              <CardGrid mb={3}>
+                <ChartCard title="Budget Accuracy TSCL" subtitle={p.single ? 'Full month, vs TSCL budget (1.0 gauge)' : MULTI_MONTH_NOTE} colSpan={12} height="auto" isLoading={st.bud.isLoading} help={helpFor('RV-15')} dataKpi="RV-15" expandable={false}>
+                  {CardState({ locked: st.bud.locked, error: st.bud.error }) ?? (
+                    <Grid templateColumns={{ base: '1fr', md: '200px 1fr' }} gap={3} alignItems="center">
+                      <Gauge value={p.gaugeBud} label="Achieved of month budget" rag={rag(p.gaugeBud == null ? null : (p.gaugeBud / p.days.pct) * 100, 'attainment')} />
+                      <Box fontSize="13px" color={colors.bodyText}>
+                        <Text>
+                          EFP sales: <b>{pkr(p.Se)}</b>
+                        </Text>
+                        <Text>
+                          Month budget: <b>{p.B && p.B > 0 ? pkr(p.B) : '—'}</b>
+                        </Text>
+                        <Text>
+                          Days-gone budget: <b>{pkr(p.Btd)}</b>
+                        </Text>
+                        <Flex mt={2}>
+                          <Box px="8px" py="1px" borderRadius="999px" bg={colors.targetSoft} color={colors.target} fontSize="12px" fontWeight={700}>
+                            Days Gone {p.days.pct}%
+                          </Box>
+                        </Flex>
+                      </Box>
+                    </Grid>
+                  )}
+                </ChartCard>
+              </CardGrid>
+            </>
+          ),
+        },
+        {
+          key: 'sales',
+          title: 'Sales & mix',
+          tiles: [
+            <ExecTile key="RV-01" id="RV-01" label="Sales (TP)" value={pkr(sales.total)} delta={{ value: change(sales.total, salesCmp.total), label: cl }} {...st.sales} />,
+          ],
+          lead: (
+            <ChartCard title="Sales Summary" subtitle="By class (1.0 card)" colSpan={4} height="auto" isLoading={st.sales.isLoading} help={helpFor('RV-13')} dataKpi="RV-13" expandable={false}>
+              {CardState({ locked: st.sales.locked, error: st.sales.error, empty: !sales.rows.length }) ?? (
+                <Box as="table" w="100%" fontSize="13px">
+                  <thead>
+                    <tr>
+                      {['Class', 'SKUs', 'Sales', 'Share'].map((h) => (
+                        <Box as="th" key={h} textAlign={h === 'Class' ? 'left' : 'right'} color={colors.mutedText} fontWeight={500} py="4px">
+                          {h}
+                        </Box>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sales.rows
+                      .filter((r) => visibleClasses.includes(r.cls))
+                      .map((r) => (
+                        <Box as="tr" key={r.cls} cursor="pointer" _hover={{ bg: colors.hoverBg }} onClick={() => detail.open({ kind: 'class', cls: r.cls })} title="Click for details">
+                          <Box as="td" py="5px">
+                            <Flex align="center" gap="6px">
+                              <Box w="10px" h="10px" borderRadius="2px" bg={clsColor(r.cls)} />
+                              {r.cls}
+                            </Flex>
+                          </Box>
+                          <Box as="td" textAlign="right">
+                            {full(r.skus)}
+                          </Box>
+                          <Box as="td" textAlign="right" title={full(r.amount)}>
+                            {full(r.amount)}
+                          </Box>
+                          <Box as="td" textAlign="right" position="relative">
+                            <Box position="absolute" right={0} top="20%" bottom="20%" w={`${r.share}%`} maxW="100%" bg={colors.salesSoft} zIndex={0} borderRadius="2px" />
+                            <Text as="span" position="relative">
+                              {r.share.toFixed(1)}%
+                            </Text>
+                          </Box>
+                        </Box>
+                      ))}
+                    <Box as="tr" bg={colors.tableTotalStart} fontWeight={700}>
+                      <Box as="td" py="5px">
+                        Total
+                      </Box>
+                      <Box as="td" textAlign="right">
+                        {full(sales.rows.reduce((t, r) => t + r.skus, 0))}
+                      </Box>
+                      <Box as="td" textAlign="right">
+                        {full(sales.total)}
+                      </Box>
+                      <Box as="td" textAlign="right">
+                        100%
+                      </Box>
+                    </Box>
+                  </tbody>
+                </Box>
+              )}
+            </ChartCard>
+          ),
+          details: (
+            <>
+              <CardGrid mb={3}>
+                <ChartCard title="Sales mix" subtitle={`This period vs ${compare === 'ly' ? 'same period LY' : 'previous period'}`} colSpan={6} height="220px" isLoading={st.sales.isLoading} help={helpFor('RV-09')} dataKpi="RV-09">
+                  {CardState({ locked: st.sales.locked, error: st.sales.error, empty: !sales.rows.length }) ?? (
+                    <Flex direction="column" h="100%">
+                      <Box flex={1} minH={0}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={mix} layout="vertical" margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+                            <XAxis type="number" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} allowDataOverflow {...axis} unit="%" />
+                            <YAxis type="category" dataKey="period" {...axis} width={96} />
+                            <Tooltip {...tooltipStyle} formatter={(v) => pct1(Number(v))} />
+                            {CLASSES.map((c) => (
+                              <Bar key={c} dataKey={c} stackId="m" fill={clsColor(c)} name={`Class ${c}`} />
+                            ))}
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </Box>
+                      <Legend items={CLASSES.map((c) => ({ label: c, color: clsColor(c) }))} />
+                    </Flex>
+                  )}
+                </ChartCard>
+                <ChartCard title="Range activation" subtitle="SKUs that sold ÷ SKUs in the range" colSpan={6} height="220px" isLoading={st.range.isLoading} help={helpFor('RV-10')} dataKpi="RV-10" headerRight={<Text fontSize="12px" color={colors.mutedText}>Total {pct0(range.total)}</Text>}>
+                  {CardState({ locked: st.range.locked, error: st.range.error, empty: !range.rows.some((r) => r.inRange > 0) }) ?? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={range.rows.filter((r) => visibleClasses.includes(r.cls))} layout="vertical" margin={{ top: 4, right: 36, left: 0, bottom: 0 }}>
+                        <XAxis type="number" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} allowDataOverflow {...axis} unit="%" />
+                        <YAxis type="category" dataKey="cls" {...axis} width={30} />
+                        <Tooltip {...tooltipStyle} formatter={(v, _n, item) => [`${pct1(Number(v))} (${(item.payload as { sold: number }).sold} of ${(item.payload as { inRange: number }).inRange})`, 'Activated']} />
+                        <Bar dataKey="pct" radius={[0, 3, 3, 0]} label={{ position: 'right', fontSize: 11, fill: colors.bodyText, formatter: (v: unknown) => pct0(Number(v)) }}>
+                          {range.rows.filter((r) => visibleClasses.includes(r.cls)).map((r) => (
+                            <Cell key={r.cls} fill={clsColor(r.cls)} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </ChartCard>
+              </CardGrid>
+            </>
+          ),
+        },
+        {
+          key: 'alignment',
+          title: 'Plan alignment',
+          lead: (
+            <ChartCard title="Plan alignment: forecast vs budget" subtitle="IBL target ÷ TSCL budget · green band 95–105%" colSpan={7} height="240px" isLoading={st.ibl.isLoading} help={helpFor('RV-11')} dataKpi="RV-11">
+              {CardState({ locked: st.ibl.locked, error: st.ibl.error, empty: !alignment.length, emptyText: 'No TSCL budget is loaded for this month' }) ?? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={alignment.map((a) => ({ ...a, diff: a.pct - 100 }))} layout="vertical" margin={{ top: 4, right: 48, left: 8, bottom: 0 }}>
+                    <CartesianGrid {...grid} horizontal={false} />
+                    <XAxis type="number" {...axis} domain={[-25, 25]} ticks={[-20, -10, 0, 10, 20]} allowDataOverflow tickFormatter={(v) => `${100 + Number(v)}%`} />
+                    <YAxis type="category" dataKey="cls" {...axis} width={44} />
+                    <ReferenceArea x1={-5} x2={5} fill={colors.goodSoft} fillOpacity={0.7} />
+                    <ReferenceLine x={0} stroke={colors.target} />
+                    <Tooltip {...tooltipStyle} formatter={(_v, _n, item) => {
+                      const row = item.payload as { pct: number; gap: number };
+                      return [`${pct1(row.pct)} · gap ${row.gap >= 0 ? '+' : '−'}PKR ${money(Math.abs(row.gap))}`, 'Forecast ÷ budget'];
+                    }} />
+                    <Bar dataKey="diff" label={{ position: 'right', fontSize: 11, fill: colors.bodyText, formatter: (v: unknown) => pct0(100 + Number(v)) }}>
+                      {alignment.map((a) => (
+                        <Cell key={a.cls} fill={RAG_META[rag(a.pct, 'planAlignment') ?? 'green'].color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </ChartCard>
+          ),
+          details: (
+            <>
+              <CardGrid mb={3}>
+                <ChartCard title="Class leaders and laggards" subtitle={`This month · ${monthLabel(p.currentMonth, 'long')}`} colSpan={12} height="auto" isLoading={st.cat.isLoading} help={helpFor('RV-12')} dataKpi="RV-12" expandable={false} headerRight={<ViewDetails detailId="rev-acc" />}>
+                  {CardState({ locked: st.cat.locked, error: st.cat.error, empty: !ranking.length }) ?? (
+                    <Grid templateColumns="1fr 1fr" gap={4}>
+                      {[
+                        { title: 'Ahead', list: ranking.slice(0, 2) },
+                        { title: 'Behind', list: [...ranking].reverse().slice(0, 2) },
+                      ].map((g) => (
+                        <Box key={g.title}>
+                          <Text fontSize="11px" color={colors.mutedText} textTransform="uppercase" mb={1}>
+                            {g.title}
+                          </Text>
+                          {g.list.map((r) => {
+                            const prorated = p.days.totalDays > 0 ? (r.pct / p.days.daysGone) * p.days.totalDays : r.pct;
+                            const status = rag(p.projectedFinal ? r.pct : prorated, 'attainment');
+                            return (
+                              <Flex key={r.cls} align="center" gap="8px" py="4px" cursor="pointer" _hover={{ bg: colors.hoverBg }} onClick={() => detail.open({ kind: 'class', cls: r.cls })}>
+                                <Box w="10px" h="10px" borderRadius="2px" bg={clsColor(r.cls)} />
+                                <Text fontWeight={600} fontSize="13px">
+                                  Class {r.cls}
+                                </Text>
+                                <Text fontSize="13px" ml="auto">
+                                  {pct0(r.pct)}
+                                </Text>
+                                <RagBadge rag={status} size="sm" />
+                              </Flex>
+                            );
+                          })}
+                        </Box>
+                      ))}
+                    </Grid>
+                  )}
+                </ChartCard>
+              </CardGrid>
+            </>
+          ),
+        },
+      ]}
+      aside={<AreaRisks data={data} tab="revenue" area="Revenue & Plan" />}
+      asideKpi="EX-10"
+    />
   );
 }

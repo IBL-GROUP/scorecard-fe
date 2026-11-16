@@ -92,6 +92,8 @@ test('TC-S5-05 TC-EXEC-024 Pareto bar (OP-05) opens Dispatch Vs Order (OP-14) fi
   await stubServices(page);
   await page.goto('./?tab=fulfilment');
   await settled(page);
+  // The Pareto chart is in the Orders topic's Details sheet (FR-EXEC-025).
+  await page.getByRole('button', { name: 'Orders: details', exact: true }).click();
   await page.locator('[data-kpi~="OP-05"] .recharts-bar-rectangle').first().click();
   const detail = page.locator('[data-detail="dispatch"]');
   await expect(detail.locator('> button[aria-expanded]')).toHaveAttribute('aria-expanded', 'true');
@@ -102,7 +104,10 @@ test('TC-S5-05 TC-EXEC-024 branch bar on Distribution sets a branch chip, and th
   await stubServices(page);
   await page.goto('./?tab=distribution');
   await settled(page);
+  // Compliance by Branch is in the Reporting topic's Details sheet (FR-EXEC-025).
+  await page.getByRole('button', { name: 'Reporting: details', exact: true }).click();
   await page.locator('[data-kpi~="DH-05"] .recharts-bar-rectangle').first().click();
+  await page.getByRole('button', { name: 'Close details' }).click();
   const remove = page.getByRole('button', { name: 'Clear this filter' });
   await expect(remove).toBeVisible();
   await remove.click();
@@ -114,12 +119,58 @@ for (const tab of ['revenue', 'inventory', 'fulfilment', 'distribution']) {
     await stubServices(page);
     await page.goto(`./?tab=${tab}`);
     await settled(page);
-    const links = page.getByRole('button', { name: 'View details', exact: true });
-    const n = await links.count();
+    // At least one Zone 4 section is open and on screen after each click.
+    const expanded = page.locator('[data-detail] > button[aria-expanded="true"]').first();
+    const close = page.getByRole('button', { name: 'Close details' });
+    // A link on a panel opens the Details sheet holding its table (FR-EXEC-025).
+    const onPanels = page.locator('[data-topic]').getByRole('button', { name: 'View details', exact: true });
+    const n = await onPanels.count();
     for (let i = 0; i < n; i++) {
-      await links.nth(i).click();
-      // At least one Zone 4 section is open and on screen after each click.
-      await expect(page.locator('[data-detail] > button[aria-expanded="true"]').first()).toBeVisible();
+      await onPanels.nth(i).click();
+      await expect(expanded).toBeVisible();
+      await close.click();
     }
+    // Links inside each Details sheet.
+    const sheets = page.locator('[data-kpi-more]');
+    const m = await sheets.count();
+    for (let j = 0; j < m; j++) {
+      await sheets.nth(j).click();
+      const inSheet = page.locator('[data-topic-sheet]').getByRole('button', { name: 'View details', exact: true });
+      const k = await inSheet.count();
+      for (let i = 0; i < k; i++) {
+        await inSheet.nth(i).click();
+        await expect(expanded).toBeVisible();
+      }
+      await close.click();
+    }
+  });
+}
+
+for (const [w, h] of [
+  [1920, 1080],
+  [1440, 900],
+] as const) {
+  test(`TC-EXEC-032 at ${w}×${h} every tab fits the screen; each Details sheet opens with its items and closes with Esc`, async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize({ width: w, height: h });
+    const t = await stubServices(page);
+    for (const tab of ['overview', 'revenue', 'inventory', 'fulfilment', 'distribution']) {
+      await page.goto(`./?tab=${tab}`);
+      await settled(page);
+      const overflow = await page.evaluate(() => document.documentElement.scrollHeight - document.documentElement.clientHeight);
+      expect(overflow, `${tab} scrolls by ${overflow}px`).toBeLessThanOrEqual(1);
+      const buttons = page.locator('[data-kpi-more]');
+      const n = await buttons.count();
+      for (let i = 0; i < n; i++) {
+        const ids = ((await buttons.nth(i).getAttribute('data-kpi-more')) ?? '').split(/\s+/).filter(Boolean);
+        await buttons.nth(i).click();
+        const sheet = page.locator('[data-topic-sheet]');
+        await expect(sheet).toBeVisible();
+        for (const id of ids) await expect(sheet.locator(`[data-kpi~="${id}"]`).first()).toBeAttached();
+        await page.keyboard.press('Escape');
+        await expect(sheet).toHaveCount(0);
+      }
+    }
+    expect(realErrors(t)).toEqual([]);
   });
 }

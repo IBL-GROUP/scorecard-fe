@@ -1,5 +1,5 @@
 import { Box, GridItem, Skeleton, Text, type GridItemProps } from '@chakra-ui/react';
-import { useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { FiMaximize2 } from 'react-icons/fi';
 import { ExpandedContext, InfoTip, Overlay } from '@/v2/components/overlay';
 import type { HelpText } from '@/v2/constants/help';
@@ -26,6 +26,9 @@ export interface ChartCardProps {
   dataKpi?: string;
 }
 
+/** true inside a topic panel (FR-EXEC-025): the card fills the space the panel leaves, whatever height it asks for. */
+export const PanelLeadContext = createContext(false);
+
 const BAR_HEIGHTS = [55, 80, 40, 90, 65, 75, 50, 85, 60, 70];
 const LINE_DOTS   = [45, 65, 30, 70, 50, 80, 38, 60, 55, 75];
 
@@ -40,7 +43,7 @@ export function ChartCard({
   title,
   children,
   colSpan = 4,
-  height = 'auto',
+  height: askedHeight = 'auto',
   isLoading = false,
   variant = 'bar',
   headerRight,
@@ -51,13 +54,15 @@ export function ChartCard({
   dataKpi,
 }: ChartCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const inPanel = useContext(PanelLeadContext);
+  const height = inPanel ? 'auto' : askedHeight;
   const { shows } = useStore();
   const skeletonH = height === 'auto' ? '100%' : height;
   // "1.0 only" in the header hides cards that carry no 1.0 metric (FR-EXEC-024).
   if (!shows(dataKpi)) return null;
 
   return (
-    <GridItem colSpan={colSpan} minH={0} minW={0} data-kpi={dataKpi} scrollMarginTop="140px">
+    <GridItem colSpan={inPanel ? undefined : colSpan} minH={0} minW={0} data-kpi={dataKpi} scrollMarginTop="140px">
       <Box
         bg={colors.cardBg}
         border="1px solid"
@@ -121,6 +126,11 @@ export function ChartCard({
         <Box
           h={height}
           position="relative"
+          overflow={inPanel ? 'auto' : undefined}
+          // Scrollable inside a panel, so reachable by keyboard (WCAG 2.1.1, NFR-EXEC-003).
+          tabIndex={inPanel ? 0 : undefined}
+          role={inPanel ? 'region' : undefined}
+          aria-label={inPanel ? title : undefined}
           flex={height === 'auto' ? 1 : undefined}
           minH={{ base: '240px', lg: 0 }}
         >

@@ -1,7 +1,7 @@
 // "All metrics / 1.0 only" switch (FR-EXEC-024): which items each mode shows.
 import { createElement as h, Fragment } from 'react';
 import { describe, expect, it } from 'vitest';
-import { anyShown, isShown, PRD_ITEMS, RETAINED_1_0, tabHasItems, V1_IDS } from './catalog';
+import { anyShown, contentsOf, isShown, PRD_ITEMS, RETAINED_1_0, tabHasItems, V1_IDS } from './catalog';
 import type { TabKey } from './tabs';
 
 const Leaf = () => null;
@@ -44,5 +44,25 @@ describe('metric mode', () => {
     // An untagged leaf (Top Risks, Data trust) is 2.0-only.
     expect(anyShown(h(Leaf), v1)).toBe(false);
     expect(anyShown([null, false, 'text'], v1)).toBe(false);
+  });
+});
+
+describe('topic Details sheet contents', () => {
+  // A sheet like Revenue's Attainment one: a gauge card holding the Days Gone pill, and an Operational Detail section.
+  const details = h(
+    Fragment,
+    null,
+    h('div', null, h(Leaf, { dataKpi: 'RV-14' } as object, h('span', { 'data-kpi': 'RV-16' }))),
+    h(Leaf, { id: 'rev-acc', kpi: 'RV-06 RV-07' } as object),
+    h(Leaf, { dataKpi: 'RV-08' } as object),
+  );
+
+  it('TC-EXEC-033 lists the PRD IDs and Operational Detail sections a sheet holds, filtered by the metric mode', () => {
+    const a = contentsOf(details, all);
+    expect(a.ids.sort()).toEqual(['RV-06', 'RV-07', 'RV-08', 'RV-14', 'RV-16']);
+    expect(a.sections).toEqual(['rev-acc']);
+    // "1.0 only": RV-08 (2.0-only) drops out; the rest carry 1.0 metrics.
+    expect(contentsOf(details, v1).ids.sort()).toEqual(['RV-06', 'RV-07', 'RV-14', 'RV-16']);
+    expect(contentsOf(null, all)).toEqual({ ids: [], sections: [] });
   });
 });
