@@ -1,25 +1,22 @@
-// The 2.0 app shell: navbar (tabs, "Data as of" stamp EX-11, "All metrics /
-// 1.0 only" switch, theme switch, user menu), global filter bar, the active tab, and (demo mode) the demo controls.
+// The 2.0 app shell, laid out as Sales Pulse 2.0 (FR-EXEC-042, FR-EXEC-043): the
+// menu (AppHeader), the control panel (FilterBar: search, metric switch, period
+// button), the active tab, and (demo mode) the demo controls.
 
 import { Box, Flex, Text } from '@chakra-ui/react';
 import { useEffect, useRef, useState } from 'react';
 import { ScrollRestoration, useSearchParams } from 'react-router-dom';
-import { FiMoon, FiSettings, FiSun } from 'react-icons/fi';
 import { colors } from '@/v2/constants/theme';
-import { useColorMode } from '@/v2/theme/color-mode';
 import { DEMO_DATA } from '@/v2/config/api';
 import { useDashboardData } from '@/v2/features/data';
 import { useActiveTab, useNav, scrollToKpi } from '@/v2/features/nav';
 import { useStore } from '@/v2/features/store';
 import { TABS } from '@/v2/features/tabs';
-import { tabHasItems, type MetricMode } from '@/v2/features/catalog';
+import { tabHasItems } from '@/v2/features/catalog';
 import { trust } from '@/v2/features/derive';
 import { useFitScreen } from '@/v2/features/fit';
-import { rag } from '@/v2/features/kpiThresholds';
-import { RagDot } from '@/v2/components/exec/Rag';
 import { FilterBar } from './FilterBar';
 import { DemoPanel } from './DemoPanel';
-import { UserMenu } from './UserMenu';
+import { AppHeader, DataAsOf } from './AppHeader';
 import { NoAccess } from '@/v2/auth/AuthGate';
 import { setUsageTab } from '@/v2/features/usage';
 import { DetailLayer } from '@/v2/components/detail/DetailSheets';
@@ -31,81 +28,11 @@ import { InventoryPage } from '@/v2/pages/InventoryPage';
 import { FulfilmentPage } from '@/v2/pages/FulfilmentPage';
 import { DistributionPage } from '@/v2/pages/DistributionPage';
 
-function DataAsOf({ closing, freshness }: { closing: string | null; freshness: number | null }) {
-  const [loadedAt] = useState(() => new Date());
-  return (
-    <Flex align="center" gap="6px" fontSize="12px" color={colors.mutedText} data-kpi="EX-11" title="Stock snapshot date and when this screen loaded">
-      <RagDot rag={rag(freshness, 'freshnessDays')} />
-      <Text>
-        Stock as of {closing ? new Date(`${closing.slice(0, 10)}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'} · refreshed{' '}
-        {loadedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-      </Text>
-    </Flex>
-  );
-}
-
-const METRIC_MODES: { mode: MetricMode; label: string; short: string }[] = [
-  { mode: 'all', label: 'All metrics', short: 'All' },
-  { mode: 'v1', label: '1.0 only', short: '1.0' },
-];
-
-/**
- * "All metrics" shows every 2.0 KPI and chart; "1.0 only" shows just the items
- * that carry a Supply Chain Pulse 1.0 metric. Remembered per user (FR-EXEC-024).
- */
-export function MetricModeSwitch() {
-  const { metricMode, setMetricMode } = useStore();
-  return (
-    <Flex
-      role="group"
-      aria-label="Metrics shown"
-      title="All metrics: every 2.0 KPI and chart. 1.0 only: just the KPIs and metrics Supply Chain Pulse 1.0 has."
-      border="1px solid"
-      borderColor={colors.border}
-      borderRadius="999px"
-      p="2px"
-      gap="2px"
-      flexShrink={0}
-      data-metric-mode={metricMode}
-    >
-      {METRIC_MODES.map((o) => {
-        const on = metricMode === o.mode;
-        return (
-          <Box
-            key={o.mode}
-            as="button"
-            aria-pressed={on}
-            aria-label={o.label}
-            onClick={() => setMetricMode(o.mode)}
-            px="10px"
-            py="3px"
-            borderRadius="999px"
-            fontSize="12px"
-            fontWeight={on ? 700 : 500}
-            bg={on ? colors.brandSoft : 'transparent'}
-            color={on ? colors.brand : colors.bodyText}
-            whiteSpace="nowrap"
-            _hover={on ? undefined : { bg: colors.navbarHover }}
-          >
-            <Text as="span" display={{ base: 'none', lg: 'inline' }}>
-              {o.label}
-            </Text>
-            <Text as="span" display={{ base: 'inline', lg: 'none' }}>
-              {o.short}
-            </Text>
-          </Box>
-        );
-      })}
-    </Flex>
-  );
-}
-
 export function Shell() {
   const tab = useActiveTab();
   const nav = useNav();
   const st = useStore();
   const [sp] = useSearchParams();
-  const { colorMode, toggleColorMode } = useColorMode();
   const [demoOpen, setDemoOpen] = useState(false);
   const data = useDashboardData(tab);
   const fit = useFitScreen();
@@ -168,62 +95,7 @@ export function Shell() {
     <Box minH="100vh" bg={colors.pageBg}>
       <ScrollRestoration />
       <Box position="sticky" top={0} zIndex={30} ref={headerRef}>
-        <Flex bg={colors.navbarBg} borderBottom="1px solid" borderColor={colors.border} px={{ base: 4, md: 6 }} h="52px" align="center" gap={4}>
-          <Flex align="baseline" gap="8px" flexShrink={0}>
-            <Text fontWeight={800} color={colors.brand} fontSize="16px">
-              Supply Chain Pulse
-            </Text>
-            <Text fontSize="12px" color={colors.mutedText} fontWeight={600}>
-              2.0
-            </Text>
-          </Flex>
-          <Flex as="nav" gap="2px" overflowX="auto" role="tablist" aria-label="Dashboard tabs" flex={1} minW={0}>
-            {visibleTabs.map((x) => {
-              const on = x.key === activeTab;
-              return (
-                <Box
-                  key={x.key}
-                  as="button"
-                  role="tab"
-                  aria-selected={on}
-                  onClick={() => nav(x.key)}
-                  px="12px"
-                  h="52px"
-                  fontSize="13.5px"
-                  fontWeight={on ? 700 : 500}
-                  color={on ? colors.brand : colors.bodyText}
-                  borderBottom="3px solid"
-                  borderColor={on ? colors.brand : 'transparent'}
-                  whiteSpace="nowrap"
-                  _hover={{ bg: colors.navbarHover }}
-                >
-                  <Text as="span" display={{ base: 'none', '2xl': 'inline' }}>
-                    {x.label}
-                  </Text>
-                  <Text as="span" display={{ base: 'none', lg: 'inline', '2xl': 'none' }}>
-                    {x.mid}
-                  </Text>
-                  <Text as="span" display={{ base: 'inline', lg: 'none' }}>
-                    {x.short}
-                  </Text>
-                </Box>
-              );
-            })}
-          </Flex>
-          <Box display={{ base: 'none', xl: 'block' }}>
-            <DataAsOf closing={t.closing} freshness={t.freshness} />
-          </Box>
-          <MetricModeSwitch />
-          <Box as="button" onClick={toggleColorMode} aria-label="Switch light or dark mode" color={colors.mutedText} p="6px" borderRadius="4px" _hover={{ bg: colors.navbarHover }}>
-            {colorMode === 'light' ? <FiMoon /> : <FiSun />}
-          </Box>
-          {DEMO_DATA && (
-            <Flex as="button" align="center" gap="6px" onClick={() => setDemoOpen(true)} px="8px" py="3px" borderRadius="999px" bg={colors.warnSoft} color={colors.warn} fontSize="11px" fontWeight={700} title="Generated numbers for demos and tests. No request reaches the live database.">
-              <FiSettings /> DEMO DATA
-            </Flex>
-          )}
-          <UserMenu />
-        </Flex>
+        <AppHeader tabs={visibleTabs} active={activeTab} onPick={nav} closing={t.closing} freshness={t.freshness} onDemo={() => setDemoOpen(true)} />
         <FilterBar data={data} tab={activeTab} />
       </Box>
 
@@ -238,7 +110,7 @@ export function Shell() {
         overflow={fit ? 'hidden' : undefined}
         data-fit={fit || undefined}
       >
-        <Box display={{ base: 'block', xl: 'none' }} mb={3}>
+        <Box display={{ base: 'block', '2xl': 'none' }} mb={3}>
           <DataAsOf closing={t.closing} freshness={t.freshness} />
         </Box>
         <ErrorBoundary>

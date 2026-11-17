@@ -189,6 +189,9 @@
           },
           {
             "$ref": "#/components/parameters/branch"
+          },
+          {
+            "$ref": "#/components/parameters/coverDays"
           }
         ],
         "responses": {
@@ -213,6 +216,16 @@
                       }
                     }
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "coverDays is not a whole number from 1 to 366",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -252,6 +265,9 @@
           },
           {
             "$ref": "#/components/parameters/branch"
+          },
+          {
+            "$ref": "#/components/parameters/coverDays"
           }
         ],
         "responses": {
@@ -276,6 +292,16 @@
                       }
                     }
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "coverDays is not a whole number from 1 to 366",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -735,6 +761,9 @@
           },
           {
             "$ref": "#/components/parameters/branch"
+          },
+          {
+            "$ref": "#/components/parameters/groupBy"
           }
         ],
         "responses": {
@@ -763,6 +792,16 @@
               }
             }
           },
+          "400": {
+            "description": "groupBy is not sku",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
@@ -773,7 +812,8 @@
         "x-requirements": [
           "FR-SUM-007",
           "BR-MET-006"
-        ]
+        ],
+        "description": "With groupBy=sku the rows are IblVsTsclSkuRow (per SKU)."
       }
     },
     "/inventory-days": {
@@ -798,6 +838,9 @@
           },
           {
             "$ref": "#/components/parameters/branch"
+          },
+          {
+            "$ref": "#/components/parameters/coverDays"
           }
         ],
         "responses": {
@@ -822,6 +865,16 @@
                       }
                     }
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "coverDays is not a whole number from 1 to 366",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -861,6 +914,9 @@
           },
           {
             "$ref": "#/components/parameters/branch"
+          },
+          {
+            "$ref": "#/components/parameters/coverDays"
           }
         ],
         "responses": {
@@ -885,6 +941,16 @@
                       }
                     }
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "coverDays is not a whole number from 1 to 366",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -924,6 +990,9 @@
           },
           {
             "$ref": "#/components/parameters/branch"
+          },
+          {
+            "$ref": "#/components/parameters/coverDays"
           }
         ],
         "responses": {
@@ -948,6 +1017,16 @@
                       }
                     }
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "coverDays is not a whole number from 1 to 366",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -988,6 +1067,9 @@
           },
           {
             "$ref": "#/components/parameters/branch"
+          },
+          {
+            "$ref": "#/components/parameters/coverDays"
           }
         ],
         "responses": {
@@ -1012,6 +1094,16 @@
                       }
                     }
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "coverDays is not a whole number from 1 to 366",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -1342,6 +1434,66 @@
           "FR-FILT-004"
         ]
       }
+    },
+    "/sales-summary/by-sales-type": {
+      "get": {
+        "operationId": "getSalesSummaryBySalesType",
+        "tags": [
+          "Summary"
+        ],
+        "summary": "Sales (TP) split by sales type",
+        "description": "The same window, filters and rows as /sales-summary (so the parts add up to its total), grouped by the sales view's data_flag: Rd to trade, Ibl to trade, Pharma Healthcare to trade. Supply Chain Pulse 2.0 RV-01 split (FR-EXEC-048); scorecard-be v2 only.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/startDate"
+          },
+          {
+            "$ref": "#/components/parameters/endDate"
+          },
+          {
+            "$ref": "#/components/parameters/classification"
+          },
+          {
+            "$ref": "#/components/parameters/sku"
+          },
+          {
+            "$ref": "#/components/parameters/branch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sales split by sales type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Envelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/SalesTypeRow"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1415,6 +1567,29 @@
             "type": "string"
           }
         }
+      },
+      "coverDays": {
+        "name": "coverDays",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 366
+        },
+        "description": "Days the target month's target is spread over when cover days are worked out: daily target = month target ÷ coverDays, cover days = inventory value ÷ daily target. Absent: the days in the endDate month (1.0, BR-MET-002). Outside 1–366: 400. Supply Chain Pulse 2.0 Cover days input (FR-EXEC-047); scorecard-be v2 only."
+      },
+      "groupBy": {
+        "name": "groupBy",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "sku"
+          ]
+        },
+        "description": "sku: one row per SKU (item_code, classification, ibl_target, tscl_target, ibl_vs_tscl_pct) instead of per class, and no Total row. The TSCL budget is national, so only the IBL side follows branch (BR-MET-006). Any other value: 400. Supply Chain Pulse 2.0 Plan alignment drill (FR-EXEC-049); scorecard-be v2 only."
       }
     },
     "responses": {
@@ -2550,6 +2725,51 @@
             "type": "integer"
           }
         }
+      },
+      "SalesTypeRow": {
+        "type": "object",
+        "required": [
+          "sales_type",
+          "amount"
+        ],
+        "properties": {
+          "sales_type": {
+            "type": "string",
+            "description": "The sales view's own type (data_flag): 'Rd to trade', 'Ibl to trade', 'Pharma Healthcare to trade'; 'Others' when blank."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Σ amount (TP) of that type, same rows as /sales-summary."
+          }
+        }
+      },
+      "IblVsTsclSkuRow": {
+        "type": "object",
+        "required": [
+          "item_code",
+          "classification",
+          "ibl_target",
+          "tscl_target",
+          "ibl_vs_tscl_pct"
+        ],
+        "properties": {
+          "item_code": {
+            "type": "string"
+          },
+          "classification": {
+            "type": "string"
+          },
+          "ibl_target": {
+            "type": "number"
+          },
+          "tscl_target": {
+            "type": "number"
+          },
+          "ibl_vs_tscl_pct": {
+            "type": "number"
+          }
+        },
+        "description": "A row of /ibl-vs-tscl?groupBy=sku."
       }
     }
   }

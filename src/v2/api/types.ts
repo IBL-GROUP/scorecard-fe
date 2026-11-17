@@ -16,6 +16,8 @@ export const CLASSES: ClassCode[] = ['A', 'B', 'C', 'N', 'Others'];
 export const RATED_CLASSES: Exclude<ClassCode, 'Others'>[] = ['A', 'B', 'C', 'N'];
 
 export interface SalesSummaryRow { classification: string; sku: Num; amount: Num }
+/** /sales-summary/by-sales-type: sales split by the view's sales type ('Rd to trade', 'Ibl to trade', 'Pharma Healthcare to trade'). */
+export interface SalesTypeRow { sales_type: string; amount: Num }
 export interface TotalSkuRow { classification: string; count: Num }
 export interface CoverDaysRow {
   classification: string;

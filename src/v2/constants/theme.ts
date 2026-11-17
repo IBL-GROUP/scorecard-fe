@@ -1,3 +1,5 @@
+import { compact } from '@/v2/features/format';
+
 // ─── Sales Pulse 2.0 palette ────────────────────────────────────────────────
 // ONEThunder: Cobalt (#233a87) and Midnight (#161631), with Odoo's grey scale
 // for neutrals. Every colour is a CSS variable with a light and a dark value,
@@ -264,24 +266,17 @@ export const gradients = {
   totalRow: colors.tableTotalStart,
 } as const;
 
-// One rule for money across the dashboard:
-//  - formatCompact: tables, charts, insights, pop-ups → 3.04B · 53.8M · 505K
-//  - formatPrecise: the headline KPI tiles only     → 3.04B · 53.82M · 505.0K
+// One rule for money across the dashboard (FR-EXEC-030): never billions,
+// K from 100K, the value itself under 100K.
+//  - formatCompact: tables, charts, insights, pop-ups → 3,040.0M · 53.8M · 505K · 45,230
+//  - formatCompactValue: tiles, chips and labels      → 3,040.0M · 53.8M · 505.4K · 45,230
 export function formatCompact(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
-  const abs = Math.abs(n);
-  if (abs >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
-  if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-  return n.toFixed(0);
+  return compact(n);
 }
 
 // Shared number formatting for tiles, chips and labels.
 export function formatCompactValue(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return '—';
-  const abs = Math.abs(n);
-  if (abs >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
-  if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (abs >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toFixed(0);
+  return compact(n, 1, 1);
 }

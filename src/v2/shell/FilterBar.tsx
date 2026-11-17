@@ -1,110 +1,117 @@
-// Global filter bar (PRD 3.3): Period presets and Compare apply at once;
-// Division, Classification and Branch (under "More filters") are staged and
-// applied together with Apply, as in 1.0 (FR-FILT-002).
+// The control panel under the menu, as in Sales Pulse 2.0 (FR-EXEC-043): one
+// Odoo-style search for Division, Class and Branch on the left (chips, saved
+// favourites), the "All metrics / 1.0 only" switch and the period button on the
+// right. Every choice applies at once: there is no Apply button (FR-FILT-002 as
+// changed for 2.0 on 16 Nov 2026).
 
-import { Box, Flex, Text } from '@chakra-ui/react';
-import { DatePicker } from '@/v2/components/date-picker';
-import { notify } from '@/v2/components/notify';
-import { Button } from '@/v2/components/button';
-import { useEffect, useState } from 'react';
-import { FiSliders } from 'react-icons/fi';
-import { Segmented } from '@/v2/components/segmented';
-import { MultiSelect } from '@/v2/components/select/MultiSelect';
+import { Box, Flex, Input, Text } from '@chakra-ui/react';
+import { useEffect, useMemo, useState } from 'react';
+import { daysInMonth, parse } from '@/v2/features/period';
+import { SearchBar, type SearchField } from '@/v2/components/search';
 import { colors } from '@/v2/constants/theme';
-import { PRESETS, rangeLabel, todayIso, type CompareKey, type PresetKey } from '@/v2/features/period';
-import { EMPTY_FILTERS, useStore, type Filters } from '@/v2/features/store';
+import { useStore, type Filters } from '@/v2/features/store';
 import type { DashboardData } from '@/v2/features/data';
 import type { TabKey } from '@/v2/features/tabs';
+import { MetricModeSwitch } from './MetricModeSwitch';
+import { PeriodButton } from './PeriodButton';
 
-const COMPARE: { value: CompareKey; label: string }[] = [
-  { value: 'prev', label: 'Previous period' },
-  { value: 'ly', label: 'Same period LY' },
-];
+const CLASSES = ['A', 'B', 'C', 'N', 'Others'];
+
+/**
+ * Cover days (FR-EXEC-047): the days the month's target is spread over when
+ * scorecard-be works out cover days (daily target = month target ÷ these days).
+ * Empty = the days in the To month, as 1.0. Applies on Enter or on leaving the
+ * box; a value outside 1–366 is put back.
+ */
+function CoverDaysInput() {
+  const st = useStore();
+  const shown = st.coverDays == null ? '' : String(st.coverDays);
+  const [text, setText] = useState(shown);
+  useEffect(() => setText(shown), [shown]);
+  const end = parse(st.window.end);
+  const monthDays = daysInMonth(end.getFullYear(), end.getMonth());
+  const commit = () => {
+    const t = text.trim();
+    if (!t) return st.setCoverDays(null);
+    const n = Number(t);
+    if (Number.isInteger(n) && n >= 1 && n <= 366) st.setCoverDays(n === monthDays ? null : n);
+    else setText(shown);
+  };
+  return (
+    <Flex align="center" gap="8px" flexShrink={0}>
+      <label htmlFor="cover-days" style={{ fontSize: '13px', color: colors.mutedText, whiteSpace: 'nowrap' }}>
+        Cover days
+      </label>
+      <Input
+        id="cover-days"
+        data-cover-days
+        type="number"
+        inputMode="numeric"
+        min={1}
+        max={366}
+        step={1}
+        w="84px"
+        h="34px"
+        fontSize="13px"
+        borderRadius="4px"
+        bg={colors.cardBg}
+        placeholder={String(monthDays)}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === 'Enter' && commit()}
+        title={`Days the month's target is spread over: daily target = month target ÷ these days. Empty = days in the month (${monthDays}).`}
+      />
+    </Flex>
+  );
+}
+const split = (v: string | undefined) => (v ? v.split(',').filter(Boolean) : []);
 
 export function FilterBar({ data, tab }: { data: DashboardData; tab: TabKey }) {
   const st = useStore();
-  const [staged, setStaged] = useState<Filters>(st.filters);
-  const [more, setMore] = useState(st.filters.branch.length > 0);
-  const [custom, setCustom] = useState(st.window);
-  useEffect(() => setStaged(st.filters), [st.filters]);
-  useEffect(() => setCustom(st.window), [st.window]);
-
-  const items = data.options.items;
-  const divisions = [...new Set(items.map((i) => i.division).filter(Boolean) as string[])].sort();
-  const dirty = JSON.stringify(staged) !== JSON.stringify(st.filters);
-  const branchTab = tab === 'revenue' || tab === 'inventory';
+  // Division, Class and Branch drive the Summary, Inventory and Overview data;
+  // Fulfilment and Distribution have their own chips (as before).
   const productFilters = tab !== 'fulfilment' && tab !== 'distribution';
 
+  const fields: SearchField[] = useMemo(() => {
+    const divisions = [...new Set(data.options.items.map((i) => i.division).filter(Boolean) as string[])].sort();
+    return [
+      { key: 'division', label: 'Division', multi: true, options: divisions.map((d) => ({ value: d, label: d })) },
+      { key: 'classification', label: 'Class', multi: true, options: CLASSES.map((c) => ({ value: c, label: c === 'Others' ? 'Other' : `Class ${c}` })) },
+      { key: 'branch', label: 'Branch', multi: true, options: data.options.branches.map((b) => ({ value: String(b.hub_branch_code), label: b.hub_branch_desc })) },
+    ];
+  }, [data.options.items, data.options.branches]);
+
+  const values: Record<string, string> = {
+    division: st.filters.division.join(','),
+    classification: st.filters.classification.join(','),
+    branch: st.filters.branch.join(','),
+  };
+  const apply = (next: Record<string, string>) => {
+    const f: Filters = { division: split(next.division), classification: split(next.classification), branch: split(next.branch) };
+    st.applyFilters(f);
+  };
+
   return (
-    <Box bg={colors.barBg} borderBottom="1px solid" borderColor={colors.border} px={{ base: 4, md: 6 }} py="8px">
-      <Flex gap="10px" align="center" wrap="wrap">
-        <Flex direction="column" gap="2px">
-          <Text fontSize="11px" color={colors.mutedText}>
-            Period
-          </Text>
-          <Segmented<PresetKey> size="xs" ariaLabel="Period" value={st.preset} onChange={st.setPreset} options={PRESETS.map((p) => ({ value: p.key, label: p.label }))} />
-        </Flex>
-        {st.preset === 'custom' && (
-          <Flex gap="6px" align="flex-end">
-            <Box>
-              <Text fontSize="11px" color={colors.mutedText}>
-                From
-              </Text>
-              <DatePicker variant="range-start" value={custom.start} maxDate={custom.end} onChange={(v) => setCustom({ ...custom, start: v })} />
+    <Flex align="center" gap={4} wrap="wrap" px={4} py="10px" bg={colors.barBg} borderBottom="1px solid" borderColor={colors.border} data-control-panel>
+      <Flex flex="1 1 460px" minW={0} maxW="900px">
+        {productFilters ? (
+          <Flex w="100%" gap={3} align="center">
+            <Box flex={1} minW={0} data-filter-search>
+              <SearchBar fields={fields} values={values} onChange={apply} favoritesKey="supplyChainPulse.favorites" placeholder="Search division, class, branch…" />
             </Box>
-            <Box>
-              <Text fontSize="11px" color={colors.mutedText}>
-                To
-              </Text>
-              <DatePicker variant="range-end" value={custom.end} minDate={custom.start} maxDate={todayIso()} onChange={(v) => setCustom({ ...custom, end: v })} />
-            </Box>
-            <Button size="sm" variant="primary" onClick={() => custom.start && custom.end && custom.start <= custom.end && st.setCustom(custom)}>
-              Set
-            </Button>
+            <CoverDaysInput />
           </Flex>
-        )}
-        <Flex direction="column" gap="2px">
-          <Text fontSize="11px" color={colors.mutedText}>
-            Compare to
+        ) : (
+          <Text fontSize="12.5px" color={colors.mutedText}>
+            Division, class and branch do not apply to this tab; use its own chips.
           </Text>
-          <Segmented<CompareKey> size="xs" ariaLabel="Compare to" value={st.compare} onChange={st.setCompare} options={COMPARE} />
-        </Flex>
-        {productFilters && (
-          <>
-            <Box minW="170px">
-              <MultiSelect label="Division" value={staged.division} onChange={(v) => setStaged({ ...staged, division: v })} options={divisions.map((d) => ({ value: d, label: d }))} placeholder="All divisions" />
-            </Box>
-            <Box minW="150px">
-              <MultiSelect label="Class" value={staged.classification} onChange={(v) => setStaged({ ...staged, classification: v })} options={['A', 'B', 'C', 'N', 'Others'].map((c) => ({ value: c, label: c }))} placeholder="All classes" />
-            </Box>
-            <Button size="sm" variant="gray" onClick={() => setMore(!more)} aria-expanded={more} alignSelf="flex-end">
-              <FiSliders /> More filters
-            </Button>
-            {more && (
-              <Box minW="190px">
-                <MultiSelect
-                  label="Branch"
-                  value={staged.branch}
-                  onChange={(v) => setStaged({ ...staged, branch: v })}
-                  options={data.options.branches.map((b) => ({ value: String(b.hub_branch_code), label: b.hub_branch_desc }))}
-                  placeholder={branchTab ? 'All branches' : 'All branches (used on Revenue and Inventory)'}
-                />
-              </Box>
-            )}
-            <Flex gap="6px" alignSelf="flex-end">
-              <Button size="sm" variant="primary" disabled={!dirty} onClick={() => (st.applyFilters(staged), notify({ title: 'Filters applied', detail: 'Every tab reloads with the new selection, the one on screen first.', tone: 'info', key: 'filters' }))}>
-                Apply
-              </Button>
-              <Button size="sm" variant="primaryOutline" onClick={() => (setStaged(EMPTY_FILTERS), st.applyFilters(EMPTY_FILTERS))}>
-                Clear
-              </Button>
-            </Flex>
-          </>
         )}
-        <Text ml="auto" fontSize="12px" color={colors.mutedText} alignSelf="flex-end">
-          {rangeLabel(st.window)} · vs {rangeLabel(data.cmpWindow)}
-        </Text>
       </Flex>
-    </Box>
+      <Flex align="center" gap={3} flexShrink={0} ml="auto">
+        <MetricModeSwitch />
+        <PeriodButton cmpWindow={data.cmpWindow} />
+      </Flex>
+    </Flex>
   );
 }

@@ -14,23 +14,27 @@ const PRESETS = [
   ['ytd', 'YTD'],
   ['custom', 'Custom'],
 ] as const;
-const COMPARES: [CompareKey, string, RegExp][] = [
-  ['prev', 'Previous period', /vs previous period/],
-  ['ly', 'Same period LY', /vs same period LY/],
+const COMPARES: [CompareKey, string][] = [
+  ['prev', 'Previous period'],
+  ['ly', 'Same period last year'],
 ];
 
 const radio = (page: Page, group: string, name: string) => page.getByRole('radiogroup', { name: group }).getByRole('radio', { name, exact: true });
 
 for (const [preset, presetLabel] of PRESETS) {
-  for (const [compare, compareLabel, compareText] of COMPARES) {
+  for (const [compare, compareLabel] of COMPARES) {
     test(`TC-S5-06 TC-EXEC-025 ${presetLabel} with ${compareLabel}: values load, windows and labels are right, no console errors`, async ({ page }) => {
       const t = await stubServices(page);
       await page.goto('./');
       await settled(page);
+      await page.locator('[data-period-button]').click();
       await radio(page, 'Period', presetLabel).click();
       await radio(page, 'Compare to', compareLabel).click();
       await expect(radio(page, 'Period', presetLabel)).toHaveAttribute('aria-checked', 'true');
+      await page.keyboard.press('Escape');
       await settled(page);
+      // The button names both periods, A then B: "Nov 2026 vs Oct 2026".
+      await expect(page.locator('[data-period-button]')).toHaveAccessibleName(/^Period: .+ vs .+$/);
 
       // The current and the comparison window were both requested: as a date
       // range, or (windows over a month, rule F1) as month-end category calls.
@@ -43,8 +47,11 @@ for (const [preset, presetLabel] of PRESETS) {
         expect(asked(w), `current window ${w.start}..${w.end}`).toBe(true);
         expect(asked(c), `comparison window ${c.start}..${c.end}`).toBe(true);
       }
-      await expect(page.getByText(compareText).first()).toBeVisible();
+      // Tiles no longer show the comparison line (FR-EXEC-039); a tile's detail page does.
       await expect(page.getByText('Couldn’t load')).toHaveCount(0);
+      await page.locator('[data-kpi="EX-01"] button[aria-label$=": details"]').first().click();
+      const cmpName = (await page.locator('[data-period-button]').getAttribute('aria-label'))!.replace(/^Period: .+ (vs .+)$/, '$1');
+      await expect(page.getByText(cmpName).first()).toBeVisible();
       expect(realErrors(t)).toEqual([]);
     });
   }
@@ -52,7 +59,7 @@ for (const [preset, presetLabel] of PRESETS) {
 
 /** Every Zone 4 section, its tab, and the topic whose Details sheet holds it (FR-EXEC-025). */
 const DETAILS: [tab: string, id: string, topic: string][] = [
-  ['revenue', 'rev-acc', 'Attainment'],
+  ['revenue', 'rev-acc', 'Forecast Accuracy IBL'],
   ['inventory', 'inv-days', 'Service'],
   ['fulfilment', 'dispatch', 'Orders'],
   ['fulfilment', 'wip', 'Production'],

@@ -510,7 +510,7 @@ export function AchBullets({
                       <Box w="3px" h="6px" bg={colors.sales} borderRadius="1px" flexShrink={0} />
                       <Box w="2px" h="12px" bg={colors.target} flexShrink={0} />
                       <Text fontSize="11px" color={colors.mutedText} lineHeight="12px" truncate>
-                        Too small to draw at this scale ({((Math.max(i.sale_value, i.target_value) / max) * 100).toFixed(2)}% of the largest)
+                        Too small to draw at this scale ({((Math.max(i.sale_value, i.target_value) / max) * 100).toFixed(1)}% of the largest)
                       </Text>
                     </Flex>
                   ) : (

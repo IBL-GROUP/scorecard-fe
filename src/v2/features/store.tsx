@@ -91,6 +91,8 @@ interface State {
   zone4: Record<string, boolean>;
   /** "all" = every 2.0 item; "v1" = only items carrying a 1.0 metric (FR-EXEC-024). */
   metricMode: MetricMode;
+  /** Cover days input: the days the month's target is spread over; null = the days in the month (FR-EXEC-047). */
+  coverDays: number | null;
 }
 
 interface Store extends State {
@@ -106,6 +108,7 @@ interface Store extends State {
   setZone4: (id: string, open: boolean) => void;
   can: (s: Section) => boolean;
   setMetricMode: (m: MetricMode) => void;
+  setCoverDays: (d: number | null) => void;
   /** Whether an item tagged with PRD ID(s) is shown in the current metric mode. */
   shows: (kpi?: string | null) => boolean;
 }
@@ -133,6 +136,7 @@ export function StoreProvider({ children, live }: { children: ReactNode; live?: 
       user,
       zone4: zone4Of(user),
       metricMode: readMetricMode(user.id),
+      coverDays: null,
     };
   });
 
@@ -204,6 +208,8 @@ export function StoreProvider({ children, live }: { children: ReactNode; live?: 
     });
   }, []);
 
+  const setCoverDays = useCallback((d: number | null) => setState((s) => ({ ...s, coverDays: d })), []);
+
   const value = useMemo<Store>(
     () => ({
       ...state,
@@ -219,9 +225,10 @@ export function StoreProvider({ children, live }: { children: ReactNode; live?: 
       isZone4Open: (id) => state.zone4[id] ?? state.user.persona === 'planner',
       can: (sec) => state.user.sections.includes(sec),
       setMetricMode,
+      setCoverDays,
       shows: (kpi) => isShown(state.metricMode, kpi),
     }),
-    [state, setPreset, setCustom, setCompare, applyFilters, setChip, setUser, setPersona, setZone4, setMetricMode],
+    [state, setPreset, setCustom, setCompare, applyFilters, setChip, setUser, setPersona, setZone4, setMetricMode, setCoverDays],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

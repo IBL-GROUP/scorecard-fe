@@ -3,7 +3,7 @@
 
 import { Box, Flex, Text } from '@chakra-ui/react';
 import { useMemo, useState, type ReactNode } from 'react';
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ChartCard } from '@/v2/components/chart-card';
 import { DataTable } from '@/v2/components/data-table';
 import { Segmented } from '@/v2/components/segmented';
@@ -11,8 +11,10 @@ import { MultiSelect } from '@/v2/components/select/MultiSelect';
 import { ExecTile } from '@/v2/components/exec/ExecTile';
 import { CardGrid, CardState, ChipBar, OperationalDetail, ViewDetails } from '@/v2/components/exec/Panels';
 import { AreaLayout } from '@/v2/components/exec/AreaLayout';
+import { HBars } from '@/v2/components/exec/HBars';
+import { GroupedTable } from '@/v2/components/grouped-table/GroupedTable';
 import { AreaRisks } from './OverviewPage';
-import { axis, grid, tooltipStyle } from '@/v2/components/exec/charts';
+import { Legend, axis, grid, ragLegend, tooltipStyle } from '@/v2/components/exec/charts';
 import { RagBadge, RAG_META } from '@/v2/components/exec/Rag';
 import { InfoTip } from '@/v2/components/overlay';
 import { colors } from '@/v2/constants/theme';
@@ -21,9 +23,9 @@ import { n0, type RdStatusRow } from '@/v2/api/types';
 import type { DashboardData } from '@/v2/features/data';
 import { distribution, status, trust } from '@/v2/features/derive';
 import { chronicNonReporters, rdAgeBuckets, rdComplianceByBranch, uploaded } from '@/v2/features/kpis';
-import { rag } from '@/v2/features/kpiThresholds';
+import { kpiThresholds, rag } from '@/v2/features/kpiThresholds';
 import { useStore } from '@/v2/features/store';
-import { DASH, full, money, pct0, pct1, pkr, units } from '@/v2/features/format';
+import { DASH, full, pct0, pct1, pkr, units } from '@/v2/features/format';
 
 type UploadFilter = 'all' | 'uploaded' | 'not';
 
@@ -210,6 +212,8 @@ export function DistributionPage({ data }: { data: DashboardData }) {
           lead: (
             <ChartCard title="RD Reporting Age" subtitle="Distributors by days since their last stock report" colSpan={{ base: 1, lg: 5 }} height="260px" isLoading={sRd.isLoading} help={helpFor('DH-04')} dataKpi="DH-04">
               {CardState({ ...sRd, empty }) ?? (
+                <Flex direction="column" h="100%">
+                <Box flex={1} minH={0}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={ages} margin={{ top: 18, right: 8, left: -12, bottom: 0 }}>
                     <CartesianGrid {...grid} vertical={false} />
@@ -224,6 +228,9 @@ export function DistributionPage({ data }: { data: DashboardData }) {
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
+                </Box>
+                <Legend items={[{ label: 'Reported within 1 day', color: AGE_COLOR(0) }, { label: '2–3 days since report', color: AGE_COLOR(2) }, { label: 'More than 3 days (stale)', color: AGE_COLOR(4) }]} />
+                </Flex>
               )}
             </ChartCard>
           ),
@@ -240,22 +247,24 @@ export function DistributionPage({ data }: { data: DashboardData }) {
                   dataKpi="DH-05"
                 >
                   {CardState({ ...sRd, empty }) ?? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={byBranch} layout="vertical" margin={{ top: 4, right: 40, left: 8, bottom: 0 }}>
-                        <CartesianGrid {...grid} horizontal={false} />
-                        <XAxis type="number" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} allowDataOverflow {...axis} unit="%" />
-                        <YAxis type="category" dataKey="branch" width={110} {...axis} />
-                        <Tooltip {...tooltipStyle} formatter={(v) => [pct0(Number(v)), 'Reported today']} />
-                        <ReferenceLine x={90} stroke={colors.target} strokeDasharray="4 3" label={{ value: 'Target 90%', fontSize: 10, fill: colors.target, position: 'top' }} />
-                        <Bar dataKey="pct" radius={[0, 3, 3, 0]} cursor="pointer" onClick={(e) => { const b = (e as unknown as { branch?: string; payload?: { branch?: string } }); const name = b.branch ?? b.payload?.branch; if (name) st.setChip('distribution', { key: 'branch', value: name }); }}>
-                          {byBranch.map((b) => {
-                            const r = rag(b.pct, 'rdCompliance');
-                            return <Cell key={b.branch} fill={r ? RAG_META[r].color : colors.sales} opacity={chip?.key === 'branch' && chip.value !== b.branch ? 0.35 : 1} />;
-                          })}
-                          <LabelList dataKey="pct" position="right" fontSize={11} fill={colors.bodyText} formatter={(v) => pct0(Number(v))} />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <HBars
+                      rows={byBranch.map((b) => {
+                        const r = rag(b.pct, 'rdCompliance');
+                        return {
+                          key: b.branch,
+                          label: b.branch,
+                          value: b.pct,
+                          target: kpiThresholds.rdCompliance.green,
+                          color: r ? RAG_META[r].color : colors.sales,
+                          valueText: pct0(b.pct),
+                          dim: chip?.key === 'branch' && chip.value !== b.branch,
+                          onClick: () => st.setChip('distribution', { key: 'branch', value: b.branch }),
+                        };
+                      })}
+                      fmt={pct0}
+                      max={100}
+                      legend={[...ragLegend('rdCompliance', { shape: 'bar', what: 'reported today' }), { label: `Target ${kpiThresholds.rdCompliance.green}%`, color: colors.target, shape: 'tick' }]}
+                    />
                   )}
                 </ChartCard>
               </CardGrid>
@@ -281,11 +290,10 @@ export function DistributionPage({ data }: { data: DashboardData }) {
                         headers={['Distributor', 'Branch', 'Days silent', 'Last stock value', 'Last report date']}
                         rows={chronic.map((r) => ({
                           onClick: () => detail.open({ kind: 'rd', code: String(r.ibl_distributor_code) }),
-                          cells: [r.distributor_desc ?? DASH, r.branch_desc ?? DASH, String(n0(r.day_diff)), money(n0(r.last_stock_value)), fmtDate(r.last_stock_date)],
+                          cells: [r.distributor_desc ?? DASH, r.branch_desc ?? DASH, String(n0(r.day_diff)), full(n0(r.last_stock_value)), fmtDate(r.last_stock_date)],
                           cellColors: [undefined, undefined, colors.bad, undefined, undefined],
                         }))}
                         pageSize={10}
-                        autoTotal={false}
                         searchable={false}
                       />
                     ))}
@@ -339,30 +347,30 @@ export function DistributionPage({ data }: { data: DashboardData }) {
                         {tableRows.length} of {rd.rows.length} RDs
                       </Text>
                     </Flex>
-                    <DataTable
-                      headerGradient={colors.tableHeaderBg}
-                      headers={['RD Code', 'Distributor', 'Branch Code', 'Branch', 'Current Units', 'Current Value', 'Previous Date', 'Previous Units', 'Previous Value', 'Days Difference', 'Upload Status']}
-                      rows={tableRows.map((r) => {
-                        const dRag = rag(n0(r.day_diff), 'staleRdDays');
-                        return {
-                          onClick: () => detail.open({ kind: 'rd', code: String(r.ibl_distributor_code) }),
-                          cells: [
-                            String(r.ibl_distributor_code ?? DASH),
-                            r.distributor_desc ?? DASH,
-                            String(r.branch_code ?? DASH),
-                            r.branch_desc ?? DASH,
-                            full(n0(r.stock_qty)),
-                            full(n0(r.stock_value)),
-                            fmtDate(r.last_stock_date),
-                            full(n0(r.last_stock_qty)),
-                            full(n0(r.last_stock_value)),
-                            String(n0(r.day_diff)),
-                            uploaded(r) ? '✓ Uploaded' : '✕ Not uploaded',
-                          ],
-                          cellColors: [undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, dRag ? RAG_META[dRag].color : undefined, uploaded(r) ? colors.good : colors.bad],
-                        };
-                      })}
-                      pageSize={25}
+                    <GroupedTable<RdStatusRow>
+                      rows={tableRows}
+                      levels={[
+                        { key: 'branch', label: 'Branch', of: (r) => r.branch_desc ?? '' },
+                        { key: 'status', label: 'Upload status', of: (r) => (uploaded(r) ? 'Uploaded' : 'Not uploaded') },
+                      ]}
+                      presets={[
+                        { value: 'branch', label: 'Branch › Distributor', levels: ['branch'] },
+                        { value: 'status', label: 'Upload status › Branch', levels: ['status', 'branch'] },
+                      ]}
+                      leaf={{ label: 'Distributor', key: (r) => String(r.ibl_distributor_code), name: (r) => r.distributor_desc ?? DASH, code: (r) => (r.ibl_distributor_code == null ? undefined : String(r.ibl_distributor_code)) }}
+                      texts={[
+                        { header: 'Previous Date', value: (r) => fmtDate(r.last_stock_date) },
+                        { header: 'Upload Status', value: (r) => (uploaded(r) ? '✓ Uploaded' : '✕ Not uploaded'), color: (r) => (uploaded(r) ? colors.good : colors.bad) },
+                      ]}
+                      figures={[
+                        { header: 'Current Units', value: (r) => n0(r.stock_qty), fmt: full },
+                        { header: 'Current Value', value: (r) => n0(r.stock_value), fmt: full },
+                        { header: 'Previous Units', value: (r) => n0(r.last_stock_qty), fmt: full },
+                        { header: 'Previous Value', value: (r) => n0(r.last_stock_value), fmt: full },
+                        // Days are not added up: a group shows none (FR-EXEC-026).
+                        { header: 'Days Difference', value: (r) => n0(r.day_diff), fmt: (v) => (v == null ? '' : String(v)), group: 'none', color: (r) => { const g = rag(n0(r.day_diff), 'staleRdDays'); return g ? RAG_META[g].color : undefined; } },
+                      ]}
+                      onLeaf={(r) => detail.open({ kind: 'rd', code: String(r.ibl_distributor_code) })}
                     />
                   </>
                 )}

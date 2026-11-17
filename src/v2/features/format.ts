@@ -1,18 +1,29 @@
-// Number formatting for 2.0 (PRD section 3.4): PKR in M (1 decimal) and
-// B (2 decimals) on tiles, full figures in tooltips and exports; % with 1
-// decimal on tiles; whole days; "—" for missing values, never 0.
+// Number formatting for 2.0 (PRD section 3.4, FR-EXEC-030): never billions,
+// always millions (1,234.5M); K from 100K; under 100K the value itself
+// (45,230); at most one decimal place; no "PKR" sign on any value. Full
+// figures in tooltips and exports; % with 1 decimal; whole days; "—" for
+// missing values, never 0.
 
 export const DASH = '—';
 
+/** The 2.0 compact rule (FR-EXEC-030), shared by every compact formatter. */
+export function compact(n: number, mDecimals = 1, kDecimals = 0): string {
+  const a = Math.abs(n);
+  const kd = 10 ** kDecimals;
+  // 999,960 would read "1000K": show it as millions instead.
+  if (a >= 1e6 || (a >= 1e5 && Math.round((a / 1e3) * kd) / kd >= 1000)) {
+    return `${(n / 1e6).toLocaleString('en-US', { minimumFractionDigits: mDecimals, maximumFractionDigits: mDecimals })}M`;
+  }
+  if (a >= 1e5) return `${(n / 1e3).toFixed(kDecimals)}K`;
+  return Math.round(n).toLocaleString('en-US');
+}
+
 export function money(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return DASH;
-  const a = Math.abs(n);
-  if (a >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
-  if (a >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
-  if (a >= 1e3) return `${(n / 1e3).toFixed(0)}K`;
-  return n.toFixed(0);
+  return compact(n);
 }
-export const pkr = (n: number | null | undefined) => (n == null || Number.isNaN(n) ? DASH : `PKR ${money(n)}`);
+/** Money in the compact rule, without a currency sign ("53.8M"): no "PKR" on any value (FR-EXEC-030). */
+export const pkr = (n: number | null | undefined) => (n == null || Number.isNaN(n) ? DASH : money(n));
 export const full = (n: number | null | undefined) => (n == null || Number.isNaN(n) ? DASH : Math.round(n).toLocaleString('en-US'));
 export const pct1 = (n: number | null | undefined) => (n == null || Number.isNaN(n) ? DASH : `${n.toFixed(1)}%`);
 export const pct0 = (n: number | null | undefined) => (n == null || Number.isNaN(n) ? DASH : `${Math.round(n)}%`);

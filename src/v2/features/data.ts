@@ -52,7 +52,7 @@ export interface Result<T = unknown> {
 
 export type TabData = Record<string, Result>;
 
-const fetchRows = async (path: string, params?: Record<string, unknown>) => {
+export const fetchRows = async (path: string, params?: Record<string, unknown>) => {
   const res = await api.get<Envelope<unknown>>(path, { params });
   return res.data.data ?? [];
 };
@@ -77,6 +77,16 @@ function windowParams(w: Window, base: Record<string, unknown>) {
 }
 
 /** All specs, per tab, for the current filters. */
+/** The endpoints whose cover days use the days the month's target is spread over (FR-EXEC-047). */
+export const COVER_DAYS_PATHS = ['/cover-days', '/cover-days/total', '/inventory-days', '/service-measure', '/above-below-threshold', '/tgt-vs-actual'];
+
+/** Adds ?coverDays to those endpoints' calls when the user set one; otherwise the specs as they are. */
+export function withCoverDays(specs: Record<TabKey, Spec[]>, coverDays: number | null): Record<TabKey, Spec[]> {
+  if (coverDays == null) return specs;
+  const add = (s: Spec): Spec => (COVER_DAYS_PATHS.includes(s.path) ? { ...s, params: { ...s.params, coverDays } } : s);
+  return Object.fromEntries(Object.entries(specs).map(([k, list]) => [k, list.map(add)])) as Record<TabKey, Spec[]>;
+}
+
 function buildSpecs(w: Window, cmp: Window, base: Record<string, unknown>, branchSet: boolean): Record<TabKey, Spec[]> {
   const today = todayIso();
   const cur = windowParams(w, base);
@@ -146,7 +156,11 @@ function buildSpecs(w: Window, cmp: Window, base: Record<string, unknown>, branc
       ...cat6('/forecast-accuracy-category-yearly', 'catY'),
       { name: 'sales', path: '/sales-summary', params: cur },
       { name: 'salesCmp', path: '/sales-summary', params: prev },
+      // RV-01 split by sales type (FR-EXEC-048).
+      { name: 'salesType', path: '/sales-summary/by-sales-type', params: cur },
       { name: 'totalSku', path: '/total-sku' },
+      // Stock level topic (FR-EXEC-031).
+      ...stockCore.filter((s) => ['cover', 'coverTotal', 'bench'].includes(s.name)),
     ],
     inventory: [
       ...stockCore,
@@ -200,7 +214,7 @@ export function useDashboardData(active: TabKey) {
   }, [filters.classification, filters.branch, sku]);
 
   const cmp = useMemo(() => comparisonWindow(w, compare), [w, compare]);
-  const specs = useMemo(() => buildSpecs(w, cmp, base, filters.branch.length > 0), [w, cmp, base, filters.branch.length]);
+  const specs = useMemo(() => withCoverDays(buildSpecs(w, cmp, base, filters.branch.length > 0), st.coverDays), [w, cmp, base, filters.branch.length, st.coverDays]);
 
   // ── Load queue ──
   const restartKey = JSON.stringify([w, cmp, base, st.user.sections]);

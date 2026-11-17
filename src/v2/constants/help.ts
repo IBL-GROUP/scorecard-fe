@@ -67,7 +67,7 @@ export const KPI_HELP: Record<string, HelpText> = {
     'Required = (full-month target − sales) ÷ days left. Current = sales ÷ days gone.',
   ),
   'RV-06': h(
-    'Is attainment against the IBL target improving or getting worse, and in which class?',
+    'Is achievement against the IBL target improving or getting worse, and in which class?',
     'pct per class per month from /forecast-accuracy-category-monthly, called twice for 6 months. Total = Σ amount ÷ Σ target per month. Band: as EX-01.',
   ),
   'RV-07': h('The same trend, against the TSCL budget.', 'pct per class per month from /forecast-accuracy-category-yearly, called twice for 6 months.'),
@@ -84,7 +84,7 @@ export const KPI_HELP: Record<string, HelpText> = {
     'Is the sales forecast (IBL target) consistent with the budget (TSCL), and where does it disagree?',
     'ibl_vs_tscl_pct per class and Total from /ibl-vs-tscl. Band: Green 95–105%, Amber 90–94.9% or 105.1–110%, Red outside.',
   ),
-  'RV-12': h('Which classes are beating plan this month, and which are behind.', 'Classes ranked by current-month attainment (RV-06).'),
+  'RV-12': h('Which classes are beating plan this month, and which are behind.', 'Classes ranked by current-month achievement (RV-06).'),
   'RV-13': h(
     'What sold, in how many SKUs, and in what share. The 1.0 Sales Summary card.',
     '/sales-summary: SKUs sold, sales (TP), share = class sales ÷ total × 100 (1 decimal).',

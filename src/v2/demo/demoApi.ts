@@ -37,10 +37,13 @@ const byClass = <T>(rows: Sku[], f: (cls: string, g: Sku[]) => T | null) =>
 
 const monthLabel = (ym: string) => `${parse(`${ym}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} `; // trailing space, as the API sends
 
-function coverRows(m: DemoModel, rows: Sku[], share: number, end: string) {
+function coverRows(m: DemoModel, rows: Sku[], share: number, end: string, coverDays?: number) {
   const snap = m.snapshot(end);
+  const e = parse(end);
+  // Daily target = month target ÷ days: the days in the month, or ?coverDays (FR-EXEC-047).
+  const spread = coverDays ? daysInMonth(e.getFullYear(), e.getMonth()) / coverDays : 1;
   return byClass(rows, (cls, g) => {
-    const dt = g.reduce((t, s) => t + m.dailyTarget(s, end), 0) * share;
+    const dt = g.reduce((t, s) => t + m.dailyTarget(s, end), 0) * share * spread;
     if (!snap) return null;
     const inv = g.reduce((t, s) => t + m.skuCover(s, snap) * m.dailyTarget(s, end), 0) * share;
     const efp = g.reduce((t, s) => t + m.skuCover(s, snap) * m.dailyTarget(s, end) * s.costRatio, 0) * share;
@@ -105,14 +108,24 @@ const ENDPOINTS: Record<string, (m: DemoModel, p: Params) => unknown[]> = {
       return amount > 0 ? { classification: cls, sku: per.filter((v) => v > 0).length, amount: r2(amount) } : null;
     });
   },
+  // RV-01 split (FR-EXEC-048): the /sales-summary total in fixed demo shares.
+  '/sales-summary/by-sales-type': (m, p) => {
+    const total = (ENDPOINTS['/sales-summary'](m, p) as { amount: number }[]).reduce((t, r) => t + r.amount, 0);
+    if (!total) return [];
+    return [
+      { sales_type: 'Rd to trade', amount: r2(total * 0.729) },
+      { sales_type: 'Ibl to trade', amount: r2(total * 0.245) },
+      { sales_type: 'Pharma Healthcare to trade', amount: r2(total * 0.026) },
+    ];
+  },
   '/total-sku': () => byClass(SKUS, (cls, g) => (cls === 'Others' ? null : { classification: cls, count: g.length })),
   '/cover-days': (m, p) => {
     const { rows, share, end } = scope(m, p);
-    return coverRows(m, rows, share, end);
+    return coverRows(m, rows, share, end, Number(p.coverDays) || undefined);
   },
   '/cover-days/total': (m, p) => {
     const { rows, share, end } = scope(m, p);
-    const c = coverRows(m, rows, share, end);
+    const c = coverRows(m, rows, share, end, Number(p.coverDays) || undefined);
     if (!c.length) return [];
     const sum = (k: 'inv_val' | 'inv_val_efp' | 'quantity' | 'trg_value' | 'daily_target') => c.reduce((t, r) => t + Number(r[k]), 0);
     const dt = sum('daily_target');
@@ -150,6 +163,13 @@ const ENDPOINTS: Record<string, (m: DemoModel, p: Params) => unknown[]> = {
   '/ibl-vs-tscl': (m, p) => {
     const { rows, share, end } = scope(m, p);
     const ym = end.slice(0, 7);
+    // Per SKU for the Plan alignment drill (FR-EXEC-049); the budget ignores branches.
+    if (p.groupBy === 'sku')
+      return rows.map((s) => {
+        const ibl = m.target(s, ym) * share;
+        const tscl = m.budget(s, ym);
+        return { item_code: s.code, classification: s.cls, ibl_target: r2(ibl), tscl_target: r2(tscl), ibl_vs_tscl_pct: tscl > 0 ? r2((ibl / tscl) * 100) : 0 };
+      });
     const per = byClass(rows, (cls, g) => {
       const ibl = g.reduce((t, s) => t + m.target(s, ym), 0) * share;
       const tscl = g.reduce((t, s) => t + m.budget(s, ym), 0);

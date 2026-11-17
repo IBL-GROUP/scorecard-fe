@@ -8,7 +8,7 @@
 import { Box, Flex, Grid, Text } from '@chakra-ui/react';
 import { Children, isValidElement, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FiArrowRight, FiX } from 'react-icons/fi';
+import { FiArrowRight, FiChevronRight, FiX } from 'react-icons/fi';
 import { PanelLeadContext } from '@/v2/components/chart-card/ChartCard';
 import { colors } from '@/v2/constants/theme';
 import { anyShown, contentsOf } from '@/v2/features/catalog';
@@ -113,28 +113,41 @@ function TopicPanel({ p, fit, span, isOpen, onDetails }: { p: Prepared; fit: boo
       gridColumn={span ? '1 / -1' : undefined}
     >
       <Flex align="center" gap="12px" minH="28px" flexShrink={0} wrap="wrap">
-        <Text as="h2" fontSize="15px" fontWeight={700} color={colors.darkText}>
-          {topic.title}
-        </Text>
+        {/* No Details button (user request, 17 Nov 2026): the panel title opens the topic's sheet (FR-EXEC-049). */}
+        {hasDetails && !topic.open ? (
+          <Box
+            as="button"
+            display="inline-flex"
+            alignItems="center"
+            gap="4px"
+            fontSize="15px"
+            fontWeight={700}
+            color={colors.darkText}
+            aria-label={`${topic.title}: details`}
+            aria-haspopup="dialog"
+            aria-expanded={isOpen}
+            data-kpi-more={more.ids.join(' ')}
+            title={`More on ${topic.title}`}
+            onClick={(e: React.MouseEvent<HTMLElement>) => onDetails(e.currentTarget)}
+            _hover={{ color: colors.brand, textDecoration: 'underline' }}
+            _focusVisible={{ outline: `2px solid ${colors.brand}`, outlineOffset: '2px', borderRadius: '2px' }}
+          >
+            <Text as="h2" fontSize="15px" fontWeight={700}>
+              {topic.title}
+            </Text>
+            <FiChevronRight size={15} aria-hidden />
+          </Box>
+        ) : (
+          <Text as="h2" fontSize="15px" fontWeight={700} color={colors.darkText}>
+            {topic.title}
+          </Text>
+        )}
         <Verdict counts={counts} />
         <Box ml="auto" />
-        {topic.open ? (
+        {topic.open && (
           <Box {...panelButton} onClick={topic.open.run}>
             {topic.open.label} <FiArrowRight aria-hidden />
           </Box>
-        ) : (
-          hasDetails && (
-            <Box
-              {...panelButton}
-              aria-label={`${topic.title}: details`}
-              aria-haspopup="dialog"
-              aria-expanded={isOpen}
-              data-kpi-more={more.ids.join(' ')}
-              onClick={(e: React.MouseEvent<HTMLElement>) => onDetails(e.currentTarget)}
-            >
-              Details <FiArrowRight aria-hidden />
-            </Box>
-          )
         )}
       </Flex>
       {tiles.length > 0 && (
@@ -217,7 +230,11 @@ function DetailsSheet({ p, onClose }: { p: Prepared; onClose: () => void }) {
   );
 }
 
-export function AreaLayout({ topics, top, aside, asideKpi }: { topics: Topic[]; top?: ReactNode; aside?: ReactNode; asideKpi?: string }) {
+/**
+ * `asideTopic` is one more topic panel, shown in the side column under
+ * `aside` (Summary: Plan alignment under Risks & Opportunities, FR-EXEC-036).
+ */
+export function AreaLayout({ topics, top, aside, asideKpi, asideTopic }: { topics: Topic[]; top?: ReactNode; aside?: ReactNode; asideKpi?: string; asideTopic?: Topic }) {
   const fit = useFitScreen();
   const { metricMode, shows } = useStore();
   const [openKey, setOpenKey] = useState<string | null>(null);
@@ -225,16 +242,21 @@ export function AreaLayout({ topics, top, aside, asideKpi }: { topics: Topic[]; 
   const [sp] = useSearchParams();
   const focus = sp.get('focus');
 
-  const prepared: Prepared[] = topics.map((topic) => {
+  const prepare = (topic: Topic): Prepared => {
     const tiles = Children.toArray(topic.tiles).filter((c) => isValidElement(c) && shows((c.props as { id?: string }).id));
     return { topic, tiles, counts: ragCounts(tiles), more: contentsOf(topic.details, shows) };
-  });
+  };
+  const prepared: Prepared[] = topics.map(prepare);
+  const asidePrepared = asideTopic ? prepare(asideTopic) : null;
   // "1.0 only" (FR-EXEC-024) drops a panel with nothing of 1.0 on it or behind it.
-  const shown = prepared.filter((p) => metricMode === 'all' || p.tiles.length > 0 || anyShown(p.topic.lead, shows) || anyShown(p.topic.body, shows) || p.more.ids.length > 0);
+  const isShownPanel = (p: Prepared) => metricMode === 'all' || p.tiles.length > 0 || anyShown(p.topic.lead, shows) || anyShown(p.topic.body, shows) || p.more.ids.length > 0;
+  const shown = prepared.filter(isShownPanel);
+  const asideShown = asidePrepared && isShownPanel(asidePrepared) ? asidePrepared : null;
   const showAside = !!aside && (!asideKpi || shows(asideKpi));
+  const showColumn = showAside || !!asideShown;
 
   const ref = useRef(prepared);
-  ref.current = prepared;
+  ref.current = asidePrepared ? [...prepared, asidePrepared] : prepared;
 
   // "View details" or a chart click asks for an Operational Detail: open the sheet holding it.
   useEffect(() => onRevealDetail((id) => {
@@ -261,12 +283,12 @@ export function AreaLayout({ topics, top, aside, asideKpi }: { topics: Topic[]; 
   const cols = n > 1 ? 2 : 1;
   // A row with a lead chart shares the height left; a row of tiles only takes what it needs.
   const rowSizes = Array.from({ length: Math.ceil(n / cols) }, (_, r) => (shown.slice(r * cols, r * cols + cols).some((p) => p.topic.lead && anyShown(p.topic.lead, shows)) ? 'minmax(0,1fr)' : 'auto')).join(' ');
-  const open = shown.find((p) => p.topic.key === openKey);
+  const open = [...shown, ...(asideShown ? [asideShown] : [])].find((p) => p.topic.key === openKey);
 
   return (
     <Flex direction="column" h={fit ? '100%' : undefined} minH={0} gap={3}>
       {top}
-      <Grid flex={1} minH={0} gap={3} templateColumns={{ base: 'minmax(0,1fr)', xl: showAside ? 'minmax(0,1fr) minmax(300px, 24%)' : 'minmax(0,1fr)' }}>
+      <Grid flex={1} minH={0} gap={3} templateColumns={{ base: 'minmax(0,1fr)', xl: showColumn ? 'minmax(0,1fr) minmax(300px, 24%)' : 'minmax(0,1fr)' }}>
         <Grid minH={0} gap={3} templateColumns={{ base: 'minmax(0,1fr)', lg: `repeat(${cols}, minmax(0,1fr))` }} templateRows={fit ? rowSizes : undefined}>
           {shown.map((p, i) => (
             <TopicPanel
@@ -282,10 +304,27 @@ export function AreaLayout({ topics, top, aside, asideKpi }: { topics: Topic[]; 
             />
           ))}
         </Grid>
-        {showAside && (
-          <Box minH={0} overflowY={fit ? 'auto' : undefined}>
-            {aside}
-          </Box>
+        {showColumn && (
+          // Side column: the aside (risks) on top, the aside topic under it, each half the height.
+          <Grid minH={0} gap={3} templateColumns="minmax(0,1fr)" templateRows={fit && showAside && asideShown ? 'minmax(0,1fr) minmax(0,1fr)' : undefined}>
+            {showAside && (
+              <Box minH={0} overflowY={fit ? 'auto' : undefined}>
+                {aside}
+              </Box>
+            )}
+            {asideShown && (
+              <TopicPanel
+                p={asideShown}
+                fit={fit}
+                span={false}
+                isOpen={openKey === asideShown.topic.key}
+                onDetails={(el) => {
+                  opener.current = el;
+                  setOpenKey(asideShown.topic.key);
+                }}
+              />
+            )}
+          </Grid>
         )}
       </Grid>
       {open && <DetailsSheet p={open} onClose={close} />}

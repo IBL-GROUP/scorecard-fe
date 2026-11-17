@@ -1,3 +1,4 @@
+import { compact } from '@/v2/features/format';
 import { Box, Flex, Text } from '@chakra-ui/react';
 import { Bar, CartesianGrid, ComposedChart, LabelList, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useExpanded } from '@/v2/components/overlay';
@@ -10,12 +11,9 @@ import { colors, formatCompact } from '@/v2/constants/theme';
 //   narrow → "109.3M" turned upright, inside the top of the column, or just
 //            above it when the column is too short to hold it
 const CHAR_W = 6; // px per character at 10.5px tabular numerals
+// Never billions; the value itself under 100K (FR-EXEC-030).
 function shortCompact(v: number) {
-  const a = Math.abs(v);
-  if (a >= 1e9) return `${Math.round(v / 1e8) / 10}B`;
-  if (a >= 1e6) return `${Math.round(v / 1e6)}M`;
-  if (a >= 1e3) return `${Math.round(v / 1e3)}K`;
-  return String(Math.round(v));
+  return compact(v, 0);
 }
 type LabelProps = { x?: number | string; y?: number | string; width?: number | string; height?: number | string; value?: unknown };
 function ValueLabel(props: LabelProps) {

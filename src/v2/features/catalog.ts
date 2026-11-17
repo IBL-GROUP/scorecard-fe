@@ -8,10 +8,15 @@ import type { TabKey } from './tabs';
 
 const range = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => `${prefix}-${String(i + 1).padStart(2, '0')}`);
 
+// Stock level (IN-03, IN-04, IN-05, IN-07, IN-08, IN-14) is on Summary since
+// 16 Nov 2026 (FR-EXEC-031); Plan alignment (RV-11, RV-12) stays on Summary,
+// in the side column (FR-EXEC-036).
+export const MOVED_TO_SUMMARY = ['IN-03', 'IN-04', 'IN-05', 'IN-07', 'IN-08', 'IN-14'];
+
 export const PRD_ITEMS: Record<TabKey, string[]> = {
   overview: range('EX', 11),
-  revenue: range('RV', 16),
-  inventory: range('IN', 17),
+  revenue: [...range('RV', 16), ...MOVED_TO_SUMMARY],
+  inventory: range('IN', 17).filter((id) => !MOVED_TO_SUMMARY.includes(id)),
   fulfilment: range('OP', 16),
   distribution: range('DH', 14),
 };

@@ -8,10 +8,8 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   ComposedChart,
   Line,
-  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -21,19 +19,21 @@ import { ExecTile } from '@/v2/components/exec/ExecTile';
 import { CardGrid, CardState, ChipBar, DATES_ONLY, OperationalDetail, ViewDetails, openDetail } from '@/v2/components/exec/Panels';
 import { AreaLayout } from '@/v2/components/exec/AreaLayout';
 import { AreaRisks } from './OverviewPage';
-import { axis, grid, Legend, tooltipStyle } from '@/v2/components/exec/charts';
+import { axis, grid, Legend, ragLegend, tooltipStyle } from '@/v2/components/exec/charts';
 import { RAG_META } from '@/v2/components/exec/Rag';
 import { ChartCard } from '@/v2/components/chart-card';
-import { DataTable } from '@/v2/components/data-table';
 import { Segmented } from '@/v2/components/segmented';
 import { colors } from '@/v2/constants/theme';
 import { n0, type DispatchVsOrderRow, type RpmRow, type WipRow } from '@/v2/api/types';
-import type { DashboardData } from '@/v2/features/data';
+import { rowsOf, type DashboardData } from '@/v2/features/data';
 import { fulfilment, production, service, status } from '@/v2/features/derive';
-import { materialsBelow, paretoUnfulfilled, rmpmByPlant, RMPM_STATES, wipByPlant } from '@/v2/features/kpis';
-import { rag } from '@/v2/features/kpiThresholds';
+import { fillByChannel, fillRate, materialsBelow, paretoUnfulfilled, rmpmByPlant, RMPM_STATES, wipByPlant } from '@/v2/features/kpis';
+import { kpiThresholds, rag } from '@/v2/features/kpiThresholds';
 import { change, full, money, pct0, pct1, pkr, units } from '@/v2/features/format';
 import { useStore } from '@/v2/features/store';
+import { compareText, periodTag } from '@/v2/features/period';
+import { HBars } from '@/v2/components/exec/HBars';
+import { GroupedTable } from '@/v2/components/grouped-table/GroupedTable';
 
 const TYPE_COLORS = [colors.sales, colors.target, colors.prior, colors.accent, colors.borderStrong];
 const STATE_COLORS: Record<string, string> = {
@@ -62,7 +62,7 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
   const st = useStore();
   const detail = useDetail();
   const chip = st.chips.fulfilment;
-  const cmpLabel = st.compare === 'ly' ? 'vs same period LY' : 'vs previous period';
+  const cmpLabel = compareText(data.cmpWindow);
 
   const f = fulfilment(d);
   const p = production(d);
@@ -92,6 +92,8 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
   const wipRows = p.wip.filter((r) => (wipPlant === 'All' || r.plnt_desc === wipPlant) && (wipType === 'All' || r.material_type_description === wipType));
   const rmRows = p.rpm.filter((r) => rmPlant === 'All' || r.plantname === rmPlant);
 
+  // B period fill rate per channel, for the lighter bar (FR-EXEC-045).
+  const cmpFill = new Map(fillByChannel(rowsOf<DispatchVsOrderRow>(d.dispatchCmp)).map((c) => [c.channel, c.pct]));
   const channelData = f.channels.map((c) => ({ channel: c.channel, pct: c.pct == null ? 0 : Math.round(c.pct * 10) / 10, rag: rag(c.pct, 'fillRate') }));
   const fillRag = rag(f.pct, 'fillRate');
   const holdRag = rag(p.r.onHoldPct, 'onHoldPct');
@@ -142,40 +144,23 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
               headerRight={<ViewDetails detailId="dispatch" />}
             >
               {CardState({ ...sDispatch, empty: !channelData.length }) ?? (
-                <Flex direction="column" h="100%">
-                  <Box flex={1} minH={0}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={channelData} layout="vertical" margin={{ left: 8, right: 40, top: 4, bottom: 4 }}>
-                        <CartesianGrid {...grid} horizontal={false} />
-                        <XAxis type="number" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} allowDataOverflow {...axis} tickFormatter={(v: number) => `${v}%`} />
-                        <YAxis type="category" dataKey="channel" width={90} {...axis} />
-                        <Tooltip {...tooltipStyle} formatter={(v) => [`${v}%`, 'Fill rate']} />
-                        <ReferenceLine x={95} stroke={colors.target} strokeDasharray="4 3" label={{ value: '95%', fill: colors.target, fontSize: 11, position: 'top' }} />
-                        <Bar
-                          dataKey="pct"
-                          radius={[0, 3, 3, 0]}
-                          cursor="pointer"
-                          label={{ position: 'right', fontSize: 11, fill: colors.bodyText, formatter: (v: unknown) => `${v}%` }}
-                          onClick={(e: unknown) => {
-                            const ch = (e as { payload?: { channel?: string } }).payload?.channel;
-                            if (ch) detail.open({ kind: 'channel', channel: ch });
-                          }}
-                        >
-                          {channelData.map((c) => (
-                            <Cell key={c.channel} fill={c.rag ? RAG_META[c.rag].color : colors.sales} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </Box>
-                  <Legend
-                    items={[
-                      { label: `${RAG_META.green.word} ≥ 95%`, color: RAG_META.green.color },
-                      { label: `${RAG_META.amber.word} 90–95%`, color: RAG_META.amber.color },
-                      { label: `${RAG_META.red.word} < 90%`, color: RAG_META.red.color },
-                    ]}
-                  />
-                </Flex>
+                <HBars
+                  rows={channelData.map((c) => ({
+                    key: c.channel,
+                    label: c.channel,
+                    value: c.pct,
+                    prior: cmpFill.get(c.channel) ?? null,
+                    target: kpiThresholds.fillRate.green,
+                    color: c.rag ? RAG_META[c.rag].color : colors.sales,
+                    valueText: `${c.pct}%`,
+                    priorText: cmpFill.get(c.channel) == null ? '—' : `${Math.round((cmpFill.get(c.channel) as number) * 10) / 10}%`,
+                    note: `${kpiThresholds.fillRate.green}% target`,
+                    onClick: () => detail.open({ kind: 'channel', channel: c.channel }),
+                  }))}
+                  fmt={(n) => `${n}%`}
+                  max={100}
+                  legend={[...ragLegend('fillRate', { shape: 'bar', what: 'fill rate' }), { label: `B · ${periodTag(data.cmpWindow)}`, color: colors.prior }, { label: `Target ${kpiThresholds.fillRate.green}%`, color: colors.target, shape: 'tick' }]}
+                />
               )}
             </ChartCard>
           ),
@@ -192,6 +177,8 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
                   headerRight={<ViewDetails detailId="dispatch" />}
                 >
                   {CardState({ ...sDispatch, empty: !pareto.length }) ?? (
+                    <Flex direction="column" h="100%">
+                    <Box flex={1} minH={0}>
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={pareto} margin={{ left: 4, right: 8, top: 8, bottom: 4 }}>
                         <CartesianGrid {...grid} vertical={false} />
@@ -219,24 +206,40 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
                         <Line yAxisId="c" dataKey="cumPct" stroke={colors.target} strokeWidth={2} dot={{ r: 2.5 }} />
                       </ComposedChart>
                     </ResponsiveContainer>
+                    </Box>
+                    <Legend items={[{ label: 'Unfulfilled units (left axis)', color: colors.sales }, { label: 'Cumulative share of unfulfilled (right axis)', color: colors.target, shape: 'line' }]} />
+                    </Flex>
                   )}
                 </ChartCard>
               </CardGrid>
               <OperationalDetail id="dispatch" kpi="OP-14" title="Dispatch Vs Order" subtitle="1.0 table · by material and channel">
                 {CardState({ ...sDispatch, empty: !sDispatch.isLoading && !dispatchRows.length }) ?? (
-                  <DataTable
-                    headerGradient={colors.tableHeaderBg}
-                    headers={['Material', 'Channel', 'Ordered Qty', 'Delivered Qty', 'Delivery %']}
+                  <GroupedTable<DispatchVsOrderRow>
+                    rows={dispatchRows}
                     isLoading={sDispatch.isLoading}
-                    rows={dispatchRows.map((r: DispatchVsOrderRow) => {
-                      const pct = n0(r.delivery_pct);
-                      const g = rag(pct, 'fillRate');
-                      return {
-                        onClick: () => detail.open({ kind: 'material', material: r.material_name }),
-                        cells: [r.material_name, r.channel_type, full(n0(r.total_order_qty)), full(n0(r.total_delivery_qty)), `${pct.toFixed(1)}%`],
-                        cellColors: [undefined, undefined, undefined, undefined, g ? RAG_META[g].color : undefined],
-                      };
-                    })}
+                    levels={[
+                      { key: 'channel', label: 'Channel', of: (r) => r.channel_type },
+                      { key: 'material', label: 'Material', of: (r) => r.material_name },
+                    ]}
+                    presets={[
+                      { value: 'channel', label: 'Channel › Material', levels: ['channel'] },
+                      { value: 'material', label: 'Material › Channel', levels: ['material'], leaf: { label: 'Channel', name: (r) => r.channel_type } },
+                    ]}
+                    leaf={{ label: 'Material', key: (r) => `${r.material_name}|${r.channel_type}`, name: (r) => r.material_name }}
+                    figures={[
+                      { header: 'Ordered Qty', value: (r) => n0(r.total_order_qty), fmt: full },
+                      { header: 'Delivered Qty', value: (r) => n0(r.total_delivery_qty), fmt: full },
+                      {
+                        header: 'Delivery %',
+                        value: (r) => n0(r.delivery_pct),
+                        fmt: pct1,
+                        // A group's delivery % is its fill rate: Σ delivered ÷ Σ ordered (the OP-01 rule).
+                        group: (list) => fillRate(list).pct,
+                        color: (r) => { const g = rag(n0(r.delivery_pct), 'fillRate'); return g ? RAG_META[g].color : undefined; },
+                        groupColor: (v) => { const g = rag(v, 'fillRate'); return g ? RAG_META[g].color : undefined; },
+                      },
+                    ]}
+                    onLeaf={(r) => detail.open({ kind: 'material', material: r.material_name })}
                   />
                 )}
               </OperationalDetail>
@@ -272,7 +275,7 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
             <ChartCard
               dataKpi="OP-09"
               title="WIP Value by Plant and Material Type"
-              subtitle={`PKR · ⓘ ${DATES_ONLY}`}
+              subtitle={`ⓘ ${DATES_ONLY}`}
               colSpan={{ base: 1, lg: 6 }}
               height="300px"
               isLoading={sWip.isLoading}
@@ -310,24 +313,29 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
                       </Text>
                       <Segmented size="xs" value={wipType} onChange={setWipType} options={['All', ...wipTypes].map((t) => ({ value: t, label: t }))} ariaLabel="Material type" />
                     </Flex>
-                    <DataTable
-                      headerGradient={colors.tableHeaderBg}
-                      headers={['Order', 'Material', 'Plant', 'Storage location', 'Material type', 'Item Qty', 'Good Received Qty', 'Quantity', 'WIP Value']}
+                    <GroupedTable<WipRow>
+                      rows={wipRows}
                       isLoading={sWip.isLoading}
-                      rows={wipRows.map((r: WipRow) => ({
-                        onClick: () => detail.open({ kind: 'order', order: r.order_number }),
-                        cells: [
-                          r.order_number,
-                          r['Material Name'],
-                          r.plnt_desc,
-                          r.storage_loc_desc,
-                          r.material_type_description,
-                          full(n0(r.item_qty)),
-                          full(n0(r.good_received_qty)),
-                          full(n0(r.Quantity)),
-                          full(n0(r['WIP Value'])),
-                        ],
-                      }))}
+                      levels={[
+                        { key: 'plant', label: 'Plant', of: (r) => r.plnt_desc },
+                        { key: 'type', label: 'Material type', of: (r) => r.material_type_description },
+                      ]}
+                      presets={[
+                        { value: 'plant', label: 'Plant › Material type', levels: ['plant', 'type'] },
+                        { value: 'type', label: 'Material type › Plant', levels: ['type', 'plant'] },
+                      ]}
+                      leaf={{ label: 'Order', key: (r) => String(r.order_number), name: (r) => String(r.order_number) }}
+                      texts={[
+                        { header: 'Material', value: (r) => r['Material Name'] },
+                        { header: 'Storage location', value: (r) => r.storage_loc_desc },
+                      ]}
+                      figures={[
+                        { header: 'Item Qty', value: (r) => n0(r.item_qty), fmt: full },
+                        { header: 'Good Received Qty', value: (r) => n0(r.good_received_qty), fmt: full },
+                        { header: 'Quantity', value: (r) => n0(r.Quantity), fmt: full },
+                        { header: 'WIP Value', value: (r) => n0(r['WIP Value']), fmt: full },
+                      ]}
+                      onLeaf={(r) => detail.open({ kind: 'order', order: r.order_number })}
                     />
                   </>
                 )}
@@ -408,42 +416,31 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
                     <Flex gap={4} px={2} py={2}>
                       <Picker label="Plant" value={rmPlant} options={rmPlants} onChange={setRmPlant} />
                     </Flex>
-                    <DataTable
-                      headerGradient={colors.tableHeaderBg}
-                      headers={['Material', 'Type', 'Plant', 'Storage location', 'Unrestricted', 'Quality inspection', 'Blocked', 'Restricted', 'Returns', 'In transit', 'Total value', 'Unrestricted qty', 'Total qty']}
+                    <GroupedTable<RpmRow>
+                      rows={rmRows}
                       isLoading={sRpm.isLoading}
-                      rows={rmRows.map((r: RpmRow) => {
-                        const held = (v: number) => (v > 0 ? colors.warn : undefined);
-                        return {
-                          onClick: () => detail.open({ kind: 'rmpm', material: r.materialname, plant: r.plantname }),
-                          cells: [
-                            r.materialname,
-                            r.producttype,
-                            r.plantname,
-                            r.storagelocationname,
-                            full(n0(r.unrestricted_val)),
-                            full(n0(r.quality_inspection_val)),
-                            full(n0(r.blocked_val)),
-                            full(n0(r.restricted_val)),
-                            full(n0(r.returns_val)),
-                            full(n0(r.stock_in_transit_val)),
-                            full(n0(r.total_val)),
-                            full(n0(r.unrestricted_qty)),
-                            full(n0(r.total_qty)),
-                          ],
-                          cellColors: [
-                            undefined,
-                            undefined,
-                            undefined,
-                            undefined,
-                            undefined,
-                            held(n0(r.quality_inspection_val)),
-                            held(n0(r.blocked_val)),
-                            held(n0(r.restricted_val)),
-                            held(n0(r.returns_val)),
-                          ],
-                        };
-                      })}
+                      levels={[
+                        { key: 'plant', label: 'Plant', of: (r) => r.plantname },
+                        { key: 'type', label: 'Type', of: (r) => r.producttype },
+                      ]}
+                      presets={[
+                        { value: 'plant', label: 'Plant › Type', levels: ['plant', 'type'] },
+                        { value: 'type', label: 'Type › Plant', levels: ['type', 'plant'] },
+                      ]}
+                      leaf={{ label: 'Material', key: (r) => `${r.materialname}|${r.plantname}|${r.storagelocationname}`, name: (r) => r.materialname }}
+                      texts={[{ header: 'Storage location', value: (r) => r.storagelocationname }]}
+                      figures={[
+                        { header: 'Unrestricted', value: (r) => n0(r.unrestricted_val), fmt: full },
+                        { header: 'Quality inspection', value: (r) => n0(r.quality_inspection_val), fmt: full, color: (r) => (n0(r.quality_inspection_val) > 0 ? colors.warn : undefined) },
+                        { header: 'Blocked', value: (r) => n0(r.blocked_val), fmt: full, color: (r) => (n0(r.blocked_val) > 0 ? colors.warn : undefined) },
+                        { header: 'Restricted', value: (r) => n0(r.restricted_val), fmt: full, color: (r) => (n0(r.restricted_val) > 0 ? colors.warn : undefined) },
+                        { header: 'Returns', value: (r) => n0(r.returns_val), fmt: full, color: (r) => (n0(r.returns_val) > 0 ? colors.warn : undefined) },
+                        { header: 'In transit', value: (r) => n0(r.stock_in_transit_val), fmt: full },
+                        { header: 'Total value', value: (r) => n0(r.total_val), fmt: full },
+                        { header: 'Unrestricted qty', value: (r) => n0(r.unrestricted_qty), fmt: full },
+                        { header: 'Total qty', value: (r) => n0(r.total_qty), fmt: full },
+                      ]}
+                      onLeaf={(r) => detail.open({ kind: 'rmpm', material: r.materialname, plant: r.plantname })}
                     />
                   </>
                 )}

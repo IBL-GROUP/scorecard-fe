@@ -167,3 +167,18 @@ export function rangeLabel(w: Window): string {
   const f = (s: string) => parse(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   return w.start === w.end ? f(w.start) : `${f(w.start)} – ${f(w.end)}`;
 }
+
+/**
+ * The month(s) a window covers, as the Sales Pulse 2.0 period button names
+ * them (FR-EXEC-043): "Nov 2026", "Oct–Nov 2026", "Dec 2025–Jan 2026".
+ */
+export function periodTag(w: Window): string {
+  const mon = (s: string) => parse(s).toLocaleDateString('en-GB', { month: 'short' });
+  const year = (s: string) => s.slice(0, 4);
+  if (w.start.slice(0, 7) === w.end.slice(0, 7)) return `${mon(w.end)} ${year(w.end)}`;
+  if (year(w.start) === year(w.end)) return `${mon(w.start)}–${mon(w.end)} ${year(w.end)}`;
+  return `${mon(w.start)} ${year(w.start)}–${mon(w.end)} ${year(w.end)}`;
+}
+
+/** "vs Oct 2026": the comparison, named by the B period's months (FR-EXEC-043). */
+export const compareText = (cmp: Window) => `vs ${periodTag(cmp)}`;

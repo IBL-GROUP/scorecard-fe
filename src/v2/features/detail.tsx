@@ -29,6 +29,8 @@ export type DetailItem =
       action?: SheetAction;
     }
   | { kind: 'class'; cls: string }
+  /** Plan alignment drill (FR-EXEC-049): one class's IBL target vs TSCL budget, by SKU. */
+  | { kind: 'alignClass'; cls: string }
   | { kind: 'branch'; branch: string }
   | { kind: 'sku'; sku: string }
   | { kind: 'channel'; channel: string }
@@ -40,6 +42,7 @@ export type DetailItem =
 export const KIND_LABEL: Record<DetailItem['kind'], string> = {
   kpi: 'KPI',
   class: 'Class',
+  alignClass: 'Plan alignment',
   branch: 'Branch',
   sku: 'SKU',
   channel: 'Channel',
@@ -54,7 +57,9 @@ export function titleOf(i: DetailItem): string {
     case 'kpi':
       return i.label;
     case 'class':
-      return i.cls === 'Others' ? 'Others (unclassified)' : `Class ${i.cls}`;
+      return i.cls === 'Others' ? 'Other (unclassified)' : `Class ${i.cls}`;
+    case 'alignClass':
+      return `${i.cls === 'Others' ? 'Other' : `Class ${i.cls}`} · forecast vs budget by SKU`;
     case 'branch':
       return i.branch;
     case 'sku':

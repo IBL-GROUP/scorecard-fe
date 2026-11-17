@@ -1,32 +1,36 @@
 // Tab 3: Inventory & Working Capital (PRD v2 section 4.3, wireframe 5.2).
-// Every item IN-01 … IN-17 is rendered with its data-kpi ID.
+// Every item of PRD_ITEMS.inventory is rendered with its data-kpi ID. Since
+// 16 Nov 2026 the Stock level topic (IN-03, IN-04, IN-05, IN-07, IN-08, IN-14)
+// is on Summary (FR-EXEC-031).
 
-import { Box, Flex, Grid, Text } from '@chakra-ui/react';
+import { Box, Flex, Text } from '@chakra-ui/react';
 import { useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ChartCard } from '@/v2/components/chart-card';
-import { DataTable } from '@/v2/components/data-table';
 import { Segmented } from '@/v2/components/segmented';
 import { ExecTile } from '@/v2/components/exec/ExecTile';
 import { CardGrid, CardState, ChipBar, OperationalDetail, ViewDetails, openDetail } from '@/v2/components/exec/Panels';
 import { AreaLayout } from '@/v2/components/exec/AreaLayout';
+import { HBars } from '@/v2/components/exec/HBars';
+import { GroupedTable } from '@/v2/components/grouped-table/GroupedTable';
 import { AreaRisks } from './OverviewPage';
-import { Bullet, Heatmap, Legend, axis, grid, tooltipStyle } from '@/v2/components/exec/charts';
-import { RagDot } from '@/v2/components/exec/Rag';
+import { Heatmap, Legend, axis, grid, ragLegend, tooltipStyle } from '@/v2/components/exec/charts';
 import { colors } from '@/v2/constants/theme';
 import { clsColor } from '@/v2/constants/classColors';
-import { INV_BRANCHES, RATED_CLASSES, n0, num, type BenchmarkRow, type CoverDaysRow, type TgtVsActualRow, type TotalSkuRow } from '@/v2/api/types';
+import { INV_BRANCHES, RATED_CLASSES, n0, num, type BenchmarkRow, type TgtVsActualRow, type TotalSkuRow } from '@/v2/api/types';
 import { rowsOf, type DashboardData } from '@/v2/features/data';
 import { service, status, stock, workingCapitalTrend } from '@/v2/features/derive';
-import { classCoverage, inventoryClassRows, shortfallRag } from '@/v2/features/kpis';
-import { rag } from '@/v2/features/kpiThresholds';
+import { inventoryClassRows } from '@/v2/features/kpis';
+import { kpiThresholds, rag } from '@/v2/features/kpiThresholds';
 import { change, days, full, money, pct0, pct1, pkr } from '@/v2/features/format';
 import { monthLabel } from '@/v2/features/period';
 import { useStore } from '@/v2/features/store';
 
-const CLASS_ORDER = ['A', 'B', 'C', 'N', 'Others'];
 
 import { useDetail } from '@/v2/features/detail';
+
+/** One SKU row of the Inventory Days table. */
+type InvLeaf = { cls: string; sku: string; vals: number[]; total: number };
 
 export function InventoryPage({ data }: { data: DashboardData }) {
   const d = data.tabs.inventory;
@@ -35,7 +39,6 @@ export function InventoryPage({ data }: { data: DashboardData }) {
   const chip = st.chips.inventory;
   const clsChip = chip?.key === 'cls' ? chip.value : null;
   const branchChip = chip?.key === 'branch' ? chip.value : null;
-  const [basis, setBasis] = useState<'TP' | 'EFP'>('TP');
   const [svcView, setSvcView] = useState<'heat' | 'line'>('heat');
   // TC-S4-11: Shift-click on a heatmap cell focuses the Inventory Days table on that branch and class.
   const [invFocus, setInvFocus] = useState<{ branch: string; cls: string } | null>(null);
@@ -55,36 +58,12 @@ export function InventoryPage({ data }: { data: DashboardData }) {
   const showCls = (c: string) => !clsChip || c === clsChip;
 
   const sWc = status(d, 'coverTotal', 'wip', 'rpm');
-  const sStock = status(d, 'cover', 'coverTotal', 'bench');
   const sSvc = status(d, 'aboveBelow');
   const sTrend = status(d, ...[0, 1, 2, 3, 4, 5].flatMap((i) => [`wcFg${i}`, `wcWip${i}`, `wcRpm${i}`]));
   const sMatrix = status(d, 'serviceAll');
   const sInv = status(d, 'invDays', 'bench');
 
   const wcTotal = cur ? cur.total : null;
-  const excessRag = rag(s.excess.pct, 'excessPct');
-  const shortRag = shortfallRag(s.shortfall);
-
-  // IN-14 cards: Total + classes.
-  const coverRows = rowsOf<CoverDaysRow>(d.cover);
-  const cards = [
-    ...(s.total ? [{ cls: 'Total', r: s.total }] : []),
-    ...CLASS_ORDER.map((c) => ({ cls: c, r: coverRows.find((r) => (r.classification ?? 'Others') === c) })).filter((x): x is { cls: string; r: CoverDaysRow } => !!x.r),
-  ];
-
-  // IN-07 scale.
-  const bulletMax = Math.max(10, ...s.cls.flatMap((r) => [r.cd ?? 0, r.bm ?? 0, r.th ?? 0])) * 1.1;
-
-  // IN-08 waterfall: start FG, minus each class excess, end right-sized; shortfall as separate bars.
-  const excessSteps = s.excessByClass.filter((e) => e.value > 0);
-  let running = s.fgCost ?? 0;
-  const bridge: { name: string; base: number; value: number; kind: 'total' | 'down' | 'short' }[] = [{ name: 'FG at cost', base: 0, value: running, kind: 'total' }];
-  for (const e of excessSteps) {
-    running -= e.value;
-    bridge.push({ name: `Excess ${e.cls}`, base: running, value: e.value, kind: 'down' });
-  }
-  bridge.push({ name: 'Right-sized', base: 0, value: Math.max(0, running), kind: 'total' });
-  for (const sh of s.shortfall) bridge.push({ name: `Short ${sh.cls}`, base: 0, value: sh.value, kind: 'short' });
 
   // IN-10 line view data.
   const lineData = [...sv.matrix]
@@ -115,142 +94,22 @@ export function InventoryPage({ data }: { data: DashboardData }) {
   // IN-17 table
   const focusCol = invFocus ? INV_BRANCHES.findIndex((b) => b.label.toLowerCase() === invFocus.branch.trim().toLowerCase()) : -1;
   const keepCol = (i: number) => focusCol < 0 || i === focusCol;
-  const headers = ['Class / SKU', ...INV_BRANCHES.filter((_, i) => keepCol(i)).map((b) => b.label), 'Total'];
-  const tableRows = invClasses
+  // Class › SKU rows of the grouped table (FR-EXEC-046); the table orders them (FR-EXEC-027).
+  const CLASS_ORDER = ['A', 'B', 'C', 'N', 'Others'];
+  const invCols = INV_BRANCHES.map((b, i) => ({ label: b.label, i })).filter(({ i }) => keepCol(i));
+  const invLeaves: InvLeaf[] = invClasses
     .filter((c) => showCls(c.cls) && (!invFocus || c.cls === invFocus.cls))
-    .flatMap((c) => {
-      const th = thOf(c.cls);
-      const color = (v: number) => (th != null && v >= th ? colors.good : undefined);
-      return [
-        { onClick: () => detail.open({ kind: 'class', cls: c.cls }), cells: [`Class ${c.cls}`, ...c.vals.filter((_, i) => keepCol(i)).map((v) => v.toFixed(0)), c.total.toFixed(0)], cellColors: [undefined, ...c.vals.filter((_, i) => keepCol(i)).map(color), color(c.total)], cellWeights: c.vals.filter((_, i) => keepCol(i)).map(() => '700').concat(['700', '700']) },
-        ...c.skus.map((k) => ({ onClick: () => detail.open({ kind: 'sku', sku: k.sku }), cells: [`  ↳ ${k.sku}`, ...k.vals.filter((_, i) => keepCol(i)).map((v) => v.toFixed(0)), k.total.toFixed(0)], cellColors: [undefined, ...k.vals.filter((_, i) => keepCol(i)).map(color), color(k.total)] })),
-      ];
-    });
+    .flatMap((c) => c.skus.map((k) => ({ cls: c.cls, sku: k.sku, vals: k.vals, total: k.total })));
+  // Green at or above the class threshold, as before.
+  const coverColor = (cls: string, v: number | null | undefined) => {
+    const th = thOf(cls);
+    return th != null && v != null && v >= th ? colors.good : undefined;
+  };
 
   return (
     <AreaLayout
       top={<ChipBar tab="inventory" />}
       topics={[
-        {
-          key: 'stock',
-          title: 'Stock level',
-          tiles: [
-            <ExecTile key="IN-03" id="IN-03" label="Coverage Index" value={pct1(s.coverage)} rag={rag(s.coverage, 'coverage')} band="coverage" variance={`${days(s.totalCd)} vs ${days(s.wBm)} benchmark`} {...sStock} />,
-            <ExecTile key="IN-04"
-              id="IN-04"
-              label="Excess Inventory Value"
-              value={pkr(s.excess.value)}
-              rag={excessRag}
-              band="excessPct"
-              variance={`${pct1(s.excess.pct)} of FG at cost`}
-              {...sStock}
-            />,
-            <ExecTile key="IN-05" id="IN-05" label="Cover Shortfall Value (TP)" value={pkr(s.shortfallValue)} rag={sStock.isLoading ? null : shortRag} caption={s.shortfall.length ? `Below threshold: ${s.shortfall.map((x) => x.cls).join(', ')}` : 'No class below threshold'} {...sStock} />,
-          ],
-          lead: (
-            <ChartCard dataKpi="IN-07" title="Cover Days vs Benchmark by Class" subtitle="Bar = actual · tick = benchmark · red zone = below threshold" colSpan={{ base: 12, lg: 6 }} height="280px" isLoading={sStock.isLoading}>
-              {CardState({ ...sStock, empty: !s.cls.length }) ?? (
-                <Box>
-                  {s.cls
-                    .filter((r) => showCls(r.cls))
-                    .map((r) => {
-                      const cov = classCoverage(r);
-                      const rg = rag(cov, 'coverage');
-                      return (
-                        <Bullet
-                          key={r.cls}
-                          label={`Class ${r.cls}`}
-                          actual={r.cd}
-                          target={r.bm}
-                          threshold={r.th}
-                          max={bulletMax}
-                          color={clsColor(r.cls)}
-                          rag={rg}
-                          right={
-                            <>
-                              {days(r.cd)} · {cov == null ? 'no benchmark' : pct0(cov)} <RagDot rag={rg} />
-                            </>
-                          }
-                          onClick={() => detail.open({ kind: 'class', cls: r.cls })}
-                        />
-                      );
-                    })}
-                  {s.totalCd != null && (
-                    <Bullet label="Total" actual={s.totalCd} target={s.wBm} max={bulletMax} color={colors.darkText} rag={rag(s.coverage, 'coverage')} right={<>{days(s.totalCd)} · {pct0(s.coverage)}</>} />
-                  )}
-                </Box>
-              )}
-            </ChartCard>
-          ),
-          details: (
-            <>
-              <CardGrid mb={3}>
-                <ChartCard
-                  dataKpi="IN-14"
-                  title="Cover Days by Class"
-                  subtitle={basis === 'TP' ? 'Valued at trade price (TP)' : 'Valued at item cost (EFP)'}
-                  colSpan={12}
-                  isLoading={sStock.isLoading}
-                  expandable={false}
-                  headerRight={<Segmented size="xs" value={basis} onChange={setBasis} ariaLabel="Valuation" options={[{ value: 'TP', label: 'TP' }, { value: 'EFP', label: 'EFP' }]} />}
-                >
-                  {CardState({ ...sStock, empty: !cards.length }) ?? (
-                    <Grid templateColumns={{ base: 'repeat(2, minmax(0,1fr))', md: 'repeat(3, minmax(0,1fr))', xl: 'repeat(6, minmax(0,1fr))' }} gap={3}>
-                      {cards.map(({ cls, r }) => {
-                        const cd = num(basis === 'TP' ? r.cover_days : r.cover_days_efp);
-                        const inv = num(basis === 'TP' ? r.inv_val : r.inv_val_efp);
-                        const cs = s.cls.find((x) => x.cls === cls);
-                        const rg = cs ? rag(classCoverage(cs), 'coverage') : null;
-                        const dim = clsChip && cls !== clsChip && cls !== 'Total';
-                        return (
-                          <Box key={cls} borderTop={`3px solid ${clsColor(cls)}`} bg={colors.sunkBg} borderRadius="3px" px={3} py={2} opacity={dim ? 0.4 : 1}>
-                            <Flex align="center" gap="6px">
-                              <Text fontSize="12.5px" fontWeight={700} color={colors.darkText}>
-                                {cls === 'Total' ? 'Total' : `Class ${cls}`}
-                              </Text>
-                              <Box ml="auto">
-                                <RagDot rag={rg} />
-                              </Box>
-                            </Flex>
-                            <Text fontSize="22px" fontWeight={700} color={colors.darkText}>
-                              {days(cd)}
-                            </Text>
-                            <Text fontSize="12px" color={colors.bodyText}>
-                              {pkr(inv)}
-                            </Text>
-                            <Text fontSize="12px" color={colors.mutedText}>
-                              {full(num(r.quantity))} units
-                            </Text>
-                          </Box>
-                        );
-                      })}
-                    </Grid>
-                  )}
-                </ChartCard>
-              </CardGrid>
-              <CardGrid mb={3}>
-                <ChartCard dataKpi="IN-08" title="Excess / Shortfall Bridge" subtitle="FG at cost → less excess above benchmark → right-sized; shortfall (TP) in red" colSpan={12} height="460px" isLoading={sStock.isLoading}>
-                  {CardState({ ...sStock, empty: !s.cls.length }) ?? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={bridge} margin={{ top: 8, right: 8, left: 0, bottom: 30 }}>
-                        <CartesianGrid {...grid} vertical={false} />
-                        <XAxis dataKey="name" {...axis} angle={-30} textAnchor="end" interval={0} height={50} />
-                        <YAxis {...axis} tickFormatter={(v: number) => money(v)} width={52} />
-                        <Tooltip {...tooltipStyle} formatter={(v, name) => (name === 'base' ? null : pkr(Number(v)))} />
-                        <Bar dataKey="base" stackId="w" fill="transparent" legendType="none" />
-                        <Bar dataKey="value" name="Value" stackId="w">
-                          {bridge.map((b) => (
-                            <Cell key={b.name} fill={b.kind === 'total' ? colors.sales : b.kind === 'down' ? colors.warn : colors.bad} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
-                </ChartCard>
-              </CardGrid>
-            </>
-          ),
-        },
         {
           key: 'capital',
           title: 'Working capital',
@@ -284,7 +143,7 @@ export function InventoryPage({ data }: { data: DashboardData }) {
                       </ComposedChart>
                     </ResponsiveContainer>
                   </Box>
-                  <Legend items={[{ label: 'Finished goods', color: colors.sales }, { label: 'WIP', color: colors.target }, { label: 'RMPM', color: colors.prior }, { label: 'Total', color: colors.darkText }]} />
+                  <Legend items={[{ label: 'Finished goods', color: colors.sales }, { label: 'WIP', color: colors.target }, { label: 'RMPM', color: colors.prior }, { label: 'Total working capital', color: colors.darkText, shape: 'line' }]} />
                 </Flex>
               )}
             </ChartCard>
@@ -313,6 +172,8 @@ export function InventoryPage({ data }: { data: DashboardData }) {
             >
               {CardState({ ...sMatrix, empty: !sv.matrix.length }) ??
                 (svcView === 'heat' ? (
+                  <Flex direction="column" h="100%">
+                  <Box flex={1} minH={0} overflowY="auto" tabIndex={0} role="region" aria-label="Service level by branch and class" _focusVisible={{ outline: `2px solid ${colors.brand}`, outlineOffset: "-2px" }}>
                   <Heatmap
                     cols={RATED_CLASSES.map((c) => `Class ${c}`)}
                     rows={sv.matrix.map((r) => ({ label: r.branch, cells: r.cells }))}
@@ -321,7 +182,12 @@ export function InventoryPage({ data }: { data: DashboardData }) {
                     highlightRow={[...branchNames, ...(branchChip ? [branchChip] : [])]}
                     onCell={(branch, col, shift) => (shift ? focusInvDays(branch, RATED_CLASSES[col]) : detail.open({ kind: 'branch', branch }))}
                   />
+                  </Box>
+                  <Legend items={[...ragLegend('serviceLevel', { shape: 'band', what: 'of SKUs above threshold' }), ...(branchNames.length || branchChip ? [{ label: '▸ Filtered branch', color: colors.darkText, shape: 'dot' as const }] : [])]} />
+                  </Flex>
                 ) : (
+                  <Flex direction="column" h="100%">
+                  <Box flex={1} minH={0}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={lineData} margin={{ top: 8, right: 12, left: 0, bottom: 30 }}>
                       <CartesianGrid {...grid} />
@@ -333,6 +199,9 @@ export function InventoryPage({ data }: { data: DashboardData }) {
                       ))}
                     </LineChart>
                   </ResponsiveContainer>
+                  </Box>
+                  <Legend items={RATED_CLASSES.map((c) => ({ label: `Class ${c}: % of SKUs above threshold`, color: clsColor(c), shape: 'line' as const }))} />
+                  </Flex>
                 ))}
             </ChartCard>
           ),
@@ -341,44 +210,30 @@ export function InventoryPage({ data }: { data: DashboardData }) {
               <CardGrid mb={3}>
                 <ChartCard dataKpi="IN-11" title="Branch Service Ranking" subtitle="Simple average across classes, not SKU-weighted · bottom 5 highlighted" colSpan={{ base: 12, lg: 5 }} height="460px" isLoading={sMatrix.isLoading}>
                   {CardState({ ...sMatrix, empty: !ranking.length }) ?? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={ranking} layout="vertical" margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-                        <CartesianGrid {...grid} horizontal={false} />
-                        <XAxis type="number" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} allowDataOverflow {...axis} tickFormatter={(v: number) => `${v}%`} />
-                        <YAxis type="category" dataKey="branch" {...axis} width={88} interval={0} />
-                        <Tooltip {...tooltipStyle} formatter={(v) => pct1(Number(v))} />
-                        <Bar dataKey="avg" name="Average service level">
-                          {ranking.map((r) => (
-                            <Cell key={r.branch} fill={r.worst ? colors.bad : colors.borderStrong} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <HBars
+                      sort="keep"
+                      rows={ranking.map((r) => ({ key: r.branch, label: r.branch, value: r.avg, target: kpiThresholds.serviceLevel.green, color: r.worst ? colors.bad : colors.borderStrong, valueText: pct1(r.avg), onClick: () => detail.open({ kind: 'branch', branch: r.branch }) }))}
+                      fmt={pct1}
+                      max={100}
+                      legend={[{ label: 'Bottom 5 branches', color: colors.bad }, { label: 'Other branches', color: colors.borderStrong }, { label: `Target ${kpiThresholds.serviceLevel.green}%`, color: colors.target, shape: 'tick' }]}
+                    />
                   )}
                 </ChartCard>
                 <ChartCard dataKpi="IN-16" title="SKUs Against Threshold" colSpan={{ base: 12, lg: 7 }} height="260px" isLoading={sSvc.isLoading} headerRight={<ViewDetails detailId="inv-days" />}>
                   {CardState({ ...sSvc, empty: !abData.length }) ?? (
-                    <Flex direction="column" h="100%">
-                      <Box flex={1} minH={0}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={abData} layout="vertical" margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
-                            <CartesianGrid {...grid} horizontal={false} />
-                            <XAxis type="number" {...axis} />
-                            <YAxis type="category" dataKey="cls" {...axis} width={30} />
-                            <Tooltip {...tooltipStyle} />
-                            <Bar dataKey="above" name="Above threshold" stackId="s" fill={colors.borderStrong} />
-                            <Bar dataKey="below" name="Below threshold" stackId="s" fill={colors.bad} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </Box>
-                      <Legend items={[{ label: 'Above threshold', color: colors.borderStrong }, { label: 'Below threshold (risk)', color: colors.bad }]} />
-                    </Flex>
+                    <HBars
+                      rows={abData.map((r) => ({ key: r.cls, label: r.cls === 'Others' ? 'Other' : `Class ${r.cls}`, value: r.below, prior: r.above, color: colors.bad, valueText: full(r.below), priorText: full(r.above), note: `${full(r.below + r.above)} SKUs` }))}
+                      fmt={full}
+                      legend={[{ label: 'Below threshold (risk)', color: colors.bad }, { label: 'Above threshold', color: colors.prior }]}
+                    />
                   )}
                 </ChartCard>
               </CardGrid>
               <CardGrid mb={3}>
                 <ChartCard dataKpi="IN-12" title="Cover Days by Branch" subtitle="Average cover of each class’s SKUs · coloured against the class benchmark" colSpan={12} height="460px" isLoading={sInv.isLoading} headerRight={<ViewDetails detailId="inv-days" />}>
                   {CardState({ ...sInv, empty: !invClasses.length }) ?? (
+                    <Flex direction="column" h="100%">
+                    <Box flex={1} minH={0} overflowY="auto" tabIndex={0} role="region" aria-label="Cover days by branch" _focusVisible={{ outline: `2px solid ${colors.brand}`, outlineOffset: "-2px" }}>
                     <Heatmap
                       cols={heatClasses.map((c) => (c === 'Others' ? 'Other' : `Class ${c}`))}
                       rows={coverHeat}
@@ -390,11 +245,14 @@ export function InventoryPage({ data }: { data: DashboardData }) {
                       highlightRow={[...branchNames, ...(branchChip ? [branchChip] : [])]}
                       onCell={(branch, col, shift) => (shift ? focusInvDays(branch, heatClasses[col]) : detail.open({ kind: 'branch', branch }))}
                     />
+                    </Box>
+                    <Legend items={[...ragLegend('coverage', { shape: 'band', what: 'of class benchmark' }), { label: 'No benchmark', color: colors.sunkBg, ink: colors.border, shape: 'band' }]} />
+                    </Flex>
                   )}
                 </ChartCard>
               </CardGrid>
               <OperationalDetail id="inv-days" kpi="IN-17" title="Inventory Days" subtitle={`Class → SKU × 14 branches + Total${invFocus ? ` · focus: ${invFocus.branch}, Class ${invFocus.cls}` : branchChip ? ` · focus: ${branchChip}` : ''}`}>
-                {CardState({ ...sInv, empty: !tableRows.length }) ?? (
+                {CardState({ ...sInv, empty: !invLeaves.length }) ?? (
                   <>
                     {invFocus && (
                       <Flex align="center" gap="8px" px={2} pb={2} fontSize="12.5px" color={colors.bodyText} data-testid="inv-focus">
@@ -404,7 +262,33 @@ export function InventoryPage({ data }: { data: DashboardData }) {
                         </Box>
                       </Flex>
                     )}
-                    <DataTable title="Inventory Days (cover days)" headerGradient={colors.tableHeaderBg} headers={headers} rows={tableRows} pageSize={80} autoTotal={false} />
+                    <GroupedTable<InvLeaf>
+                      title="Inventory Days (cover days)"
+                      rows={invLeaves}
+                      levels={[{ key: 'cls', label: 'Class', of: (r) => r.cls, name: (r) => (r.cls === 'Others' ? 'Other' : `Class ${r.cls}`), order: (a, b) => CLASS_ORDER.indexOf(a) - CLASS_ORDER.indexOf(b) }]}
+                      presets={[{ value: 'cls', label: 'Class › SKU', levels: ['cls'] }]}
+                      leaf={{ label: 'SKU', key: (r) => `${r.cls}|${r.sku}`, name: (r) => r.sku }}
+                      figures={[
+                        ...invCols.map((col) => ({
+                          header: col.label,
+                          value: (r: InvLeaf) => r.vals[col.i] ?? null,
+                          fmt: (v: number | null) => (v == null ? '' : v.toFixed(0)),
+                          // A class row shows that class's cover days (inventoryClassRows); the Total row has none.
+                          group: (_rows: InvLeaf[], _level: string | null, key: string | null) => (key ? invClasses.find((c) => c.cls === key)?.vals[col.i] ?? null : null),
+                          color: (r: InvLeaf) => coverColor(r.cls, r.vals[col.i]),
+                          groupColor: (v: number | null, _level: string | null, key: string | null) => (key ? coverColor(key, v) : undefined),
+                        })),
+                        {
+                          header: 'Total',
+                          value: (r: InvLeaf) => r.total,
+                          fmt: (v: number | null) => (v == null ? '' : v.toFixed(0)),
+                          group: (_rows: InvLeaf[], _level: string | null, key: string | null) => (key ? invClasses.find((c) => c.cls === key)?.total ?? null : null),
+                          color: (r: InvLeaf) => coverColor(r.cls, r.total),
+                          groupColor: (v: number | null, _level: string | null, key: string | null) => (key ? coverColor(key, v) : undefined),
+                        },
+                      ]}
+                      onLeaf={(r) => detail.open({ kind: 'sku', sku: r.sku })}
+                    />
                     <Text fontSize="11.5px" color={colors.mutedText} mt={2} px={2}>
                       Total = simple average of branches with a value, not stock-weighted. Green cells are at or above the class threshold.
                     </Text>
@@ -455,6 +339,18 @@ export function InventoryPage({ data }: { data: DashboardData }) {
                         </tr>
                       );
                     })}
+                    {/* Total: only the SKU count is summed; days and dates are not (FR-EXEC-026). */}
+                    <Box as="tr" bg={colors.tableTotalStart} fontWeight={700} data-total-row>
+                      <Box as="td" py="5px">
+                        Total
+                      </Box>
+                      <Box as="td" />
+                      <Box as="td" />
+                      <Box as="td" textAlign="right" color={colors.darkText}>
+                        {full(RATED_CLASSES.reduce((t, c) => t + (num(totalSku.find((x) => x.classification === c)?.count ?? null) ?? 0), 0))}
+                      </Box>
+                      <Box as="td" />
+                    </Box>
                   </tbody>
                 </Box>
               )}
@@ -468,6 +364,8 @@ export function InventoryPage({ data }: { data: DashboardData }) {
               <CardGrid mb={3}>
                 <ChartCard dataKpi="IN-15" title="Cover Days Threshold vs Actual" colSpan={12} height="260px" isLoading={status(d, 'tgt').isLoading}>
                   {CardState({ ...status(d, 'tgt'), empty: !tgtData.length }) ?? (
+                    <Flex direction="column" h="100%">
+                    <Box flex={1} minH={0}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={tgtData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                         <CartesianGrid {...grid} vertical={false} />
@@ -482,6 +380,9 @@ export function InventoryPage({ data }: { data: DashboardData }) {
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
+                    </Box>
+                    <Legend items={[{ label: 'Threshold (days)', color: colors.borderStrong }, { label: 'Actual cover days (class colour)', color: clsColor('A'), colors: tgtData.map((r) => clsColor(r.cls)) }]} />
+                    </Flex>
                   )}
                 </ChartCard>
               </CardGrid>

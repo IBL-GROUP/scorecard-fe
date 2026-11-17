@@ -191,3 +191,38 @@ describe('Pace adjustment on live data (story S3)', () => {
     expect(K.varianceByClass(cells, '2026-11', 0.5).steps[0].variance).toBe(40);
   });
 });
+
+describe('accuracy gauge side chart (FR-EXEC-041)', () => {
+  const row = (classification: string, month: string, pct: number | null): CategoryAccuracyRow => ({ classification, month, amount: 0, target_value: 0, pct });
+  it('TC-EXEC-044 three calendar months ending with the To month, the API pct rounded to 1 decimal, classes A to N then Other', () => {
+    const h = K.classHistory(
+      [
+        [row('A', 'September 2026', 91.26), row('A', 'October 2026', 88.04), row('', 'November   2026', 70.55), row('B', 'November 2026', 102.31)],
+        [row('A', 'August 2026', 99), row('A', 'November 2026', 95.449), row('C', 'December 2026', 50), row('N', 'October 2026', null)],
+      ],
+      '2026-11-16'
+    );
+    expect(h.months).toEqual(['2026-09', '2026-10', '2026-11']);
+    expect(h.rows.map((r) => r.cls)).toEqual(['A', 'B', 'Others']);
+    expect(h.rows[0]).toEqual({ cls: 'A', '2026-09': 91.3, '2026-10': 88, '2026-11': 95.4 });
+    expect(h.rows[2]).toEqual({ cls: 'Others', '2026-11': 70.6 });
+    // A year boundary.
+    expect(K.classHistory([], '2026-01-31').months).toEqual(['2025-11', '2025-12', '2026-01']);
+  });
+});
+
+describe('Sales TP split by sales type (FR-EXEC-048)', () => {
+  it('TC-EXEC-054 Rd, Ibl, Pharma Healthcare in that order with Sales Pulse colours; other types as Other; zero parts dropped', () => {
+    const parts = K.salesTypeSplit([
+      { sales_type: 'Ibl to trade', amount: 303.7 },
+      { sales_type: ' Rd to trade ', amount: 905.1 },
+      { sales_type: 'Pharma Healthcare to trade', amount: 32 },
+      { sales_type: 'Others', amount: 0.5 },
+    ]);
+    expect(parts.map((p) => p.label)).toEqual(['Rd to trade', 'Ibl to trade', 'Pharma Healthcare to trade', 'Other']);
+    expect(parts.map((p) => p.value)).toEqual([905.1, 303.7, 32, 0.5]);
+    expect(parts[0].color).toBe('#3B5BDB');
+    expect(K.salesTypeSplit([{ sales_type: 'Rd to trade', amount: 10 }, { sales_type: 'Ibl to trade', amount: 0 }]).map((p) => p.label)).toEqual(['Rd to trade']);
+    expect(K.salesTypeSplit([])).toEqual([]);
+  });
+});

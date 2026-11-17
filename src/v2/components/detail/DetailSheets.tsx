@@ -11,7 +11,6 @@ import { RagBadge, ragCell } from '@/v2/components/exec/Rag';
 import { Bullet } from '@/v2/components/exec/charts';
 import { clsColor } from '@/v2/constants/classColors';
 import { colors } from '@/v2/constants/theme';
-import { helpFor } from '@/v2/constants/help';
 import {
   INV_BRANCHES,
   n0,
@@ -25,11 +24,13 @@ import {
   type SalesSummaryRow,
   type WipRow,
 } from '@/v2/api/types';
-import { rowsOf, type DashboardData, type Result } from '@/v2/features/data';
+import { fetchRows, rowsOf, type DashboardData, type Result } from '@/v2/features/data';
+import { useStore } from '@/v2/features/store';
+import { useQuery } from '@tanstack/react-query';
 import { KIND_LABEL, titleOf, useDetail, type DetailItem } from '@/v2/features/detail';
 import { plan, service, stock, workingCapitalTrend } from '@/v2/features/derive';
 import * as K from '@/v2/features/kpis';
-import { bandText, rag } from '@/v2/features/kpiThresholds';
+import { rag } from '@/v2/features/kpiThresholds';
 import { DASH, days, full, money, pct0, pct1, pkr } from '@/v2/features/format';
 import { monthLabel } from '@/v2/features/period';
 import { useNav } from '@/v2/features/nav';
@@ -103,8 +104,18 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
   );
 }
 
-/** A table whose rows can open a deeper sheet. */
-function Rows({ head, rows }: { head: string[]; rows: { cells: ReactNode[]; onClick?: () => void; key: string; tone?: string }[] }) {
+/** Row label of a class in a detail sheet: "Class A" … "Class N", and "Other" for unclassified (FR-EXEC-029). */
+const clsName = (c: string) => (c === 'Others' ? 'Other' : `Class ${c}`);
+
+const sumOf = <T,>(xs: T[], f: (x: T) => number) => xs.reduce((t, x) => t + (f(x) || 0), 0);
+
+/**
+ * A table whose rows can open a deeper sheet. Its first row is a Total
+ * (FR-EXEC-028): `total` holds the cells after the label, summed by the caller
+ * for count and value columns only; %, days and dates stay blank. `noTotal`
+ * is for key/value lists, which are not tables of rows.
+ */
+function Rows({ head, rows, total, noTotal }: { head: string[]; rows: { cells: ReactNode[]; onClick?: () => void; key: string; tone?: string }[]; total?: ReactNode[]; noTotal?: boolean }) {
   if (!rows.length)
     return (
       <Text fontSize="12.5px" color={colors.mutedText}>
@@ -125,6 +136,19 @@ function Rows({ head, rows }: { head: string[]; rows: { cells: ReactNode[]; onCl
           </Box>
         </thead>
         <tbody>
+          {!noTotal && (
+            <Box as="tr" data-total-row bg={colors.tableTotalStart} borderTop="1px solid" borderColor={colors.border}>
+              <Box as="td" px={3} py="6px" textAlign="left" color={colors.darkText} fontWeight={700}>
+                Total
+              </Box>
+              {head.slice(1).map((_, i) => (
+                <Box as="td" key={i} px={3} py="6px" textAlign="right" color={colors.darkText} fontWeight={700} fontVariantNumeric="tabular-nums">
+                  {total?.[i] ?? ''}
+                </Box>
+              ))}
+              <Box as="td" />
+            </Box>
+          )}
           {rows.map((r) => (
             <Box
               as="tr"
@@ -243,6 +267,9 @@ function Frame({ item, depth, stack, actions, children }: FrameProps) {
   );
 }
 
+/** A row of /ibl-vs-tscl?groupBy=sku. */
+interface IblSkuRow { item_code: string | number; classification: string; ibl_target: number | string | null; tscl_target: number | string | null }
+
 // ── KPI sheet ──
 const GROUPS: { ids: string[]; kind: 'attain' | 'budget' | 'stock' | 'service' | 'fill' | 'wc' | 'rd' | 'prod' | 'rmpm' }[] = [
   { ids: ['EX-01', 'EX-02', 'RV-01', 'RV-02', 'RV-03', 'RV-05', 'RV-16'], kind: 'attain' },
@@ -258,7 +285,6 @@ const GROUPS: { ids: string[]; kind: 'attain' | 'budget' | 'stock' | 'service' |
 
 function KpiBody({ item, data }: { item: Extract<DetailItem, { kind: 'kpi' }>; data: DashboardData }) {
   const { push } = useDetail();
-  const help = helpFor(item.id);
   const group = GROUPS.find((g) => g.ids.includes(item.id))?.kind;
   const delta = item.delta;
   return (
@@ -282,31 +308,6 @@ function KpiBody({ item, data }: { item: Extract<DetailItem, { kind: 'kpi' }>; d
         )}
         {item.caption && <Text color={colors.mutedText}>{item.caption}</Text>}
       </Flex>
-      {help && (
-        <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={3} mb={5}>
-          <Box bg={colors.cardBg} border="1px solid" borderColor={colors.border} borderRadius="4px" p={3}>
-            <Text fontSize="11px" textTransform="uppercase" color={colors.mutedText} mb={1}>
-              What it tells you
-            </Text>
-            <Text fontSize="13px" color={colors.bodyText}>
-              {help.what}
-            </Text>
-          </Box>
-          <Box bg={colors.cardBg} border="1px solid" borderColor={colors.border} borderRadius="4px" p={3}>
-            <Text fontSize="11px" textTransform="uppercase" color={colors.mutedText} mb={1}>
-              How it is calculated
-            </Text>
-            <Text fontSize="13px" color={colors.bodyText}>
-              {help.source}
-            </Text>
-            {item.band && !help.source.includes('Band') && (
-              <Text fontSize="12px" color={colors.mutedText} mt={2}>
-                Band (proposed): {bandText(item.band, item.bandUnit)}
-              </Text>
-            )}
-          </Box>
-        </Grid>
-      )}
       {group === 'attain' || group === 'budget' ? <AttainBreakdown data={data} budget={group === 'budget'} onClass={(cls) => push({ kind: 'class', cls })} /> : null}
       {group === 'stock' && <StockBreakdown data={data} onClass={(cls) => push({ kind: 'class', cls })} />}
       {group === 'service' && <ServiceBreakdown data={data} onBranch={(b) => push({ kind: 'branch', branch: b })} />}
@@ -330,7 +331,8 @@ function AttainBreakdown({ data, budget, onClass }: { data: DashboardData; budge
     <Section title={`By class, ${monthLabel(month, 'long')}`} hint={budget ? 'EFP sales vs TSCL budget' : 'Sales vs IBL target'}>
       <Rows
         head={['Class', 'Sales', budget ? 'Budget' : 'Target', 'Achieved']}
-        rows={rows.map((c) => ({ key: c.cls, cells: [`Class ${c.cls}`, money(c.amount), money(c.target), c.target > 0 ? pct1((c.amount / c.target) * 100) : DASH], onClick: () => onClass(c.cls) }))}
+        total={[money(sumOf(rows, (c) => c.amount)), money(sumOf(rows, (c) => c.target)), '']}
+        rows={rows.map((c) => ({ key: c.cls, cells: [clsName(c.cls), money(c.amount), money(c.target), c.target > 0 ? pct1((c.amount / c.target) * 100) : DASH], onClick: () => onClass(c.cls) }))}
       />
     </Section>
   );
@@ -345,11 +347,12 @@ function StockBreakdown({ data, onClass }: { data: DashboardData; onClass: (c: s
     <Section title="By class" hint="Cover days against benchmark and threshold">
       <Rows
         head={['Class', 'Cover', 'Benchmark', 'Threshold', 'Coverage', 'Excess (cost)', 'Shortfall (TP)']}
+        total={['', '', '', '', money(sumOf(s.cls, (c) => ex.get(c.cls) ?? 0)), money(sumOf(s.cls, (c) => sh.get(c.cls) ?? 0))]}
         rows={s.cls.map((c) => {
           const cov = K.classCoverage(c);
           return {
             key: c.cls,
-            cells: [c.cls === 'Others' ? 'Others' : `Class ${c.cls}`, days(c.cd), days(c.bm), days(c.th), <RagText key="c" v={cov} r={rag(cov, 'coverage')} />, ex.get(c.cls) ? money(ex.get(c.cls)) : DASH, sh.get(c.cls) ? money(sh.get(c.cls)) : DASH],
+            cells: [clsName(c.cls), days(c.cd), days(c.bm), days(c.th), <RagText key="c" v={cov} r={rag(cov, 'coverage')} />, ex.get(c.cls) ? money(ex.get(c.cls)) : DASH, sh.get(c.cls) ? money(sh.get(c.cls)) : DASH],
             onClick: () => onClass(c.cls),
           };
         })}
@@ -378,11 +381,13 @@ function ServiceBreakdown({ data, onBranch }: { data: DashboardData; onBranch: (
 function FillBreakdown({ data, onChannel }: { data: DashboardData; onChannel: (c: string) => void }) {
   const rows = rowsFrom<DispatchVsOrderRow>(data, 'dispatch');
   if (loading(data, 'dispatch')) return <Waiting />;
+  const fill = K.fillByChannel(rows);
   return (
     <Section title="By channel, worst first" hint="By quantity">
       <Rows
         head={['Channel', 'Ordered', 'Delivered', 'Unfulfilled', 'Fill rate']}
-        rows={K.fillByChannel(rows).map((c) => ({ key: c.channel, cells: [c.channel, full(c.ordered), full(c.delivered), full(c.unfulfilled), <RagText key="f" v={c.pct} r={rag(c.pct, 'fillRate')} text={pct1(c.pct)} />], onClick: () => onChannel(c.channel) }))}
+        total={[full(sumOf(fill, (c) => c.ordered)), full(sumOf(fill, (c) => c.delivered)), full(sumOf(fill, (c) => c.unfulfilled)), '']}
+        rows={fill.map((c) => ({ key: c.channel, cells: [c.channel, full(c.ordered), full(c.delivered), full(c.unfulfilled), <RagText key="f" v={c.pct} r={rag(c.pct, 'fillRate')} text={pct1(c.pct)} />], onClick: () => onChannel(c.channel) }))}
       />
     </Section>
   );
@@ -406,11 +411,12 @@ function RdBreakdown({ data, onRd }: { data: DashboardData; onRd: (code: string)
   return (
     <>
       <Section title="By branch, worst first">
-        <Rows head={['Branch', 'RDs', 'Reported today']} rows={K.rdComplianceByBranch(rows).map((b) => ({ key: b.branch, cells: [b.branch, b.count, <RagText key="p" v={b.pct} r={rag(b.pct, 'rdCompliance')} />] }))} />
+        <Rows head={['Branch', 'RDs', 'Reported today']} total={[full(sumOf(K.rdComplianceByBranch(rows), (b) => Number(b.count))), '']} rows={K.rdComplianceByBranch(rows).map((b) => ({ key: b.branch, cells: [b.branch, b.count, <RagText key="p" v={b.pct} r={rag(b.pct, 'rdCompliance')} />] }))} />
       </Section>
       <Section title="Not reported today" hint="Longest silent first">
         <Rows
           head={['Distributor', 'Branch', 'Days silent', 'Last stock']}
+          total={['', '', money(sumOf(silent, (r) => n0(r.last_stock_value)))]}
           rows={silent.map((r) => ({ key: String(r.ibl_distributor_code), cells: [r.distributor_desc ?? DASH, r.branch_desc ?? DASH, <RagText key="d" v={n0(r.day_diff)} r={rag(n0(r.day_diff), 'staleRdDays')} text={String(n0(r.day_diff))} />, money(n0(r.last_stock_value))], onClick: () => onRd(String(r.ibl_distributor_code)) }))}
         />
       </Section>
@@ -426,6 +432,7 @@ function ProdBreakdown({ data, onOrder }: { data: DashboardData; onOrder: (o: st
     <Section title="Open production orders" hint="Largest WIP value first">
       <Rows
         head={['Order', 'Material', 'Plant', 'Completion', 'WIP value']}
+        total={['', '', '', money(sumOf(open, (r) => n0(r['WIP Value'])))]}
         rows={open.map((r) => {
           const c = n0(r.item_qty) > 0 ? (n0(r.good_received_qty) / n0(r.item_qty)) * 100 : null;
           return { key: r.order_number, cells: [r.order_number, r['Material Name'], r.plnt_desc, <RagText key="c" v={c} r={rag(c, 'productionCompletion')} />, money(n0(r['WIP Value']))], onClick: () => onOrder(r.order_number) };
@@ -439,20 +446,71 @@ function RmpmBreakdown({ data, onMaterial }: { data: DashboardData; onMaterial: 
   const rows = rowsFrom<RpmRow>(data, 'rpm');
   if (loading(data, 'rpm')) return <Waiting />;
   const held = (r: RpmRow) => n0(r.blocked_val) + n0(r.quality_inspection_val) + n0(r.restricted_val) + n0(r.returns_val);
+  const top = rows.filter((r) => held(r) > 0).sort((a, b) => held(b) - held(a)).slice(0, 15);
   return (
     <Section title="Most material on hold" hint="Blocked, in QI, restricted or returned">
       <Rows
         head={['Material', 'Plant', 'On hold', 'Total value', 'On hold %']}
-        rows={rows
-          .filter((r) => held(r) > 0)
-          .sort((a, b) => held(b) - held(a))
-          .slice(0, 15)
-          .map((r) => {
+        total={['', money(sumOf(top, held)), money(sumOf(top, (r) => n0(r.total_val))), '']}
+        rows={top.map((r) => {
             const p = n0(r.total_val) > 0 ? (held(r) / n0(r.total_val)) * 100 : null;
             return { key: r.materialname + r.plant, cells: [r.materialname, r.plantname, money(held(r)), money(n0(r.total_val)), <RagText key="p" v={p} r={rag(p, 'onHoldPct')} text={pct1(p)} />], onClick: () => onMaterial(r.materialname, r.plantname) };
           })}
       />
     </Section>
+  );
+}
+
+// ── Plan alignment drill (FR-EXEC-049) ──
+/**
+ * One class's IBL target vs TSCL budget, SKU by SKU (/ibl-vs-tscl?groupBy=sku).
+ * The budget is national, so the class goes straight to its SKUs: there is no
+ * branch step (no branch budget in the data, BR-MET-006). A SKU opens its sheet.
+ */
+function AlignClassBody({ cls, data }: { cls: string; data: DashboardData }) {
+  const { push } = useDetail();
+  const { filters } = useStore();
+  const params: Record<string, unknown> = { endDate: data.window.end, groupBy: 'sku', classification: [cls] };
+  if (filters.branch.length) params.branch = filters.branch;
+  const q = useQuery({ queryKey: ['v2', '/ibl-vs-tscl', params], queryFn: () => fetchRows('/ibl-vs-tscl', params) as Promise<IblSkuRow[]>, staleTime: 5 * 60_000 });
+  const names = new Map(data.options.items.map((i) => [String(i.item_code), i.item_description]));
+  const rows = (q.data ?? [])
+    .map((r) => ({ code: String(r.item_code), name: names.get(String(r.item_code)) ?? String(r.item_code), ibl: num(r.ibl_target) ?? 0, tscl: num(r.tscl_target) ?? 0 }))
+    .filter((r) => r.ibl || r.tscl)
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+  const ibl = rows.reduce((t, r) => t + r.ibl, 0);
+  const tscl = rows.reduce((t, r) => t + r.tscl, 0);
+  // The class figure: Σ IBL target ÷ Σ TSCL budget (BR-MET-006's Total rule).
+  const classPct = tscl > 0 ? (ibl / tscl) * 100 : null;
+  if (q.isLoading) return <Waiting />;
+  if (q.isError)
+    return (
+      <Text fontSize="13px" color={colors.bad}>
+        Couldn’t load the SKUs of this class.
+      </Text>
+    );
+  return (
+    <>
+      <StatGrid>
+        <Stat label="IBL target" value={pkr(ibl)} sub={`${rows.length} SKUs`} />
+        <Stat label="TSCL budget" value={pkr(tscl)} sub="National: the budget has no branch" />
+        <Stat label="Forecast ÷ budget" value={pct1(classPct)} rag={rag(classPct, 'planAlignment')} />
+      </StatGrid>
+      <Section title="SKUs" hint="IBL target and TSCL budget for the month; budget is national">
+        <Rows
+          head={['SKU', 'IBL target', 'TSCL budget', 'Forecast ÷ budget']}
+          total={[money(ibl), money(tscl), <RagText key="t" v={classPct} r={rag(classPct, 'planAlignment')} text={pct1(classPct)} />]}
+          rows={rows.map((r) => {
+            const p = r.tscl > 0 ? (r.ibl / r.tscl) * 100 : null;
+            return {
+              key: r.code,
+              cells: [r.name, money(r.ibl), money(r.tscl), p == null ? 'no budget' : <RagText key="p" v={p} r={rag(p, 'planAlignment')} text={pct1(p)} />],
+              onClick: () => push({ kind: 'sku', sku: r.name }),
+            };
+          })}
+        />
+      </Section>
+    </>
   );
 }
 
@@ -529,11 +587,11 @@ function BranchBody({ branch, data }: { branch: string; data: DashboardData }) {
       </StatGrid>
       {bi >= 0 && classRows.length > 0 && (
         <Section title="Cover days here, by class">
-          <Rows head={['Class', 'Cover', 'Threshold']} rows={classRows.map((c) => ({ key: c.cls, cells: [c.cls === 'Others' ? 'Others' : `Class ${c.cls}`, days(c.vals[bi]), days(th(c.cls))], onClick: () => push({ kind: 'class', cls: c.cls }) }))} />
+          <Rows head={['Class', 'Cover', 'Threshold']} rows={classRows.map((c) => ({ key: c.cls, cells: [clsName(c.cls), days(c.vals[bi]), days(th(c.cls))], onClick: () => push({ kind: 'class', cls: c.cls }) }))} />
         </Section>
       )}
       <Section title="SKUs below threshold here" hint={inv.length ? `${risky.length} SKUs · 0 d means no stock in this branch` : 'Opens once Inventory has loaded'}>
-        <Rows head={['SKU', 'Class', 'Cover here', 'Threshold']} rows={risky.map(({ r, v, t }) => ({ key: r.item_desc, cells: [r.item_desc, r.classification, <RagText key="v" r={v === 0 ? 'red' : 'amber'} text={v === 0 ? 'No stock' : days(v)} />, days(t)], onClick: () => push({ kind: 'sku', sku: r.item_desc }) }))} />
+        <Rows head={['SKU', 'Class', 'Cover here', 'Threshold']} rows={risky.map(({ r, v, t }) => ({ key: r.item_desc, cells: [r.item_desc, r.classification === 'Others' ? 'Other' : r.classification, <RagText key="v" r={v === 0 ? 'red' : 'amber'} text={v === 0 ? 'No stock' : days(v)} />, days(t)], onClick: () => push({ kind: 'sku', sku: r.item_desc }) }))} />
       </Section>
     </>
   );
@@ -564,7 +622,7 @@ function SkuBody({ sku, data }: { sku: string; data: DashboardData }) {
       </Section>
       {disp.length > 0 && (
         <Section title="Orders by channel">
-          <Rows head={['Channel', 'Ordered', 'Delivered', 'Fill rate']} rows={disp.map((d) => ({ key: d.channel_type, cells: [d.channel_type, full(n0(d.total_order_qty)), full(n0(d.total_delivery_qty)), <RagText key="f" v={num(d.delivery_pct)} r={rag(num(d.delivery_pct), 'fillRate')} text={pct1(num(d.delivery_pct))} />], onClick: () => push({ kind: 'channel', channel: d.channel_type }) }))} />
+          <Rows head={['Channel', 'Ordered', 'Delivered', 'Fill rate']} total={[full(sumOf(disp, (d) => n0(d.total_order_qty))), full(sumOf(disp, (d) => n0(d.total_delivery_qty))), '']} rows={disp.map((d) => ({ key: d.channel_type, cells: [d.channel_type, full(n0(d.total_order_qty)), full(n0(d.total_delivery_qty)), <RagText key="f" v={num(d.delivery_pct)} r={rag(num(d.delivery_pct), 'fillRate')} text={pct1(num(d.delivery_pct))} />], onClick: () => push({ kind: 'channel', channel: d.channel_type }) }))} />
         </Section>
       )}
     </>
@@ -587,7 +645,7 @@ function ChannelBody({ channel, data }: { channel: string; data: DashboardData }
         <Stat label="Unfulfilled" value={full(f.unfulfilled)} sub={`${K.materialsBelow(rows).below} of ${K.materialsBelow(rows).total} materials below 90%`} />
       </StatGrid>
       <Section title="Materials, most unfulfilled first">
-        <Rows head={['Material', 'Ordered', 'Delivered', 'Short', 'Fill rate']} rows={mats.map(({ r, short }) => ({ key: r.material_name, cells: [r.material_name, full(n0(r.total_order_qty)), full(n0(r.total_delivery_qty)), full(short), <RagText key="f" v={num(r.delivery_pct)} r={rag(num(r.delivery_pct), 'fillRate')} text={pct1(num(r.delivery_pct))} />], onClick: () => push({ kind: 'material', material: r.material_name }) }))} />
+        <Rows head={['Material', 'Ordered', 'Delivered', 'Short', 'Fill rate']} total={[full(sumOf(mats, (m) => n0(m.r.total_order_qty))), full(sumOf(mats, (m) => n0(m.r.total_delivery_qty))), full(sumOf(mats, (m) => m.short)), '']} rows={mats.map(({ r, short }) => ({ key: r.material_name, cells: [r.material_name, full(n0(r.total_order_qty)), full(n0(r.total_delivery_qty)), full(short), <RagText key="f" v={num(r.delivery_pct)} r={rag(num(r.delivery_pct), 'fillRate')} text={pct1(num(r.delivery_pct))} />], onClick: () => push({ kind: 'material', material: r.material_name }) }))} />
       </Section>
     </>
   );
@@ -608,11 +666,11 @@ function MaterialBody({ material, data }: { material: string; data: DashboardDat
         <Stat label="In production" value={wip.length} sub={`${money(wip.reduce((t, r) => t + n0(r['WIP Value']), 0))} WIP value`} />
       </StatGrid>
       <Section title="By channel">
-        <Rows head={['Channel', 'Ordered', 'Delivered', 'Fill rate']} rows={rows.map((r) => ({ key: r.channel_type, cells: [r.channel_type, full(n0(r.total_order_qty)), full(n0(r.total_delivery_qty)), <RagText key="f" v={num(r.delivery_pct)} r={rag(num(r.delivery_pct), 'fillRate')} text={pct1(num(r.delivery_pct))} />], onClick: () => push({ kind: 'channel', channel: r.channel_type }) }))} />
+        <Rows head={['Channel', 'Ordered', 'Delivered', 'Fill rate']} total={[full(sumOf(rows, (r) => n0(r.total_order_qty))), full(sumOf(rows, (r) => n0(r.total_delivery_qty))), '']} rows={rows.map((r) => ({ key: r.channel_type, cells: [r.channel_type, full(n0(r.total_order_qty)), full(n0(r.total_delivery_qty)), <RagText key="f" v={num(r.delivery_pct)} r={rag(num(r.delivery_pct), 'fillRate')} text={pct1(num(r.delivery_pct))} />], onClick: () => push({ kind: 'channel', channel: r.channel_type }) }))} />
       </Section>
       {wip.length > 0 && (
         <Section title="Production orders">
-          <Rows head={['Order', 'Plant', 'Received', 'WIP value']} rows={wip.map((r) => ({ key: r.order_number, cells: [r.order_number, r.plnt_desc, `${full(n0(r.good_received_qty))} of ${full(n0(r.item_qty))}`, money(n0(r['WIP Value']))], onClick: () => push({ kind: 'order', order: r.order_number }) }))} />
+          <Rows head={['Order', 'Plant', 'Received', 'WIP value']} total={['', `${full(sumOf(wip, (r) => n0(r.good_received_qty)))} of ${full(sumOf(wip, (r) => n0(r.item_qty)))}`, money(sumOf(wip, (r) => n0(r['WIP Value'])))]} rows={wip.map((r) => ({ key: r.order_number, cells: [r.order_number, r.plnt_desc, `${full(n0(r.good_received_qty))} of ${full(n0(r.item_qty))}`, money(n0(r['WIP Value']))], onClick: () => push({ kind: 'order', order: r.order_number }) }))} />
         </Section>
       )}
       {inInventory && (
@@ -638,7 +696,7 @@ function OrderBody({ order, data }: { order: string; data: DashboardData }) {
         <Stat label="Material type" value={<Text as="span" fontSize="14px">{r.material_type_description}</Text>} />
       </StatGrid>
       <Section title="Where">
-        <Rows head={['Field', 'Value']} rows={[
+        <Rows noTotal head={['Field', 'Value']} rows={[
           { key: 'm', cells: ['Material', r['Material Name']], onClick: () => push({ kind: 'material', material: r['Material Name'] }) },
           { key: 'p', cells: ['Plant', `${r.plnt_desc} (${r.plant})`] },
           { key: 's', cells: ['Storage location', `${r.storage_loc_desc} (${r.storage_loc})`] },
@@ -744,6 +802,8 @@ export function DetailLayer({ data }: { data: DashboardData }) {
         return <KpiBody item={item} data={data} />;
       case 'class':
         return <ClassBody cls={item.cls} data={data} />;
+      case 'alignClass':
+        return <AlignClassBody cls={item.cls} data={data} />;
       case 'branch':
         return <BranchBody branch={item.branch} data={data} />;
       case 'sku':

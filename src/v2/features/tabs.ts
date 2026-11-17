@@ -9,7 +9,7 @@ export type TabKey = 'overview' | 'revenue' | 'inventory' | 'fulfilment' | 'dist
 
 export const TABS: { key: TabKey; label: string; mid: string; short: string; anyOf: Section[] }[] = [
   { key: 'overview', label: 'Executive Overview', mid: 'Overview', short: 'Overview', anyOf: ALL_SECTIONS },
-  { key: 'revenue', label: 'Revenue & Plan', mid: 'Revenue & Plan', short: 'Revenue', anyOf: ['SUMMARY'] },
+  { key: 'revenue', label: 'Summary', mid: 'Summary', short: 'Summary', anyOf: ['SUMMARY'] },
   { key: 'inventory', label: 'Inventory & Working Capital', mid: 'Inventory & Capital', short: 'Inventory', anyOf: ['SUMMARY', 'SERVICE_MEASURE'] },
   { key: 'fulfilment', label: 'Fulfilment & Operations', mid: 'Fulfilment & Ops', short: 'Fulfilment', anyOf: ['DISPATCH_WIP'] },
   { key: 'distribution', label: 'Distribution & Data Health', mid: 'Distribution & Data', short: 'Distribution', anyOf: ['RD_DATA_STATUS'] },
@@ -18,6 +18,7 @@ export const TABS: { key: TabKey; label: string; mid: string; short: string; any
 /** Which section an endpoint's data belongs to. */
 export const SECTION_OF: Record<string, Section> = {
   '/sales-summary': 'SUMMARY',
+  '/sales-summary/by-sales-type': 'SUMMARY',
   '/total-sku': 'SUMMARY',
   '/cover-days': 'SUMMARY',
   '/cover-days/total': 'SUMMARY',

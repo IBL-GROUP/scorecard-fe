@@ -29,6 +29,9 @@ export interface ChartCardProps {
 /** true inside a topic panel (FR-EXEC-025): the card fills the space the panel leaves, whatever height it asks for. */
 export const PanelLeadContext = createContext(false);
 
+/** Body height of a card opened full-size (FR-EXEC-035): content-sized cards stay auto, charts get most of the window. */
+export const expandedHeight = (askedHeight: string) => (askedHeight === 'auto' ? 'auto' : 'min(70vh, 640px)');
+
 const BAR_HEIGHTS = [55, 80, 40, 90, 65, 75, 50, 85, 60, 70];
 const LINE_DOTS   = [45, 65, 30, 70, 50, 80, 38, 60, 55, 75];
 
@@ -207,7 +210,12 @@ export function ChartCard({
       </Box>
       {expanded && (
         <Overlay title={title} subtitle={subtitle} onClose={() => setExpanded(false)}>
-          <ExpandedContext.Provider value={true}>{children}</ExpandedContext.Provider>
+          {/* Charts that fill their container (recharts at height 100%) need a
+              real height here, or they draw at 0 px and the dialog looks empty.
+              Cards that size to their content (gauges, tables, tiles) keep it (FR-EXEC-035). */}
+          <Box h={expandedHeight(askedHeight)} minH={askedHeight === 'auto' ? undefined : '320px'} position="relative" data-expanded-body>
+            <ExpandedContext.Provider value={true}>{children}</ExpandedContext.Provider>
+          </Box>
         </Overlay>
       )}
     </GridItem>

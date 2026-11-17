@@ -57,7 +57,7 @@ become authoritative once the product owner reviews this page (GAP-028).
 | Term | Meaning | Code / API | See |
 |---|---|---|---|
 | Classification / Class | The A / B / C / N split almost every figure is organised by. Each class has its own benchmark and threshold, so classes are never compared against each other's numbers. **What each letter means, and how its benchmark was set, is Unconfirmed** (GAP-025). | `classification` (repeated param), `vw_items_class.classification` | BR-MET-001, BR-FILT-001 |
-| Others | The bucket for products with no classification. Grouped, not dropped, so class rows add up to the total. Labelled "Other" on the Inventory Days table. A large Others figure means the item master is incomplete, not that cover is bad. | `classification IS NULL` | BR-MET-001, manual T1 |
+| Others | The bucket for products with no classification. Grouped, not dropped, so class rows add up to the total. Labelled "Other" on the Inventory Days heatmap and in the 2.0 detail sheets (FR-EXEC-029). A large Others figure means the item master is incomplete, not that cover is bad. | `classification IS NULL` | BR-MET-001, manual T1 |
 | Class colours | Each of A, B, C and N has one colour used on every card, chart and table. Total and unrecognised classes are grey. | — | manual T1 |
 | SKU | Stock-keeping unit: one product. Stock and sales are matched on its mapping code. The SKU filter allows several. | param `sku`, `mapping_code` | FR-FILT-003 |
 | Mapping code | The product code stock and sales share. SAP item codes resolve to it through `sap_items_detail` (`mapping_code`, or `matnr` when that is blank). | `vw_items_class.mapping_code` | BR-MET-001 |
@@ -106,7 +106,7 @@ become authoritative once the product owner reviews this page (GAP-028).
 
 | Term | Meaning | Code / API | See |
 |---|---|---|---|
-| Cover days | How many days the stock would last at the planned rate: inventory value ÷ daily target, to 1 decimal in the API, shown as whole days. `null` (no target loaded) shows "—", which differs from a real 0. | `cover_days`, `/cover-days` | BR-MET-002, BR-SUM-004 |
+| Cover days | How many days the stock would last at the planned rate: inventory value ÷ daily target (the month's target ÷ the days in the month, or ÷ the days typed in the 2.0 "Cover days" box, FR-EXEC-047), to 1 decimal in the API, shown as whole days. `null` (no target loaded) shows "—", which differs from a real 0. | `cover_days`, `/cover-days` | BR-MET-002, BR-SUM-004 |
 | Total cover days | Cover days across all classes, from `/cover-days/total`. If that row is missing, `round(Σ inv_val ÷ Σ daily_target)`. | `/cover-days/total` | FR-SUM-003, BR-SUM-003 |
 | Inventory Days | The Service Measure table of cover days per class (and per SKU) per branch. Its **Total** column is a plain average of the 14 branches, not stock-weighted (manual §6). Also used loosely as a synonym for cover days. | `/inventory-days` | FR-SVC-001 |
 | Benchmark | The expected cover days for a class, shown on the Summary Benchmark card. Stored in the `days` column of `cover_days`, versioned by `effective_date`; the value in force on the To date applies. `0` or missing means "not set" ("—"). | `cover_days.days`, `benchmarkDays` | BR-MET-003, FR-SUM-001 |
@@ -202,7 +202,11 @@ Terms introduced by PRD v2 and the S1 prototype ([FEAT-EXEC](../features/FEAT-EX
 
 | Term | Meaning | Code / API | See |
 |---|---|---|---|
-| Attainment to date | Sales (or EFP sales) so far as a share of the target (or budget) prorated to today. 100% = on pace. Windows over one month are built month by month. | `attainmentToDate` | BR-EXEC-001, BR-EXEC-002 |
+| Attainment to date | Sales (or EFP sales) so far as a share of the target (or budget) prorated to today. 100% = on pace. Windows over one month are built month by month. Shown as "achievement" on 2.0 screens, the Sales Pulse word (FR-EXEC-044). | `attainmentToDate` | BR-EXEC-001, BR-EXEC-002 |
+| Achievement | The Sales Pulse 2.0 word for attainment, used on 2.0 screens: sales so far as a share of the target (or budget) to date. Same figure and bands as attainment. | — | FR-EXEC-044 |
+| Sales type | The sales view's data_flag, as Sales Pulse 2.0 reads it: 'Rd to trade', 'Ibl to trade', 'Pharma Healthcare to trade'. Splits the Sales (TP) tile. **What each type means (who sells to the trade) is Unconfirmed**: only the three values are known from the data (DSR-be: Ibl to trade equals 1.0's Primary Sales; the other two together equal Secondary Sales). | `data_flag`, `sales_type` | FR-EXEC-048 |
+| Key insights | The 2.0 name of Top Risks & Opportunities (EX-10), as in Sales Pulse 2.0. Rows are tagged "Needs attention" (a red or amber rule fired) or "Going well" (an opportunity rule fired). | `RiskList` | FR-EXEC-044, BR-EXEC-009 |
+| A period / B period | The selected period (A) and the one it is compared with (B: the previous period or the same period last year), named by their months on the period button: "Nov 2026 vs Oct 2026". | `periodTag`, `compareText` | FR-EXEC-043 |
 | Projected month-end | Where the month lands if today's daily run-rate holds: (sales ÷ days gone × total days) ÷ month target. | `projectedMonthEnd` | BR-EXEC-001 |
 | Run-rate required | Sales needed per remaining day to reach the month target, beside the current daily run-rate. | `runRate` | RV-05 in PRD v2 |
 | Coverage index | Total cover days as a share of the target-weighted benchmark. Too low is stock-out risk, too high is excess. | `coverageIndex` | BR-EXEC-004 |

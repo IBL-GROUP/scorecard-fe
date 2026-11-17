@@ -7,11 +7,11 @@ const TILE_TARGETS: [tile: string, tab: string, focus: string][] = [
   ['EX-01', 'revenue', 'RV-02'],
   ['EX-02', 'revenue', 'RV-03'],
   ['EX-03', 'revenue', 'RV-04'],
-  ['EX-04', 'inventory', 'IN-03'],
+  ['EX-04', 'revenue', 'IN-03'],
   ['EX-05', 'inventory', 'IN-10'],
   ['EX-06', 'fulfilment', 'OP-01'],
   ['EX-07', 'inventory', 'IN-01'],
-  ['EX-08', 'inventory', 'IN-08'],
+  ['EX-08', 'revenue', 'IN-08'],
   ['EX-09', 'distribution', 'DH-01'],
 ];
 
@@ -106,7 +106,8 @@ test('TC-S5-05 TC-EXEC-024 branch bar on Distribution sets a branch chip, and th
   await settled(page);
   // Compliance by Branch is in the Reporting topic's Details sheet (FR-EXEC-025).
   await page.getByRole('button', { name: 'Reporting: details', exact: true }).click();
-  await page.locator('[data-kpi~="DH-05"] .recharts-bar-rectangle').first().click();
+  // Sales Pulse bars (FR-EXEC-045): each branch is a row.
+  await page.locator('[data-kpi~="DH-05"] [data-hbar]').first().click();
   await page.getByRole('button', { name: 'Close details' }).click();
   const remove = page.getByRole('button', { name: 'Clear this filter' });
   await expect(remove).toBeVisible();

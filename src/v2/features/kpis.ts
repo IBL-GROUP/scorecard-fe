@@ -11,6 +11,7 @@ import {
   RATED_CLASSES,
   type BenchmarkRow,
   type CategoryAccuracyRow,
+  type SalesTypeRow,
   type CoverDaysRow,
   type DispatchVsOrderRow,
   type RdStatusRow,
@@ -73,6 +74,35 @@ export function categoryCells(responses: CategoryAccuracyRow[][]): MonthClass[] 
   return [...map.values()].sort((a, b) => a.month.localeCompare(b.month));
 }
 
+/**
+ * RV-14 / RV-15 side chart, as 1.0 (FR-SUM-006, FR-EXEC-041): accuracy % per
+ * class for the three calendar months ending with the To date's month. Each
+ * value is the API's `pct`, rounded to 1 decimal; no new rule. `endIso` is the
+ * window's To date (YYYY-MM-DD).
+ */
+export function classHistory(responses: CategoryAccuracyRow[][], endIso: string, n = 3) {
+  const end = new Date(`${endIso.slice(0, 7)}-01T00:00:00`);
+  const months = Array.from({ length: n }, (_, i) => {
+    const d = new Date(end.getFullYear(), end.getMonth() - (n - 1 - i), 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const byCls = new Map<string, Record<string, number | string>>();
+  for (const rows of responses)
+    for (const r of rows) {
+      const month = monthKeyFromLabel(r.month);
+      if (!months.includes(month)) continue;
+      const p = Number(r.pct);
+      if (r.pct == null || Number.isNaN(p)) continue;
+      const cls = normClass(r.classification);
+      const row = byCls.get(cls) ?? { cls };
+      row[month] = Math.round(p * 10) / 10;
+      byCls.set(cls, row);
+    }
+  const order = ['A', 'B', 'C', 'N', 'Others'];
+  const rows = [...byCls.values()].sort((a, b) => order.indexOf(String(a.cls)) - order.indexOf(String(b.cls)));
+  return { months, rows };
+}
+
 /** RV-06/07: attainment % per month per class plus Total. */
 export function attainmentTrend(cells: MonthClass[]) {
   const months = [...new Set(cells.map((c) => c.month))].sort();
@@ -129,6 +159,18 @@ export function salesSummary(rows: SalesSummaryRow[]) {
       share: total > 0 ? Math.round((n0(r.amount) / total) * 1000) / 10 : 0,
     })),
   };
+}
+
+/** RV-01 split (FR-EXEC-048): the user's order, Sales Pulse 2.0's colours; any other type after. */
+const SALES_TYPES: { key: string; label: string; color: string }[] = [
+  { key: 'rd to trade', label: 'Rd to trade', color: '#3B5BDB' },
+  { key: 'ibl to trade', label: 'Ibl to trade', color: '#12A594' },
+  { key: 'pharma healthcare to trade', label: 'Pharma Healthcare to trade', color: '#E8590C' },
+];
+export function salesTypeSplit(rows: SalesTypeRow[]) {
+  const known = SALES_TYPES.map((t) => ({ label: t.label, color: t.color, value: rows.filter((r) => r.sales_type.trim().toLowerCase() === t.key).reduce((s, r) => s + n0(r.amount), 0) }));
+  const other = rows.filter((r) => !SALES_TYPES.some((t) => t.key === r.sales_type.trim().toLowerCase())).reduce((s, r) => s + n0(r.amount), 0);
+  return [...known, ...(other ? [{ label: 'Other', color: '#8B5CF6', value: other }] : [])].filter((p) => p.value !== 0);
 }
 
 /** RV-10: SKUs sold ÷ SKUs in range × 100, per class and total. */
@@ -494,10 +536,10 @@ export function buildRisks(i: RiskInput): Risk[] {
   // R3 — class below threshold; R4 — class above 1.5× benchmark
   for (const c of i.classStock) {
     if (c.cd != null && c.th != null && c.cd < c.th)
-      out.push({ id: `R3-${c.cls}`, tone: 'red', text: `Class ${c.cls}: ${c.cd.toFixed(0)} days of cover, below its ${c.th}-day threshold`, tab: 'inventory', kpi: 'IN-07', chip: { key: 'cls', value: c.cls }, weight: 95 });
+      out.push({ id: `R3-${c.cls}`, tone: 'red', text: `Class ${c.cls}: ${c.cd.toFixed(0)} days of cover, below its ${c.th}-day threshold`, tab: 'revenue', kpi: 'IN-07', chip: { key: 'cls', value: c.cls }, weight: 95 });
     if (c.cd != null && c.bm != null && c.cd > c.bm * riskRules.excessMultiple) {
       const excess = Math.max(0, c.cd - c.bm) * c.dailyTarget * (c.invTp > 0 ? c.invCost / c.invTp : 0);
-      out.push({ id: `R4-${c.cls}`, tone: 'red', text: `Class ${c.cls}: cover ${(c.cd / c.bm).toFixed(1)}× benchmark, PKR ${i.fmtMoney(excess)} excess`, tab: 'inventory', kpi: 'IN-08', chip: { key: 'cls', value: c.cls }, weight: 85 });
+      out.push({ id: `R4-${c.cls}`, tone: 'red', text: `Class ${c.cls}: cover ${(c.cd / c.bm).toFixed(1)}× benchmark, ${i.fmtMoney(excess)} excess`, tab: 'revenue', kpi: 'IN-08', chip: { key: 'cls', value: c.cls }, weight: 85 });
     }
   }
   // R5 — channel fill rate below 90%
@@ -507,7 +549,7 @@ export function buildRisks(i: RiskInput): Risk[] {
   // R6 — RDs silent > 3 days
   const stale = i.rdRows.filter((r) => n0(r.day_diff) > riskRules.staleRdDays);
   if (stale.length)
-    out.push({ id: 'R6', tone: 'amber', text: `${stale.length} distributors silent for over ${riskRules.staleRdDays} days, PKR ${i.fmtMoney(sum(stale, (r) => n0(r.last_stock_value)))} of stock unseen`, tab: 'distribution', kpi: 'DH-04', weight: 60 });
+    out.push({ id: 'R6', tone: 'amber', text: `${stale.length} distributors silent for over ${riskRules.staleRdDays} days, ${i.fmtMoney(sum(stale, (r) => n0(r.last_stock_value)))} of stock unseen`, tab: 'distribution', kpi: 'DH-04', weight: 60 });
   // R7 — blocked + QI over 10%
   if (i.blockedQiPct != null && i.blockedQiPct > riskRules.heldMaterialAbove)
     out.push({ id: 'R7', tone: 'amber', text: `${i.blockedQiPct.toFixed(1)}% of raw and packing material is blocked or in quality inspection`, tab: 'fulfilment', kpi: 'OP-11', weight: 55 });
@@ -521,7 +563,7 @@ export function buildRisks(i: RiskInput): Risk[] {
   // O2 — releasable excess
   const releasable = sum(excessByClass(i.classStock), (r) => r.value);
   if (releasable > 0)
-    out.push({ id: 'O2', tone: 'opportunity', text: `PKR ${i.fmtMoney(releasable)} of stock above benchmark could be released`, tab: 'inventory', kpi: 'IN-08', weight: 15 });
+    out.push({ id: 'O2', tone: 'opportunity', text: `${i.fmtMoney(releasable)} of stock above benchmark could be released`, tab: 'revenue', kpi: 'IN-08', weight: 15 });
 
   // Problems first (red, then amber, by weight); keep up to 2 places for
   // opportunities so the list is never only bad news.

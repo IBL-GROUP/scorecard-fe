@@ -32,7 +32,7 @@ export interface ExecTileProps {
   rag?: Rag | null;
   band?: BandKey;
   bandUnit?: string;
-  /** Variance against target, e.g. "vs pace: −PKR 18.3M". */
+  /** Variance against target, e.g. "vs pace: −18.3M". */
   variance?: ReactNode;
   delta?: TileDelta;
   spark?: (number | null)[];
@@ -50,28 +50,44 @@ export interface ExecTileProps {
   goTo?: { tab: TabKey; focus: string };
   help?: HelpText;
   children?: ReactNode;
+  /** How the value splits (e.g. by sales type): a thin stacked bar, then each part with its amount and share (FR-EXEC-048). */
+  split?: TileSplitPart[];
 }
 
-function DeltaLine({ d }: { d: TileDelta }) {
-  if (d.value == null || Number.isNaN(d.value))
-    return (
-      <Text fontSize="12px" color={colors.mutedText} fontStyle="italic">
-        No comparison
-      </Text>
-    );
-  const up = d.value > 0;
-  const flat = Math.abs(d.value) < 0.05;
-  const good = flat ? null : up === (d.upIsGood ?? true);
+export interface TileSplitPart {
+  label: string;
+  value: number;
+  /** Already formatted, e.g. "905.1M". */
+  text: string;
+  color: string;
+}
+
+/** The split line under a tile's value, as Sales Pulse 2.0 draws it: one bar, then each part with its share. */
+function SplitLine({ parts }: { parts: TileSplitPart[] }) {
+  const total = parts.reduce((a, x) => a + Math.max(0, x.value), 0);
+  if (!total) return null;
   return (
-    <Flex fontSize="12px" gap="6px" align="center" wrap="wrap">
-      <Text as="span" fontWeight={700} color={good == null ? colors.mutedText : good ? colors.good : colors.bad} fontVariantNumeric="tabular-nums">
-        {flat ? '■' : up ? '▲' : '▼'} {Math.abs(d.value).toFixed(1)}
-        {d.unit === 'pts' ? ' pts' : '%'}
-      </Text>
-      <Text as="span" color={colors.mutedText}>
-        {d.label}
-      </Text>
-    </Flex>
+    <Box mt="4px" data-split>
+      <Flex h="6px" borderRadius="3px" overflow="hidden" bg={colors.sunkBg} role="img" aria-label={parts.map((x) => `${x.label} ${x.text}`).join(', ')}>
+        {parts.map((x) => (
+          <Box key={x.label} h="100%" w={`${(Math.max(0, x.value) / total) * 100}%`} bg={x.color} title={`${x.label}: ${x.text}`} />
+        ))}
+      </Flex>
+      <Flex mt="5px" gap="4px 12px" wrap="wrap" fontSize="11.5px" color={colors.mutedText}>
+        {parts.map((x) => (
+          <Flex key={x.label} align="center" gap="5px" whiteSpace="nowrap" data-split-part={x.label}>
+            <Box w="8px" h="8px" borderRadius="2px" bg={x.color} flexShrink={0} />
+            {x.label}
+            <Text as="span" color={colors.darkText} fontWeight={600} fontVariantNumeric="tabular-nums">
+              {x.text}
+            </Text>
+            <Text as="span" fontVariantNumeric="tabular-nums">
+              ({((Math.max(0, x.value) / total) * 100).toFixed(1)}%)
+            </Text>
+          </Flex>
+        ))}
+      </Flex>
+    </Box>
   );
 }
 
@@ -184,8 +200,8 @@ export function ExecTile(p: ExecTileProps) {
               {p.variance}
             </Text>
           )}
-          {p.delta && <DeltaLine d={p.delta} />}
           {p.children}
+          {p.split && p.split.length > 0 && <SplitLine parts={p.split} />}
           {p.caption && (
             <Text fontSize="12px" color={colors.mutedText}>
               {p.caption}

@@ -33,13 +33,14 @@ test('TC-S5-13 TC-EXEC-028 keyboard: tabs, tiles and the filter bar are reachabl
       // A tile's keyboard control is its title button.
       const tile = el.tagName === 'BUTTON' ? el.closest('[data-tile]') : null;
       if (tile && el.getAttribute('aria-label')?.endsWith(': details')) return tile.getAttribute('data-kpi') ?? '';
+      if (el.hasAttribute('data-period-button')) return 'period';
       return el.getAttribute('role') ?? el.tagName.toLowerCase();
     });
     reached.add(what);
     if (/^EX-0[1-9]$/.test(what)) break;
   }
   expect([...reached].some((x) => x === 'tab'), 'a dashboard tab').toBe(true);
-  expect([...reached].some((x) => x === 'radio'), 'the period presets').toBe(true);
+  expect([...reached].some((x) => x === 'period'), 'the period button').toBe(true);
   expect([...reached].some((x) => /^EX-0[1-9]$/.test(x)), 'a KPI tile').toBe(true);
   // A focused tile opens its detail sheet with Enter.
   await page.keyboard.press('Enter');

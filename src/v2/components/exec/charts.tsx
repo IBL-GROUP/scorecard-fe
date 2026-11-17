@@ -4,8 +4,8 @@
 import { Box, Flex, Grid, Text } from '@chakra-ui/react';
 import type { MouseEvent, ReactNode } from 'react';
 import { colors } from '@/v2/constants/theme';
-import type { Rag } from '@/v2/features/kpiThresholds';
-import { ragCell } from './Rag';
+import { kpiThresholds, type Band, type BandKey, type Rag } from '@/v2/features/kpiThresholds';
+import { RAG_META, ragCell } from './Rag';
 
 /** Shared Recharts styling. */
 export const axis = { stroke: colors.axisText, fontSize: 11, tickLine: false } as const;
@@ -35,7 +35,15 @@ export function Sparkline({ values, color = colors.sales, height = 26 }: { value
 }
 
 /** The 1.0 accuracy gauge, kept (RV-14, RV-15): a half-ring from 0 to 120%. */
-export function Gauge({ value, label, rag }: { value: number | null; label: string; rag?: Rag | null }) {
+/** The 1.0 gauge footer (FR-EXEC-040): target and achieved side by side, then how far above or below target. */
+export interface GaugeFooter {
+  /** "Month Budget" or "Month Target", as in 1.0. */
+  targetLabel: string;
+  target: string;
+  achieved: string;
+}
+
+export function Gauge({ value, label, rag, footer }: { value: number | null; label: string; rag?: Rag | null; footer?: GaugeFooter }) {
   const max = 120;
   const v = Math.max(0, Math.min(max, value ?? 0));
   const angle = Math.PI * (1 - v / max);
@@ -62,6 +70,35 @@ export function Gauge({ value, label, rag }: { value: number | null; label: stri
       <Text fontSize="12px" color={colors.mutedText} mt="-4px">
         {label}
       </Text>
+      {footer && (
+        <>
+          <Flex mt={2} gap={3} justify="center" data-gauge-footer>
+            <Box textAlign="center">
+              <Text fontSize="10px" color={colors.mutedText} fontWeight={600} textTransform="uppercase" letterSpacing="wide" whiteSpace="nowrap">
+                {footer.targetLabel}
+              </Text>
+              <Text fontSize="12.5px" color={colors.bodyText} fontWeight={700} fontVariantNumeric="tabular-nums">
+                {footer.target}
+              </Text>
+            </Box>
+            <Box w="1px" bg={colors.border} alignSelf="stretch" />
+            <Box textAlign="center">
+              <Text fontSize="10px" color={colors.mutedText} fontWeight={600} textTransform="uppercase" letterSpacing="wide" whiteSpace="nowrap">
+                Achieved
+              </Text>
+              <Text fontSize="12.5px" color={color} fontWeight={700} fontVariantNumeric="tabular-nums">
+                {footer.achieved}
+              </Text>
+            </Box>
+          </Flex>
+          {/* 1.0 rule: the gauge % minus 100 (GaugeChart). */}
+          {value != null && (
+            <Text fontSize="12px" fontWeight={700} color={value >= 100 ? colors.good : colors.bad} mt="2px" fontVariantNumeric="tabular-nums">
+              {value >= 100 ? '▲' : '▼'} {Math.abs(value - 100).toFixed(1)}% {value >= 100 ? 'above' : 'below'} target
+            </Text>
+          )}
+        </>
+      )}
     </Flex>
   );
 }
@@ -76,6 +113,7 @@ export function Bullet({
   color,
   rag,
   right,
+  sub,
   onClick,
 }: {
   label: ReactNode;
@@ -86,11 +124,13 @@ export function Bullet({
   color: string;
   rag?: Rag | null;
   right?: ReactNode;
+  /** A second line under the bar (e.g. inventory value and units, FR-EXEC-032). */
+  sub?: ReactNode;
   onClick?: () => void;
 }) {
   const pos = (v: number) => `${Math.min(100, (v / max) * 100)}%`;
   return (
-    <Grid templateColumns="74px 1fr 120px" gap="10px" alignItems="center" py="5px" cursor={onClick ? 'pointer' : undefined} onClick={onClick} _hover={onClick ? { bg: colors.hoverBg } : undefined} borderRadius="4px" px="4px">
+    <Grid data-bullet templateColumns="74px 1fr 120px" gap="10px" alignItems="center" py="5px" cursor={onClick ? 'pointer' : undefined} onClick={onClick} _hover={onClick ? { bg: colors.hoverBg } : undefined} borderRadius="4px" px="4px">
       <Text fontSize="12.5px" fontWeight={600} color={colors.darkText} truncate>
         {label}
       </Text>
@@ -102,6 +142,11 @@ export function Bullet({
       <Flex justify="flex-end" align="center" gap="6px" fontSize="12px" color={rag ? ragCell(rag).color : colors.bodyText} fontWeight={600}>
         {right}
       </Flex>
+      {sub && (
+        <Text gridColumn="2 / -1" mt="-6px" fontSize="11px" color={colors.mutedText} fontVariantNumeric="tabular-nums" truncate>
+          {sub}
+        </Text>
+      )}
     </Grid>
   );
 }
@@ -175,16 +220,92 @@ export function Heatmap({
   );
 }
 
-/** Small legend row. */
-export function Legend({ items }: { items: { label: string; color: string; dashed?: boolean }[] }) {
+/**
+ * How a legend swatch is drawn, so it looks like the mark it explains
+ * (FR-EXEC-033): a bar, a line, a dashed target line, a vertical benchmark
+ * tick, a shaded band or heatmap cell, or a status dot.
+ */
+export type LegendShape = 'bar' | 'line' | 'dashed' | 'tick' | 'band' | 'dot';
+
+export interface LegendItem {
+  label: string;
+  color: string;
+  shape?: LegendShape;
+  /** Old spelling of shape 'dashed'. */
+  dashed?: boolean;
+  /** Several colours in one swatch: bars drawn in each class's colour. */
+  colors?: string[];
+  /** Text colour of a 'band' swatch (heatmap cells: soft fill, strong text). */
+  ink?: string;
+}
+
+function Swatch({ i }: { i: LegendItem }) {
+  const shape: LegendShape = i.shape ?? (i.dashed ? 'dashed' : 'bar');
+  switch (shape) {
+    case 'line':
+      return (
+        <Box position="relative" w="16px" h="10px" flexShrink={0}>
+          <Box position="absolute" left={0} right={0} top="4px" h="2.5px" bg={i.color} borderRadius="2px" />
+          <Box position="absolute" left="5px" top="2px" w="6px" h="6px" bg={i.color} borderRadius="50%" />
+        </Box>
+      );
+    case 'dashed':
+      return <Box w="16px" h="0" borderTop={`2px dashed ${i.color}`} flexShrink={0} />;
+    case 'tick':
+      return <Box w="2.5px" h="12px" bg={i.color} borderRadius="1px" flexShrink={0} mx="3px" />;
+    case 'band':
+      return (
+        <Box w="14px" h="10px" bg={i.color} borderRadius="2px" flexShrink={0} border="1px solid" borderColor={i.ink ?? 'transparent'} opacity={0.95} />
+      );
+    case 'dot':
+      return <Box w="8px" h="8px" bg={i.color} borderRadius="50%" flexShrink={0} />;
+    default:
+      return i.colors?.length ? (
+        <Flex w="16px" h="8px" borderRadius="2px" overflow="hidden" flexShrink={0}>
+          {i.colors.map((c) => (
+            <Box key={c} flex={1} bg={c} />
+          ))}
+        </Flex>
+      ) : (
+        <Box w="14px" h="8px" bg={i.color} borderRadius="2px" flexShrink={0} />
+      );
+  }
+}
+
+/** Legend row at the foot of a chart: one item per mark the chart draws (FR-EXEC-033). */
+export function Legend({ items }: { items: LegendItem[] }) {
   return (
-    <Flex gap="12px" wrap="wrap" fontSize="11.5px" color={colors.mutedText}>
+    <Flex as="ul" listStyleType="none" gap="6px 14px" wrap="wrap" fontSize="11.5px" color={colors.bodyText} pt="6px" flexShrink={0} aria-label="Legend" data-legend>
       {items.map((i) => (
-        <Flex key={i.label} align="center" gap="5px">
-          <Box w="12px" h={i.dashed ? '0' : '8px'} borderTop={i.dashed ? `2px dashed ${i.color}` : undefined} bg={i.dashed ? undefined : i.color} borderRadius="2px" />
+        <Flex as="li" key={i.label} align="center" gap="6px">
+          <Swatch i={i} />
           {i.label}
         </Flex>
       ))}
     </Flex>
   );
 }
+
+/**
+ * Legend items for a status band, worded from the band itself (no new rule):
+ * e.g. "On track ≥ 95%", "Watch 90–95%", "Act < 90%". `what` is appended
+ * ("of benchmark"); `shape` matches how the chart shows the status.
+ */
+export function ragLegend(key: BandKey, opts: { unit?: string; what?: string; shape?: LegendShape } = {}): LegendItem[] {
+  const { unit = '%', what, shape = 'dot' } = opts;
+  const b: Band = kpiThresholds[key];
+  const tail = what ? ` ${what}` : '';
+  const words =
+    b.kind === 'higher'
+      ? [`≥ ${b.green}${unit}`, `${b.amber}–${b.green}${unit}`, `< ${b.amber}${unit}`]
+      : b.kind === 'lower'
+        ? [`≤ ${b.green}${unit}`, `≤ ${b.amber}${unit}`, `> ${b.amber}${unit}`]
+        : [`${b.greenLo}–${b.greenHi}${unit}`, `${b.amberLo}–${b.amberHi}${unit}`, 'outside'];
+  return (['green', 'amber', 'red'] as const).map((r, n) => {
+    const c = ragCell(r);
+    return shape === 'band'
+      ? { label: `${RAG_META[r].word} ${words[n]}${tail}`, color: c.bg ?? c.color, ink: c.color, shape }
+      : { label: `${RAG_META[r].word} ${words[n]}${tail}`, color: c.color, shape };
+  });
+}
+

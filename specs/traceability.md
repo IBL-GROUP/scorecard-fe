@@ -33,8 +33,8 @@ means at least one of its test cases points at a test file.
 | NAV | 11 | 8 | 0 | 1 | 0 |
 | TBL | 5 | 4 | 0 | 1 | 0 |
 | SPEC | 15 | 15 | 15 | 3 | 2 |
-| EXEC | 49 | 45 | 28 | 8 | 3 |
-| **Total** | 192 | 152 | 44 | 29 | 29 |
+| EXEC | 72 | 68 | 49 | 8 | 3 |
+| **Total** | 215 | 175 | 65 | 29 | 29 |
 
 ## MET — Supply-chain metrics (domain)
 
@@ -305,13 +305,13 @@ Open gaps: GAP-029, GAP-030, GAP-031
 | FR-EXEC-001 | Proposed | `src/main.tsx#VITE_APP_VERSION`<br>`src/v2/main.tsx#mount` | TC-EXEC-001 | No | — | — |
 | FR-EXEC-002 | Proposed | `src/v2/config/api.ts#DEMO_DATA`<br>`src/v2/demo/demoApi.ts#demoAdapter`<br>`src/v2/main.tsx#mount` | TC-EXEC-001 | No | AC-EXEC-001 | — |
 | FR-EXEC-003 | Proposed | `src/v2/shell/Shell.tsx#DataAsOf`<br>`src/v2/features/tabs.ts#TABS`<br>`src/v2/features/nav.ts#useActiveTab` | TC-EXEC-005 | No | — | — |
-| FR-EXEC-004 | Proposed | `src/v2/shell/FilterBar.tsx#FilterBar`<br>`src/v2/features/store.tsx#StoreProvider` | TC-EXEC-008, TC-EXEC-025 | Yes | — | — |
+| FR-EXEC-004 | Proposed | `src/v2/shell/FilterBar.tsx#FilterBar`<br>`src/v2/shell/PeriodButton.tsx#PeriodButton`<br>`src/v2/features/store.tsx#StoreProvider` | TC-EXEC-008, TC-EXEC-025, TC-EXEC-047 | Yes | — | — |
 | FR-EXEC-005 | Proposed | `src/v2/pages/OverviewPage.tsx#OverviewPage`<br>`src/v2/pages/OverviewPage.tsx#overviewModel` | TC-EXEC-002, TC-EXEC-005, TC-EXEC-024 | Yes | AC-EXEC-001 | — |
-| FR-EXEC-006 | Proposed | `src/v2/pages/RevenuePage.tsx#RevenuePage` | TC-EXEC-002, TC-EXEC-003 | No | AC-EXEC-001, AC-EXEC-003 | — |
+| FR-EXEC-006 | Proposed | `src/v2/pages/RevenuePage.tsx#RevenuePage` | TC-EXEC-002, TC-EXEC-003, TC-EXEC-045 | Yes | AC-EXEC-001, AC-EXEC-003 | — |
 | FR-EXEC-007 | Proposed | `src/v2/pages/InventoryPage.tsx#InventoryPage` | TC-EXEC-002, TC-EXEC-003 | No | AC-EXEC-001 | — |
 | FR-EXEC-008 | Proposed | `src/v2/pages/FulfilmentPage.tsx#FulfilmentPage` | TC-EXEC-002, TC-EXEC-003 | No | AC-EXEC-001 | — |
 | FR-EXEC-009 | Proposed | `src/v2/pages/DistributionPage.tsx#DistributionPage` | TC-EXEC-002, TC-EXEC-003 | No | AC-EXEC-001 | — |
-| FR-EXEC-010 | Proposed | `src/v2/components/exec/ExecTile.tsx#ExecTile`<br>`src/v2/components/exec/Rag.tsx#RagBadge`<br>`src/v2/constants/help.ts#KPI_HELP` | TC-EXEC-004, TC-EXEC-011 | No | AC-EXEC-002 | — |
+| FR-EXEC-010 | Proposed | `src/v2/components/exec/ExecTile.tsx#ExecTile`<br>`src/v2/components/exec/Rag.tsx#RagBadge`<br>`src/v2/constants/help.ts#KPI_HELP` | TC-EXEC-004, TC-EXEC-011, TC-EXEC-042 | Yes | AC-EXEC-002 | — |
 | FR-EXEC-011 | Proposed | `src/v2/components/exec/Panels.tsx#OperationalDetail`<br>`src/v2/components/exec/Panels.tsx#openDetail`<br>`src/v2/features/store.tsx#isZone4Open` | TC-EXEC-006, TC-EXEC-018, TC-EXEC-024, TC-EXEC-026 | Yes | AC-EXEC-006 | — |
 | FR-EXEC-012 | Proposed | `src/v2/features/nav.ts#useNav`<br>`src/v2/components/exec/Panels.tsx#ChipBar` | TC-EXEC-005, TC-EXEC-024 | Yes | — | — |
 | FR-EXEC-013 | Proposed | `src/v2/features/data.ts#useDashboardData`<br>`src/v2/features/tabs.ts#SECTION_OF` | TC-EXEC-009, TC-EXEC-027 | Yes | AC-EXEC-004 | — |
@@ -319,14 +319,37 @@ Open gaps: GAP-029, GAP-030, GAP-031
 | FR-EXEC-015 | Proposed | `src/v2/shell/DemoPanel.tsx#DemoPanel`<br>`src/v2/demo/scenario.ts#DemoScenario`<br>`src/v2/features/catalog.ts#PRD_ITEMS` | TC-EXEC-002, TC-EXEC-004, TC-EXEC-007 | No | — | — |
 | FR-EXEC-016 | Proposed | `src/v2/pages/OverviewPage.tsx#trustRed` | TC-EXEC-010 | No | — | — |
 | FR-EXEC-017 | Proposed | `src/v2/features/detail.tsx#DetailProvider`<br>`src/v2/components/detail/DetailSheets.tsx#DetailLayer`<br>`src/v2/components/drill/SheetStack.tsx#SheetStack`<br>`src/v2/components/exec/ExecTile.tsx#openSheet` | TC-EXEC-013, TC-EXEC-024 | Yes | — | — |
-| FR-EXEC-018 | Proposed | `src/v2/shell/Shell.tsx#NotifyHost`<br>`src/v2/shell/FilterBar.tsx#notify`<br>`src/v2/components/ErrorBoundary.tsx#ErrorBoundary` | TC-EXEC-014 | No | — | — |
+| FR-EXEC-018 | Proposed | `src/v2/shell/Shell.tsx#NotifyHost`<br>`src/v2/components/ErrorBoundary.tsx#ErrorBoundary` | TC-EXEC-014 | No | — | — |
 | FR-EXEC-019 | Proposed | `src/v2/auth/AuthGate.tsx#AuthGate`<br>`src/v2/auth/AuthGate.tsx#PermissionGate`<br>`src/v2/main.tsx#LiveStore`<br>`src/v2/config/api.ts#redirectToPortal` | TC-EXEC-015, TC-EXEC-023 | Yes | AC-EXEC-005 | — |
 | FR-EXEC-020 | Proposed | `src/v2/features/data.ts#isSourcePending`<br>`src/v2/features/derive.ts#LoadError`<br>`src/v2/components/exec/Panels.tsx#PENDING_TEXT` | TC-EXEC-016 | Yes | AC-EXEC-005 | — |
 | FR-EXEC-021 | Proposed | `src/v2/shell/UserMenu.tsx#UserMenu`<br>`src/v2/features/store.tsx#setPersona` | TC-EXEC-018 | No | AC-EXEC-006 | — |
 | FR-EXEC-022 | Proposed | `src/v2/features/usage.ts#startUsageTracking`<br>`src/v2/features/usage.ts#recordExport`<br>`src/v2/components/data-table/DataTable.tsx#handleExport` | TC-EXEC-019, TC-EXEC-026 | Yes | — | — |
 | FR-EXEC-023 | Proposed | `src/v2/pages/InventoryPage.tsx#focusInvDays`<br>`src/v2/pages/FulfilmentPage.tsx#openDetail` | TC-EXEC-020, TC-EXEC-024 | Yes | — | — |
-| FR-EXEC-024 | Proposed | `src/v2/shell/Shell.tsx#MetricModeSwitch`<br>`src/v2/features/store.tsx#setMetricMode`<br>`src/v2/features/catalog.ts#isShown`<br>`src/v2/features/catalog.ts#anyShown`<br>`src/v2/components/exec/Panels.tsx#Zone` | TC-EXEC-030, TC-EXEC-031 | Yes | AC-EXEC-007 | — |
-| FR-EXEC-025 | Proposed | `src/v2/components/exec/AreaLayout.tsx#AreaLayout`<br>`src/v2/components/exec/AreaLayout.tsx#Topic`<br>`src/v2/features/catalog.ts#contentsOf`<br>`src/v2/pages/OverviewPage.tsx#AreaRisks`<br>`src/v2/pages/RevenuePage.tsx#RevenuePage`<br>`src/v2/pages/InventoryPage.tsx#InventoryPage`<br>`src/v2/pages/FulfilmentPage.tsx#FulfilmentPage`<br>`src/v2/pages/DistributionPage.tsx#DistributionPage` | TC-EXEC-024, TC-EXEC-026, TC-EXEC-031, TC-EXEC-032, TC-EXEC-033 | Yes | AC-EXEC-008 | — |
+| FR-EXEC-024 | Proposed | `src/v2/shell/MetricModeSwitch.tsx#MetricModeSwitch`<br>`src/v2/features/store.tsx#setMetricMode`<br>`src/v2/features/catalog.ts#isShown`<br>`src/v2/features/catalog.ts#anyShown`<br>`src/v2/components/exec/Panels.tsx#Zone` | TC-EXEC-030, TC-EXEC-031 | Yes | AC-EXEC-007 | — |
+| FR-EXEC-025 | Proposed | `src/v2/components/exec/AreaLayout.tsx#AreaLayout`<br>`src/v2/components/exec/AreaLayout.tsx#Topic`<br>`src/v2/features/catalog.ts#contentsOf`<br>`src/v2/pages/OverviewPage.tsx#AreaRisks`<br>`src/v2/pages/RevenuePage.tsx#RevenuePage`<br>`src/v2/pages/InventoryPage.tsx#InventoryPage`<br>`src/v2/pages/FulfilmentPage.tsx#FulfilmentPage`<br>`src/v2/pages/DistributionPage.tsx#DistributionPage` | TC-EXEC-024, TC-EXEC-026, TC-EXEC-031, TC-EXEC-032, TC-EXEC-033, TC-EXEC-038 | Yes | AC-EXEC-008 | — |
+| FR-EXEC-026 | Proposed | `src/v2/components/data-table/DataTable.tsx#footerCells`<br>`src/v2/components/data-table/DataTable.tsx#summable`<br>`src/v2/pages/RevenuePage.tsx#RevenuePage`<br>`src/v2/pages/InventoryPage.tsx#InventoryPage`<br>`src/v2/pages/DistributionPage.tsx#DistributionPage` | TC-EXEC-026, TC-EXEC-034 | Yes | — | — |
+| FR-EXEC-027 | Proposed | `src/v2/components/data-table/DataTable.tsx#compareValues`<br>`src/v2/components/data-table/DataTable.tsx#defaultSortCol`<br>`src/v2/pages/RevenuePage.tsx#RevenuePage`<br>`src/v2/pages/InventoryPage.tsx#invLeaves`<br>`src/v2/components/grouped-table/GroupedTable.tsx#GroupedTable` | TC-EXEC-034, TC-EXEC-035 | Yes | — | — |
+| FR-EXEC-028 | Proposed | `src/v2/components/detail/DetailSheets.tsx#Rows`<br>`src/v2/components/detail/DetailSheets.tsx#sumOf` | TC-EXEC-037 | No | — | — |
+| FR-EXEC-029 | Proposed | `src/v2/components/detail/DetailSheets.tsx#clsName`<br>`src/v2/features/detail.tsx#titleOf` | TC-EXEC-037 | No | — | — |
+| FR-EXEC-030 | Proposed | `src/v2/features/format.ts#compact`<br>`src/v2/features/format.ts#money`<br>`src/v2/constants/theme.ts#formatCompact`<br>`src/v2/constants/theme.ts#formatCompactValue`<br>`src/v2/components/charts/DailyColumns.tsx#shortCompact` | TC-EXEC-036, TC-EXEC-042 | Yes | — | — |
+| FR-EXEC-031 | Proposed | `src/v2/pages/topics/StockLevel.tsx#useStockLevelTopic`<br>`src/v2/pages/topics/PlanAlignment.tsx#usePlanAlignmentTopic`<br>`src/v2/pages/RevenuePage.tsx#RevenuePage`<br>`src/v2/pages/InventoryPage.tsx#InventoryPage`<br>`src/v2/features/catalog.ts#PRD_ITEMS`<br>`src/v2/features/data.ts#buildSpecs`<br>`src/v2/features/kpis.ts#buildRisks`<br>`src/v2/pages/OverviewPage.tsx#overviewModel` | TC-EXEC-032, TC-EXEC-038 | Yes | — | — |
+| FR-EXEC-032 | Proposed | `src/v2/pages/topics/StockLevel.tsx#stockValues`<br>`src/v2/components/exec/charts.tsx#Bullet` | TC-EXEC-038, TC-EXEC-040 | No | — | — |
+| FR-EXEC-033 | Proposed | `src/v2/components/exec/charts.tsx#Legend`<br>`src/v2/components/exec/charts.tsx#ragLegend`<br>`src/v2/components/exec/charts.tsx#LegendShape` | TC-EXEC-039, TC-EXEC-040 | Yes | — | — |
+| FR-EXEC-034 | Proposed | `src/v2/pages/topics/StockLevel.tsx#useStockLevelTopic`<br>`src/v2/pages/topics/StockLevel.tsx#leadBasis` | TC-EXEC-040 | No | — | — |
+| FR-EXEC-035 | Proposed | `src/v2/components/chart-card/ChartCard.tsx#ChartCard`<br>`src/v2/components/chart-card/ChartCard.tsx#expandedHeight`<br>`src/v2/components/overlay/Overlay.tsx#Overlay` | TC-EXEC-041 | Yes | — | — |
+| FR-EXEC-036 | Proposed | `src/v2/components/exec/AreaLayout.tsx#AreaLayout`<br>`src/v2/pages/RevenuePage.tsx#RevenuePage`<br>`src/v2/pages/topics/PlanAlignment.tsx#usePlanAlignmentTopic`<br>`src/v2/features/catalog.ts#PRD_ITEMS`<br>`src/v2/features/kpis.ts#buildRisks` | TC-EXEC-032, TC-EXEC-038 | Yes | — | — |
+| FR-EXEC-037 | Proposed | `src/v2/components/detail/DetailSheets.tsx#KpiBody` | TC-EXEC-025, TC-EXEC-042 | Yes | — | — |
+| FR-EXEC-038 | Proposed | `src/v2/pages/RevenuePage.tsx#RevenuePage` | TC-EXEC-042 | Yes | — | — |
+| FR-EXEC-040 | Proposed | `src/v2/components/exec/charts.tsx#Gauge`<br>`src/v2/components/exec/charts.tsx#GaugeFooter`<br>`src/v2/pages/RevenuePage.tsx#RevenuePage` | TC-EXEC-043, TC-EXEC-045 | Yes | — | — |
+| FR-EXEC-041 | Proposed | `src/v2/features/kpis.ts#classHistory`<br>`src/v2/pages/RevenuePage.tsx#ClassHistoryBars`<br>`src/v2/pages/RevenuePage.tsx#RevenuePage` | TC-EXEC-044, TC-EXEC-045 | Yes | — | — |
+| FR-EXEC-042 | Proposed | `src/v2/shell/AppHeader.tsx#AppHeader`<br>`src/v2/shell/AppHeader.tsx#MainTabs`<br>`src/v2/components/methods/MethodsOverlay.tsx#MethodsOverlay`<br>`src/v2/components/overflow/Overflow.tsx#useOverflow`<br>`src/v2/components/brand/Logo.tsx#Logo` | TC-EXEC-028, TC-EXEC-029, TC-EXEC-046 | Yes | — | — |
+| FR-EXEC-043 | Proposed | `src/v2/shell/FilterBar.tsx#FilterBar`<br>`src/v2/shell/PeriodButton.tsx#PeriodButton`<br>`src/v2/features/period.ts#periodTag`<br>`src/v2/features/period.ts#compareText`<br>`src/v2/components/search/SearchBar.tsx#SearchBar` | TC-EXEC-025, TC-EXEC-047 | Yes | — | — |
+| FR-EXEC-044 | Proposed | `src/v2/pages/OverviewPage.tsx#RiskList`<br>`src/v2/pages/OverviewPage.tsx#compareLabel`<br>`src/v2/pages/RevenuePage.tsx#RevenuePage`<br>`src/v2/pages/FulfilmentPage.tsx#FulfilmentPage` | TC-EXEC-048 | Yes | — | — |
+| FR-EXEC-045 | Proposed | `src/v2/components/exec/HBars.tsx#HBars`<br>`src/v2/pages/RevenuePage.tsx#ClassHistoryBars`<br>`src/v2/pages/FulfilmentPage.tsx#FulfilmentPage`<br>`src/v2/pages/RevenuePage.tsx#RevenuePage`<br>`src/v2/pages/topics/PlanAlignment.tsx#usePlanAlignmentTopic`<br>`src/v2/pages/InventoryPage.tsx#InventoryPage`<br>`src/v2/pages/DistributionPage.tsx#DistributionPage` | TC-EXEC-049 | Yes | — | — |
+| FR-EXEC-046 | Proposed | `src/v2/components/grouped-table/GroupedTable.tsx#GroupedTable`<br>`src/v2/pages/FulfilmentPage.tsx#FulfilmentPage`<br>`src/v2/pages/DistributionPage.tsx#DistributionPage`<br>`src/v2/pages/InventoryPage.tsx#InventoryPage`<br>`src/v2/pages/RevenuePage.tsx#RevenuePage` | TC-EXEC-026, TC-EXEC-050 | Yes | — | — |
+| FR-EXEC-047 | Proposed | `src/v2/shell/FilterBar.tsx#CoverDaysInput`<br>`src/v2/features/store.tsx#setCoverDays`<br>`src/v2/features/data.ts#withCoverDays`<br>`src/v2/features/data.ts#COVER_DAYS_PATHS`<br>`src/v2/pages/topics/StockLevel.tsx#useStockLevelTopic`<br>`src/v2/demo/demoApi.ts#coverRows` | TC-EXEC-052, TC-EXEC-053 | Yes | — | — |
+| FR-EXEC-048 | Proposed | `src/v2/pages/RevenuePage.tsx#RevenuePage`<br>`src/v2/pages/RevenuePage.tsx#SalesComparison`<br>`src/v2/components/exec/ExecTile.tsx#SplitLine`<br>`src/v2/features/kpis.ts#salesTypeSplit`<br>`src/v2/features/data.ts#buildSpecs` | TC-EXEC-054, TC-EXEC-055 | Yes | — | — |
+| FR-EXEC-049 | Proposed | `src/v2/components/exec/AreaLayout.tsx#TopicPanel`<br>`src/v2/components/detail/DetailSheets.tsx#AlignClassBody`<br>`src/v2/features/detail.tsx#titleOf`<br>`src/v2/pages/topics/PlanAlignment.tsx#usePlanAlignmentTopic`<br>`src/v2/features/data.ts#fetchRows` | TC-EXEC-032, TC-EXEC-056 | Yes | — | — |
 | NFR-EXEC-001 | Proposed | `src/v2/components/exec/Panels.tsx#TileRow` | TC-EXEC-011, TC-EXEC-029 | Yes | — | — |
 | NFR-EXEC-002 | Proposed | `src/v2/constants/theme.ts#themeCss` | TC-EXEC-011 | No | — | — |
 | NFR-EXEC-003 | Proposed | `src/v2/components/exec/ExecTile.tsx#ExecTile`<br>`src/v2/components/exec/Rag.tsx#RagBadge`<br>`src/v2/components/exec/Rag.tsx#RagDot`<br>`src/v2/components/select/MultiSelect.tsx#MultiSelect`<br>`src/v2/components/data-table/DataTable.tsx#DataTable`<br>`src/v2/constants/theme.ts#light` | TC-EXEC-028 | Yes | — | — |
@@ -342,7 +365,7 @@ Open gaps: GAP-029, GAP-030, GAP-031
 | BR-EXEC-009 | Proposed | `src/v2/features/kpis.ts#buildRisks`<br>`src/v2/features/kpiThresholds.ts#riskRules` | TC-EXEC-005, TC-EXEC-021 | Yes | — | — |
 | BR-EXEC-010 | Proposed | `src/v2/features/derive.ts#iblShare`<br>`src/v2/features/derive.ts#budShare`<br>`src/v2/features/kpis.ts#varianceByClass` | TC-EXEC-017 | Yes | — | — |
 | BR-EXEC-011 | Proposed | `src/v2/constants/classColors.ts#CLS_COLOR` | — | No | — | — |
-| BR-EXEC-012 | Proposed | `src/v2/features/derive.ts#varBud`<br>`src/v2/pages/RevenuePage.tsx#alignment` | TC-EXEC-021 | Yes | — | — |
+| BR-EXEC-012 | Proposed | `src/v2/features/derive.ts#varBud`<br>`src/v2/pages/topics/PlanAlignment.tsx#alignment` | TC-EXEC-021 | Yes | — | — |
 | DR-EXEC-001 | Proposed | `src/v2/api/types.ts#num`<br>`src/v2/features/data.ts#buildSpecs` | — | No | — | — |
 | DR-EXEC-002 | Proposed | `src/v2/demo/demoData.ts#DemoModel` | — | No | — | — |
 | DR-EXEC-003 | Proposed | `src/v2/features/derive.ts#closing_date`<br>`src/v2/features/period.ts#monthKeyFromLabel` | TC-EXEC-022 | Yes | — | — |

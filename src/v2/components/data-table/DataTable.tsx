@@ -36,8 +36,8 @@ export interface DataTableProps {
   //    datasets (thousands of rows) don't freeze the UI. Prefer this for big tables.
   children?: ReactNode;
   rows?: DataTableRowProps[];
-  // Pinned summary row rendered at the very top of the body — not sorted,
-  // searched, or paginated. Stays visible on every page.
+  // Pinned summary row rendered as the last row — not sorted, searched, or
+  // paginated. Stays visible on every page.
   totalRow?: DataTableRowProps;
   pageSize?: number;
   searchable?: boolean;
@@ -49,8 +49,12 @@ export interface DataTableProps {
   // and sorting in memory. For datasets too large to materialize client-side —
   // see the Sales Details tab, where the full set is ~500k rows. Search stays
   // client-side only, so it's hidden in this mode.
-  /** Sum numeric columns into a footer row. Off for tables where a sum means nothing. */
+  /** Sum numeric columns into a Total row, the last row of the table (FR-EXEC-026). */
   autoTotal?: boolean;
+  /** Columns the Total row may sum; the rest stay blank. Default: quantity columns (not %, days, dates, codes, cover). */
+  summable?: (header: string, col: number) => boolean;
+  /** Column sorted ascending when the table opens (FR-EXEC-027). Default the first; null keeps the caller's order. */
+  defaultSortCol?: number | null;
   server?: {
     totalCount: number;
     page: number;
@@ -74,7 +78,22 @@ function toRecords(
   );
 }
 
-function compareValues(a: string, b: string): number {
+// Month labels ("November 2026", "Nov 26") sort by date, not by their text.
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const MONTH_RE = /^([a-z]{3})[a-z]*\.?\s+'?(\d{2}|\d{4})$/i;
+function monthKey(v: string): number | null {
+  const m = MONTH_RE.exec(v.trim());
+  if (!m) return null;
+  const mi = MONTHS.indexOf(m[1].toLowerCase());
+  if (mi < 0) return null;
+  const y = m[2].length === 2 ? 2000 + Number(m[2]) : Number(m[2]);
+  return y * 12 + mi;
+}
+
+export function compareValues(a: string, b: string): number {
+  const ma = monthKey(a);
+  const mb = monthKey(b);
+  if (ma != null && mb != null) return ma - mb;
   // Strip formatting (commas, %, etc.) to detect real numbers. Only treat as
   // numeric when BOTH stripped values are non-empty numbers — otherwise text
   // columns (Branch, Team, Brand…) strip to '' → Number('')=0 and every row
@@ -133,12 +152,14 @@ export function DataTable({
   toolbar,
   server,
   autoTotal = true,
+  summable,
+  defaultSortCol = 0,
 }: DataTableProps) {
   const sectionName = useContext(ExportNameContext);
   const exportName = title ?? sectionName;
   const isServer = !!server;
   const [localPage, setLocalPage] = useState(1);
-  const [localSortCol, setLocalSortCol] = useState<number | null>(null);
+  const [localSortCol, setLocalSortCol] = useState<number | null>(defaultSortCol);
   const [localSortDir, setLocalSortDir] = useState<'asc' | 'desc'>('asc');
   const [localSearch, setLocalSearch] = useState('');
 
@@ -191,13 +212,13 @@ export function DataTable({
   // Odoo-style aggregates: sum every quantity column across all (filtered)
   // rows, not just the visible page. Percentages are never summed.
   // Days, dates, codes and cover are never summed (Supply Chain Pulse 2.0).
+  // Every table shows the row, even when no column can be summed (FR-EXEC-026).
   const PERCENT_HEADER_RE = /growth|grw|ach|%|days|date|code|cover/i;
   const footerCells: string[] | null = (() => {
     if (totalRow) return totalRow.cells;
     if (isServer || allRows.length === 0 || autoTotal === false) return null;
-    let any = false;
     const cells = headers.map((h, col) => {
-      if (!numericCols[col] || PERCENT_HEADER_RE.test(h)) return '';
+      if (!numericCols[col] || (summable ? !summable(h, col) : PERCENT_HEADER_RE.test(h))) return '';
       let sum = 0;
       for (const r of allRows) {
         const c = (r.cells[col] ?? '').trim();
@@ -205,10 +226,8 @@ export function DataTable({
         const n = Number(c.replace(/[^0-9.-]/g, ''));
         if (!Number.isNaN(n)) sum += n;
       }
-      any = true;
       return sum.toLocaleString(undefined, { maximumFractionDigits: 0 });
     });
-    if (!any) return null;
     // Growth isn't a sum: work it out from the summed previous (PMV) and
     // current (CMV) columns, the same way each row's growth is.
     const num = (c: string) => Number(String(c).replace(/[^0-9.-]/g, ''));
@@ -402,18 +421,6 @@ export function DataTable({
                 </Table.ColumnHeader>
               ))}
             </Table.Row>
-            {/* Totals sit right under the column names and stay pinned with
-                them, so the total is always in view while scrolling. */}
-            {!isLoading && totalCount > 0 && footerCells && (
-              <DataTableRow
-                cells={footerCells}
-                cellColors={totalRow?.cellColors}
-                cellWeights={totalRow?.cellWeights}
-                numericCols={numericCols}
-                growthCols={growthCols}
-                isTotal
-              />
-            )}
           </Table.Header>
           <Table.Body>
             {isLoading ? (
@@ -451,6 +458,26 @@ export function DataTable({
               ))
             )}
           </Table.Body>
+          {/* The Total row is the last row and stays pinned to the bottom of
+              the scroll area, so it is in view while scrolling (FR-EXEC-026). */}
+          {!isLoading && totalCount > 0 && footerCells && (
+            <Table.Footer
+              position="sticky"
+              bottom={0}
+              zIndex={2}
+              bg={colors.cardBg}
+              css={{ '& tr': { position: 'static' } }}
+            >
+              <DataTableRow
+                cells={footerCells}
+                cellColors={totalRow?.cellColors}
+                cellWeights={totalRow?.cellWeights}
+                numericCols={numericCols}
+                growthCols={growthCols}
+                isTotal
+              />
+            </Table.Footer>
+          )}
 
         </Table.Root>
       </Box>

@@ -11,24 +11,25 @@ import { ExecTile } from '@/v2/components/exec/ExecTile';
 import { CardState, DATES_ONLY } from '@/v2/components/exec/Panels';
 import { AreaLayout } from '@/v2/components/exec/AreaLayout';
 import { RAG_META } from '@/v2/components/exec/Rag';
-import { axis, grid, tooltipStyle } from '@/v2/components/exec/charts';
+import { Legend, axis, grid, tooltipStyle } from '@/v2/components/exec/charts';
 import { colors } from '@/v2/constants/theme';
 import { helpFor } from '@/v2/constants/help';
 import type { DashboardData } from '@/v2/features/data';
 import { distribution, fulfilment, plan, production, service, status, stock, trust, workingCapitalTrend } from '@/v2/features/derive';
 import { buildRisks, type Risk } from '@/v2/features/kpis';
-import { rag } from '@/v2/features/kpiThresholds';
+import { kpiThresholds, rag } from '@/v2/features/kpiThresholds';
 import { change, money, pct1, pkr, days } from '@/v2/features/format';
 import { useNav } from '@/v2/features/nav';
 import { useStore } from '@/v2/features/store';
 import { TABS, type TabKey } from '@/v2/features/tabs';
-import { monthLabel } from '@/v2/features/period';
+import { compareText, monthLabel, type Window } from '@/v2/features/period';
 import { InfoTip } from '@/v2/components/overlay';
 import { BarChart as DsBarChart } from '@/v2/components/charts';
 
-export const compareLabel = (c: 'prev' | 'ly') => (c === 'ly' ? 'vs same period LY' : 'vs previous period');
+/** The comparison as Sales Pulse 2.0 names it: "vs Oct 2026" (FR-EXEC-043). */
+export const compareLabel = (cmp: Window) => compareText(cmp);
 
-/** Top Risks & Opportunities (EX-10). On a domain tab it lists that tab's rows only (FR-EXEC-025). */
+/** Key insights (EX-10; "Top Risks & Opportunities" until 16 Nov 2026, FR-EXEC-044). On a domain tab it lists that tab's rows only (FR-EXEC-025). */
 export function RiskList({ risks, loading, onOpen, area }: { risks: Risk[]; loading: boolean; onOpen: (r: Risk) => void; area?: string }) {
   const help = helpFor('EX-10');
   const { shows } = useStore();
@@ -38,7 +39,7 @@ export function RiskList({ risks, loading, onOpen, area }: { risks: Risk[]; load
     <Box data-kpi="EX-10" scrollMarginTop="140px" bg={colors.cardBg} border="1px solid" borderColor={colors.border} borderRadius="4px" px={4} py={3}>
       <Flex align="center" gap="8px" mb={2}>
         <Text fontWeight={600} fontSize="14.5px" color={colors.darkText}>
-          {area ? 'Risks & Opportunities' : 'Top Risks & Opportunities'}
+          {area ? 'Key insights' : 'Key insights'}
         </Text>
         <Text fontSize="12px" color={colors.mutedText}>
           {area ? `${area}, most severe first` : 'ranked, most severe first'}
@@ -74,7 +75,7 @@ export function RiskList({ risks, loading, onOpen, area }: { risks: Risk[]; load
                 >
                   <Flex align="center" gap="5px" minW="92px" color={color} fontSize="12px" fontWeight={700}>
                     {meta ? <meta.Icon /> : <FiTrendingUp />}
-                    {meta ? (r.tone === 'red' ? 'Act' : 'Watch') : 'Opportunity'}
+                    {meta ? 'Needs attention' : 'Going well'}
                   </Flex>
                   <Text fontSize="13px" color={colors.darkText} flex={1}>
                     {r.text}
@@ -130,13 +131,13 @@ export function overviewModel(data: DashboardData) {
   };
 
   const names: Record<string, [string, string, string]> = {
-    att: ['EX-01', 'Sales attainment to date', 'revenue'],
+    att: ['EX-01', 'Sales achievement to date', 'revenue'],
     proj: ['EX-02', 'Projected month-end', 'revenue'],
-    bud: ['EX-03', 'Budget attainment to date', 'revenue'],
+    bud: ['EX-03', 'Budget achievement to date', 'revenue'],
     svc: ['EX-05', 'Service level', 'inventory'],
     fill: ['EX-06', 'Order fill rate', 'fulfilment'],
-    cov: ['EX-04', 'Coverage index', 'inventory'],
-    exc: ['EX-08', 'Excess inventory', 'inventory'],
+    cov: ['EX-04', 'Coverage index', 'revenue'],
+    exc: ['EX-08', 'Excess inventory', 'revenue'],
     rd: ['EX-09', 'RD reporting compliance', 'distribution'],
   };
   const redKpis = Object.entries(tiles)
@@ -181,8 +182,8 @@ export function AreaRisks({ data, tab, area }: { data: DashboardData; tab: TabKe
 export function OverviewPage({ data }: { data: DashboardData }) {
   const nav = useNav();
   const openRisk = useOpenRisk();
-  const { compare, metricMode } = useStore();
-  const cl = compareLabel(compare);
+  const { metricMode } = useStore();
+  const cl = compareLabel(data.cmpWindow);
   const { p, s, sv, f, rd, wc, wcNow, wcPrev, st, tiles, risks, allLoading, trustRed } = overviewModel(data);
   const tabLabel = (k: TabKey) => TABS.find((t) => t.key === k)?.mid ?? k;
 
@@ -191,11 +192,11 @@ export function OverviewPage({ data }: { data: DashboardData }) {
       <ExecTile
         key="EX-01"
         id="EX-01"
-        label="Sales attainment to date"
+        label="Sales achievement to date"
         value={tiles.att.value}
         rag={tiles.att.rag}
         band="attainment"
-        variance={p.varIbl == null ? undefined : `vs pace: ${p.varIbl >= 0 ? '+' : '−'}PKR ${money(Math.abs(p.varIbl))}`}
+        variance={p.varIbl == null ? undefined : `vs pace: ${p.varIbl >= 0 ? '+' : '−'}${money(Math.abs(p.varIbl))}`}
         delta={{ value: p.attIbl != null && p.attIblCmp != null ? p.attIbl - p.attIblCmp : null, unit: 'pts', label: cl }}
         spark={p.spark}
         {...st.att}
@@ -206,7 +207,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
       <ExecTile
         key="EX-02"
         id="EX-02"
-        label={p.projectedFinal ? 'Month-end attainment (final)' : 'Projected month-end'}
+        label={p.projectedFinal ? 'Month-end achievement (final)' : 'Projected month-end'}
         value={tiles.proj.value}
         rag={tiles.proj.rag}
         band="projected"
@@ -219,11 +220,11 @@ export function OverviewPage({ data }: { data: DashboardData }) {
       <ExecTile
         key="EX-03"
         id="EX-03"
-        label="Budget attainment to date"
+        label="Budget achievement to date"
         value={tiles.bud.value}
         rag={tiles.bud.rag}
         band="attainment"
-        variance={p.varBud == null ? undefined : `vs pace: ${p.varBud >= 0 ? '+' : '−'}PKR ${money(Math.abs(p.varBud))}`}
+        variance={p.varBud == null ? undefined : `vs pace: ${p.varBud >= 0 ? '+' : '−'}${money(Math.abs(p.varBud))}`}
         delta={{ value: p.attBud != null && p.attBudCmp != null ? p.attBud - p.attBudCmp : null, unit: 'pts', label: cl }}
         {...st.bud}
         goTo={{ tab: 'revenue', focus: 'RV-04' }}
@@ -266,7 +267,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
         band="coverage"
         variance={`${days(s.totalCd)} cover vs ${days(s.wBm)} benchmark`}
         {...st.cover}
-        goTo={{ tab: 'inventory', focus: 'IN-03' }}
+        goTo={{ tab: 'revenue', focus: 'IN-03' }}
       />
     ),
     wc: (
@@ -306,7 +307,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
         band="excessPct"
         variance={`${pct1(s.excess.pct)} of finished goods above benchmark`}
         {...st.cover}
-        goTo={{ tab: 'inventory', focus: 'IN-08' }}
+        goTo={{ tab: 'revenue', focus: 'IN-08' }}
       />
     ),
     rd: (
@@ -326,8 +327,10 @@ export function OverviewPage({ data }: { data: DashboardData }) {
   };
 
   const attTrend = (
-    <ChartCard title="Sales attainment, 6 months" subtitle="All classes, vs IBL target · 100% = on target · this month pace-adjusted" colSpan={6} height="240px" isLoading={st.att.isLoading} help={helpFor('RV-06')} dataKpi="EX-01">
+    <ChartCard title="Sales achievement, 6 months" subtitle="All classes, vs IBL target · 100% = on target · this month pace-adjusted" colSpan={6} height="240px" isLoading={st.att.isLoading} help={helpFor('RV-06')} dataKpi="EX-01">
       {CardState({ locked: st.att.locked, error: st.att.error, empty: !p.trend.length }) ?? (
+        <Flex direction="column" h="100%">
+        <Box flex={1} minH={0}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={p.trend.map((r) => ({ ...r, label: monthLabel(r.month as string) }))} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
             <CartesianGrid {...grid} vertical={false} />
@@ -339,6 +342,15 @@ export function OverviewPage({ data }: { data: DashboardData }) {
             <Line type="monotone" dataKey="Total" stroke={colors.sales} strokeWidth={2.5} dot={{ r: 3 }} name="All classes" connectNulls />
           </LineChart>
         </ResponsiveContainer>
+        </Box>
+        <Legend
+          items={[
+            { label: 'Achievement, all classes', color: colors.sales, shape: 'line' },
+            { label: '100% = on target', color: colors.target, shape: 'dashed' },
+            { label: `Watch band ${kpiThresholds.attainment.amber}–${kpiThresholds.attainment.green}%`, color: colors.warnSoft, ink: colors.warn, shape: 'band' },
+          ]}
+        />
+        </Flex>
       )}
     </ChartCard>
   );
@@ -379,7 +391,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
         )
       }
       topics={[
-        { key: 'revenue', title: 'Revenue & plan', tiles: [t.att, t.proj, t.bud], lead: attTrend, open: openTab('revenue') },
+        { key: 'revenue', title: 'Summary', tiles: [t.att, t.proj, t.bud], lead: attTrend, open: openTab('revenue') },
         { key: 'inventory', title: 'Inventory & working capital', tiles: [t.cov, t.wc, t.exc], lead: wcTrend, open: openTab('inventory') },
         { key: 'fulfilment', title: 'Fulfilment & service', tiles: [t.fill, t.svc], open: openTab('fulfilment') },
         { key: 'distribution', title: 'Distribution', tiles: [t.rd], open: openTab('distribution') },
