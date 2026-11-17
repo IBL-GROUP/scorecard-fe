@@ -379,7 +379,7 @@ export function DistributionPage({ data }: { data: DashboardData }) {
           ),
         },
       ]}
-      aside={<AreaRisks data={data} tab="distribution" area="Distribution & Data" />}
+      aside={<AreaRisks data={data} tab="distribution" area="RD Data Status" />}
       asideKpi="EX-10"
     />
   );

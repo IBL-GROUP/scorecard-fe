@@ -196,14 +196,14 @@ test('TC-EXEC-055 Sales (TP) tile as Sales Pulse: value, % of target to date, co
   expect(realErrors(t)).toEqual([]);
 });
 
-test('TC-EXEC-056 no Details buttons; click a Plan alignment class → its SKUs (target, budget, alignment, Total first) → click a SKU → its sheet', async ({ page }) => {
+test('TC-EXEC-056 no Details buttons; click a Forecast vs budget class → its SKUs (target, budget, alignment, Total first) → click a SKU → its sheet', async ({ page }) => {
   const t = await stubServices(page);
   await page.goto('./?tab=revenue');
   await settled(page);
   // Panels have no "Details" button; the title opens the sheet.
   await expect(page.locator('[data-topic] button').filter({ hasText: /^Details/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Stock level: details', exact: true })).toBeVisible();
-  // Click Class A on Plan alignment.
+  // Click Class A on Forecast vs budget.
   const calls = t.apiCalls.length;
   await page.locator('[data-kpi="RV-11"] [data-hbar="A"]').click();
   const sheet = page.getByRole('dialog').filter({ hasText: 'forecast vs budget by SKU' }).last();
@@ -217,5 +217,22 @@ test('TC-EXEC-056 no Details buttons; click a Plan alignment class → its SKUs 
   const sku = (await rows.first().locator('td').first().innerText()).trim();
   await rows.first().click();
   await expect(page.getByRole('dialog').filter({ hasText: sku }).last()).toBeVisible();
+  expect(realErrors(t)).toEqual([]);
+});
+
+test('TC-EXEC-057 tabs use the 1.0 menu names; Forecast vs budget sits right under Key insights with no empty gap', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  const t = await stubServices(page);
+  await page.goto('./?tab=revenue');
+  await settled(page);
+  await expect(page.getByRole('tab')).toHaveText(['Overview', 'Summary', 'Service Measure', 'Dispatch & WIP', 'RD Data Status']);
+  const panel = page.locator('section[aria-label="Forecast vs budget"]');
+  await expect(panel).toBeVisible();
+  const list = await page.locator('[data-kpi="EX-10"]').boundingBox();
+  const box = await panel.boundingBox();
+  expect(list && box).toBeTruthy();
+  const gap = box!.y - (list!.y + list!.height);
+  expect(gap).toBeGreaterThanOrEqual(0);
+  expect(gap).toBeLessThanOrEqual(16);
   expect(realErrors(t)).toEqual([]);
 });

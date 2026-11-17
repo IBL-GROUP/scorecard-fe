@@ -39,9 +39,9 @@ export function usePlanAlignmentTopic(d: TabData, w: Window, onlyCls: string | n
 
   return {
     key: 'alignment',
-    title: 'Plan alignment',
+    title: 'Forecast vs budget',
     lead: (
-      <ChartCard title="Plan alignment: forecast vs budget" subtitle="IBL target ÷ TSCL budget · line = 100%, forecast equals budget" colSpan={7} height="240px" isLoading={st.ibl.isLoading} help={helpFor('RV-11')} dataKpi="RV-11">
+      <ChartCard title="Forecast vs budget by class" subtitle="IBL target ÷ TSCL budget · line = 100%, forecast equals budget" colSpan={7} height="240px" isLoading={st.ibl.isLoading} help={helpFor('RV-11')} dataKpi="RV-11">
         {CardState({ locked: st.ibl.locked, error: st.ibl.error, empty: !alignment.length, emptyText: 'No TSCL budget is loaded for this month' }) ?? (
           <HBars
             sort="keep"

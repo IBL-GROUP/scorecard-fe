@@ -1,4 +1,4 @@
-// The five Supply Chain Pulse 2.0 tabs (PRD section 3.1) and the permission
+// The five Supply Chain Pulse 2.0 tabs, named as the 1.0 menu (user request, 17 Nov 2026; FR-EXEC-050) (PRD section 3.1) and the permission
 // sections that govern them (PRD section 3.2). Hiding a tab or a tile is a
 // convenience, not security (SEC-PERM-001): scorecard-be enforces the token.
 
@@ -10,9 +10,9 @@ export type TabKey = 'overview' | 'revenue' | 'inventory' | 'fulfilment' | 'dist
 export const TABS: { key: TabKey; label: string; mid: string; short: string; anyOf: Section[] }[] = [
   { key: 'overview', label: 'Executive Overview', mid: 'Overview', short: 'Overview', anyOf: ALL_SECTIONS },
   { key: 'revenue', label: 'Summary', mid: 'Summary', short: 'Summary', anyOf: ['SUMMARY'] },
-  { key: 'inventory', label: 'Inventory & Working Capital', mid: 'Inventory & Capital', short: 'Inventory', anyOf: ['SUMMARY', 'SERVICE_MEASURE'] },
-  { key: 'fulfilment', label: 'Fulfilment & Operations', mid: 'Fulfilment & Ops', short: 'Fulfilment', anyOf: ['DISPATCH_WIP'] },
-  { key: 'distribution', label: 'Distribution & Data Health', mid: 'Distribution & Data', short: 'Distribution', anyOf: ['RD_DATA_STATUS'] },
+  { key: 'inventory', label: 'Service Measure', mid: 'Service Measure', short: 'Service', anyOf: ['SUMMARY', 'SERVICE_MEASURE'] },
+  { key: 'fulfilment', label: 'Dispatch & WIP', mid: 'Dispatch & WIP', short: 'Dispatch', anyOf: ['DISPATCH_WIP'] },
+  { key: 'distribution', label: 'RD Data Status', mid: 'RD Data Status', short: 'RD Status', anyOf: ['RD_DATA_STATUS'] },
 ];
 
 /** Which section an endpoint's data belongs to. */

@@ -390,7 +390,7 @@ export function InventoryPage({ data }: { data: DashboardData }) {
           ),
         },
       ]}
-      aside={<AreaRisks data={data} tab="inventory" area="Inventory & Capital" />}
+      aside={<AreaRisks data={data} tab="inventory" area="Service Measure" />}
       asideKpi="EX-10"
     />
   );

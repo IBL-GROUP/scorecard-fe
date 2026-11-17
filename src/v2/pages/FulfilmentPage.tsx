@@ -449,7 +449,7 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
           ),
         },
       ]}
-      aside={<AreaRisks data={data} tab="fulfilment" area="Fulfilment & Ops" />}
+      aside={<AreaRisks data={data} tab="fulfilment" area="Dispatch & WIP" />}
       asideKpi="EX-10"
     />
   );

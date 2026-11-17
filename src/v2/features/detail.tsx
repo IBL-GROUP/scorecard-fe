@@ -42,7 +42,7 @@ export type DetailItem =
 export const KIND_LABEL: Record<DetailItem['kind'], string> = {
   kpi: 'KPI',
   class: 'Class',
-  alignClass: 'Plan alignment',
+  alignClass: 'Forecast vs budget',
   branch: 'Branch',
   sku: 'SKU',
   channel: 'Channel',

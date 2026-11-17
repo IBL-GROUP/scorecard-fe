@@ -106,6 +106,8 @@ function TopicPanel({ p, fit, span, isOpen, onDetails }: { p: Prepared; fit: boo
       borderColor={colors.border}
       borderRadius="6px"
       p={3}
+      // Fills its slot when inside the side column (a flex column); no effect as a grid item.
+      flex={1}
       minH={0}
       minW={0}
       // On a short desktop window a panel scrolls inside rather than squeezing its chart flat.
@@ -305,14 +307,17 @@ export function AreaLayout({ topics, top, aside, asideKpi, asideTopic }: { topic
           ))}
         </Grid>
         {showColumn && (
-          // Side column: the aside (risks) on top, the aside topic under it, each half the height.
-          <Grid minH={0} gap={3} templateColumns="minmax(0,1fr)" templateRows={fit && showAside && asideShown ? 'minmax(0,1fr) minmax(0,1fr)' : undefined}>
+          // Side column: the aside (risks) at its own height on top, the aside topic filling the rest,
+          // so there is no empty gap under the aside (user request, 17 Nov 2026). A long aside scrolls
+          // rather than squeezing the topic under its minimum.
+          <Flex direction="column" minH={0} gap={3}>
             {showAside && (
-              <Box minH={0} overflowY={fit ? 'auto' : undefined}>
+              <Box flex="0 1 auto" minH={0} overflowY={fit ? 'auto' : undefined}>
                 {aside}
               </Box>
             )}
             {asideShown && (
+              <Flex direction="column" flex="1 1 0" minH={fit ? '260px' : undefined}>
               <TopicPanel
                 p={asideShown}
                 fit={fit}
@@ -323,8 +328,9 @@ export function AreaLayout({ topics, top, aside, asideKpi, asideTopic }: { topic
                   setOpenKey(asideShown.topic.key);
                 }}
               />
+              </Flex>
             )}
-          </Grid>
+          </Flex>
         )}
       </Grid>
       {open && <DetailsSheet p={open} onClose={close} />}
