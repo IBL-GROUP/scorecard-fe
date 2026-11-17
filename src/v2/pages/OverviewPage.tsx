@@ -213,7 +213,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
         band="projected"
         caption={p.single ? (p.projectedFinal ? 'Final: the month is complete' : `If today's run-rate holds · ${p.days.pct}% of the month gone`) : 'Shown for a single month only'}
         {...st.att}
-        goTo={{ tab: 'revenue', focus: 'RV-03' }}
+        goTo={{ tab: 'revenue', focus: 'RV-02' }}
       />
     ),
     bud: (

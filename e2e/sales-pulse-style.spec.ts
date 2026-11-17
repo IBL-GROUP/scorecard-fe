@@ -236,3 +236,24 @@ test('TC-EXEC-057 tabs use the 1.0 menu names; Forecast vs budget sits right und
   expect(gap).toBeLessThanOrEqual(16);
   expect(realErrors(t)).toEqual([]);
 });
+
+test('TC-EXEC-059 Cover days also drives Service Measure: its four cover-days calls carry the value and the figures follow', async ({ page }) => {
+  const t = await stubServices(page);
+  await page.goto('./?tab=inventory');
+  await settled(page);
+  // Service Level by Branch × Class (IN-10): the sum of its cells, % of SKUs above threshold.
+  const cells = page.locator('[data-kpi="IN-10"] td');
+  const levelOf = async () => (await cells.allInnerTexts()).reduce((t, x) => t + (Number(x.trim().match(/^(\d+)%$/)?.[1]) || 0), 0);
+  const before = await levelOf();
+  expect(before).toBeGreaterThan(0);
+  const calls = t.apiCalls.length;
+  const input = page.getByRole('spinbutton', { name: 'Cover days' });
+  await input.fill('5');
+  await input.press('Enter');
+  await settled(page);
+  for (const path of ['/service-measure', '/inventory-days', '/tgt-vs-actual', '/above-below-threshold'])
+    await expect.poll(() => t.apiCalls.slice(calls).some((x) => x.path === path && x.params.get('coverDays') === '5'), { message: path }).toBe(true);
+  // Target spread over 5 days instead of ~30: daily target ×6, cover days fall, fewer SKUs stay above threshold.
+  await expect.poll(levelOf).toBeLessThan(before);
+  expect(realErrors(t)).toEqual([]);
+});

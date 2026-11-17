@@ -13,9 +13,13 @@ const range = (prefix: string, n: number) => Array.from({ length: n }, (_, i) =>
 // in the side column (FR-EXEC-036).
 export const MOVED_TO_SUMMARY = ['IN-03', 'IN-04', 'IN-05', 'IN-07', 'IN-08', 'IN-14'];
 
+// Projected month-end (RV-03) left Summary on 17 Nov 2026: Run-rate required
+// took its place on Forecast Accuracy IBL (FR-EXEC-051). It stays EX-02 on the Overview.
+export const REMOVED_FROM_SUMMARY = ['RV-03'];
+
 export const PRD_ITEMS: Record<TabKey, string[]> = {
   overview: range('EX', 11),
-  revenue: [...range('RV', 16), ...MOVED_TO_SUMMARY],
+  revenue: [...range('RV', 16).filter((id) => !REMOVED_FROM_SUMMARY.includes(id)), ...MOVED_TO_SUMMARY],
   inventory: range('IN', 17).filter((id) => !MOVED_TO_SUMMARY.includes(id)),
   fulfilment: range('OP', 16),
   distribution: range('DH', 14),

@@ -70,3 +70,16 @@ test('TC-EXEC-042 Days gone on both accuracy panels; tiles show no comparison li
   await expect(page.getByText('How it is calculated')).toHaveCount(0);
   expect(realErrors(t)).toEqual([]);
 });
+
+test('TC-EXEC-058 Forecast Accuracy IBL: Run-rate required replaces Projected month-end; Sales achievement to date has no graph', async ({ page }) => {
+  const t = await stubServices(page);
+  await page.goto('./?tab=revenue');
+  await settled(page);
+  const ibl = page.locator('section[aria-label="Forecast Accuracy IBL"]');
+  await expect(ibl).toContainText('Run-rate required');
+  await expect(ibl).toContainText(/\/day/);
+  await expect(ibl).not.toContainText('Projected month-end');
+  await expect(ibl.locator('[data-kpi="RV-03"]')).toHaveCount(0);
+  await expect(ibl.locator('[data-kpi="RV-02"] [aria-label="6-month trend"]')).toHaveCount(0);
+  expect(realErrors(t)).toEqual([]);
+});

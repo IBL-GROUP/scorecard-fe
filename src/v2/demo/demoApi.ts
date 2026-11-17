@@ -37,6 +37,18 @@ const byClass = <T>(rows: Sku[], f: (cls: string, g: Sku[]) => T | null) =>
 
 const monthLabel = (ym: string) => `${parse(`${ym}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} `; // trailing space, as the API sends
 
+/**
+ * ?coverDays (FR-EXEC-047): days of cover are stock ÷ (month target ÷ days), so
+ * spreading the target over coverDays instead of the days in the month scales
+ * every cover figure by coverDays ÷ days in month. 1 when not set.
+ */
+function coverScale(end: string, p: Params) {
+  const cd = Number(p.coverDays) || 0;
+  if (!cd) return 1;
+  const e = parse(end);
+  return cd / daysInMonth(e.getFullYear(), e.getMonth());
+}
+
 function coverRows(m: DemoModel, rows: Sku[], share: number, end: string, coverDays?: number) {
   const snap = m.snapshot(end);
   const e = parse(end);
@@ -185,11 +197,12 @@ const ENDPOINTS: Record<string, (m: DemoModel, p: Params) => unknown[]> = {
     const snap = m.snapshot(end);
     if (!snap) return [];
     const cols = BRANCHES.filter((b) => !branches.length || branches.includes(b.code));
+    const k = coverScale(end, p);
     return rows.map((s) => {
       const row: Record<string, unknown> = { classification: s.cls, item_desc: s.name };
       const vals: number[] = [];
       for (const b of BRANCHES) {
-        const v = cols.includes(b) ? r1(m.branchCover(s, b.key, snap)) : 0;
+        const v = cols.includes(b) ? r1(m.branchCover(s, b.key, snap) * k) : 0;
         row[b.key] = v;
         if (v > 0) vals.push(v);
       }
@@ -204,9 +217,10 @@ const ENDPOINTS: Record<string, (m: DemoModel, p: Params) => unknown[]> = {
     if (!snap) return [];
     const skus = list(p.sku);
     const rows = SKUS.filter((s) => s.cls !== 'Others' && (!skus.length || skus.includes(s.code)));
+    const k = coverScale(end, p);
     return byClass(rows, (cls, g) => {
       const th = BENCHMARKS[cls as keyof typeof BENCHMARKS].threshold;
-      const above = g.filter((s) => m.skuCover(s, snap) > th).length;
+      const above = g.filter((s) => m.skuCover(s, snap) * k > th).length;
       return { classification: cls, 'No Of SKUs > Threshold': above, 'No Of SKUs < Threshold': g.length - above };
     });
   },
@@ -214,19 +228,20 @@ const ENDPOINTS: Record<string, (m: DemoModel, p: Params) => unknown[]> = {
     const { rows, end, branches } = scope(m, p);
     const snap = m.snapshot(end);
     if (!snap) return [];
+    const k = coverScale(end, p);
     return BRANCHES.filter((b) => !branches.length || branches.includes(b.code)).map((b) => {
       const row: Record<string, unknown> = { branch: b.name };
       for (const cls of ['A', 'B', 'C', 'N'] as const) {
         const g = rows.filter((s) => s.cls === cls);
         const th = BENCHMARKS[cls].threshold;
-        row[`SKU-${cls}%`] = g.length ? r2((g.filter((s) => m.branchCover(s, b.key, snap) > th).length / g.length) * 100) : null;
+        row[`SKU-${cls}%`] = g.length ? r2((g.filter((s) => m.branchCover(s, b.key, snap) * k > th).length / g.length) * 100) : null;
       }
       return row;
     });
   },
   '/tgt-vs-actual': (m, p) => {
     const { rows, share, end } = scope(m, p);
-    return coverRows(m, rows, share, end)
+    return coverRows(m, rows, share, end, Number(p.coverDays) || undefined)
       .filter((r) => r.classification !== 'Others')
       .map((r) => ({ classification: r.classification, cover_days_tgt: BENCHMARKS[r.classification as keyof typeof BENCHMARKS].threshold, cover_days: r.cover_days }));
   },

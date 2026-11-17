@@ -5,7 +5,7 @@ import { realErrors, settled, stubServices, TICKET } from './stubs';
 /** Overview tiles and where "Open in …" takes them (PRD 5.4, OverviewPage goTo). */
 const TILE_TARGETS: [tile: string, tab: string, focus: string][] = [
   ['EX-01', 'revenue', 'RV-02'],
-  ['EX-02', 'revenue', 'RV-03'],
+  ['EX-02', 'revenue', 'RV-02'],
   ['EX-03', 'revenue', 'RV-04'],
   ['EX-04', 'revenue', 'IN-03'],
   ['EX-05', 'inventory', 'IN-10'],

@@ -314,17 +314,17 @@ export function RevenuePage({ data }: { data: DashboardData }) {
               band="attainment"
               variance={p.varIbl == null ? undefined : `vs pace: ${p.varIbl >= 0 ? '+' : '−'}${money(Math.abs(p.varIbl))}`}
               delta={{ value: p.attIbl != null && p.attIblCmp != null ? p.attIbl - p.attIblCmp : null, unit: 'pts', label: cl }}
-              spark={p.spark}
               {...st.att}
             />,
-            <ExecTile key="RV-03" id="RV-03" label={p.projectedFinal ? 'Month-end achievement (final)' : 'Projected month-end'} value={pct1(p.projected)} rag={rag(p.projected, 'projected')} band="projected" {...st.att} caption={p.single ? undefined : 'Shown for a single month only'}>
-              {p.projected != null && (
-                <Box position="relative" h="10px" bg={colors.sunkBg} borderRadius="3px" mt="2px" title="Bar = projection, line = 100%">
-                  <Box h="100%" w={`${Math.min(100, (p.projected / Math.max(130, p.projected)) * 100)}%`} bg={colors.sales} borderRadius="3px" className="sp-grow" />
-                  <Box position="absolute" top="-3px" bottom="-3px" w="2px" bg={colors.target} left={`${(100 / Math.max(130, p.projected)) * 100}%`} />
-                </Box>
-              )}
-            </ExecTile>,
+            // Run-rate required, as on Budget Accuracy TSCL; replaced Projected month-end (RV-03), user request 17 Nov 2026 (FR-EXEC-051).
+            <ExecTile key="RV-05-ibl"
+              id="RV-05"
+              label="Run-rate required"
+              value={p.runRate.required == null ? '—' : `${money(p.runRate.required)}/day`}
+              caption={p.runRate.current == null ? undefined : `Running ${money(p.runRate.current)}/day`}
+              variance={p.runRate.required != null && p.runRate.current != null ? (p.runRate.current >= p.runRate.required ? 'On course for target' : `Need ${money(p.runRate.required - p.runRate.current)}/day more`) : undefined}
+              {...st.att}
+            />,
             <ExecTile key="RV-16" id="RV-16" label="Days gone" value={`${p.days.pct}%`} caption={`${p.days.daysGone} of ${p.days.totalDays} days`} isLoading={false} />,
           ],
           lead: (
