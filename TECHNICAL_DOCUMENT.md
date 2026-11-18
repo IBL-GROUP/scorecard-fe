@@ -761,7 +761,7 @@ Full detail: `scorecard-be/v2/README.md` and `scorecard-be/v2/SOURCE_MAP.md`
 | `vw_items_class`, `sap_items_detail` | same names | Same name, all columns present |
 | `tscl_efp` | `tscl_efp` | Same name; `"SALE E.F.P"` is `sales_efp` (confirmed 12 Nov 2026) |
 | `sales_inv_locations` | `hub_mapping` | Confirmed 12 Nov 2026. Read with 1.0's names: `storage_location_code` → `inv_sloc`, `location` → `inv_sloc_desc` |
-| `sap_wip_data` | `vw_wip_sap_data` (not created yet) | Route ported; `/wip` answers `503` until the data team creates the view (same columns as before), then works without a change |
+| `sap_wip_data` | `vw_sap_wip_data` (17 Nov 2026) | Live. `plant`, `order_number` and `storage_loc` are numeric in the view and cast to text, as before |
 | `primary_secondary_stock` | `vw_primaray_secondary_stock` | Confirmed 12 Nov 2026. No branch column: the branch is the hub branch of the distributor's `SUBINVENTORY_CODE` in `hub_mapping` |
 
 A `503` looks like `{ "success": false, "code": "SOURCE_PENDING", "message": "...", "pending": [...] }`.

@@ -208,7 +208,7 @@ Terms introduced by PRD v2 and the S1 prototype ([FEAT-EXEC](../features/FEAT-EX
 | Key insights | The 2.0 name of Top Risks & Opportunities (EX-10), as in Sales Pulse 2.0. Rows are tagged "Needs attention" (a red or amber rule fired) or "Going well" (an opportunity rule fired). | `RiskList` | FR-EXEC-044, BR-EXEC-009 |
 | A period / B period | The selected period (A) and the one it is compared with (B: the previous period or the same period last year), named by their months on the period button: "Nov 2026 vs Oct 2026". | `periodTag`, `compareText` | FR-EXEC-043 |
 | Projected month-end | Where the month lands if today's daily run-rate holds: (sales ÷ days gone × total days) ÷ month target. | `projectedMonthEnd` | BR-EXEC-001 |
-| Run-rate required | Sales needed per remaining day to reach the month target, beside the current daily run-rate. | `runRate` | RV-05 in PRD v2 |
+| Run-rate required | Sales needed per remaining day to reach the month plan, beside the current daily run-rate. The plan is the IBL month target on Forecast Accuracy IBL and the TSCL month budget on Budget Accuracy TSCL (FR-EXEC-054). | `runRate` | RV-05 in PRD v2 |
 | Coverage index | Total cover days as a share of the target-weighted benchmark. Too low is stock-out risk, too high is excess. | `coverageIndex` | BR-EXEC-004 |
 | Excess inventory value | Stock above benchmark cover, valued at cost: max(0, cover − benchmark) × daily target × cost ÷ TP. | `excessByClass` | BR-EXEC-005 |
 | Cover shortfall value | Planned sales (TP) that stock cannot cover up to the threshold: (threshold − cover) × daily target. | `shortfallByClass` | BR-EXEC-005 |

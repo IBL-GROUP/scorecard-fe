@@ -1,13 +1,14 @@
 // Series colours for the product classes A, B, C, N and Others.
 //
-// PRD v2 section 5.3 asks for two things that conflict: keep the 1.0 class
-// colours, and never reuse RAG colours as class colours. In 1.0, B is green
-// (#059669) and C is amber (#fca311), which read as status. 2.0 therefore uses
-// a non-RAG set: A keeps its 1.0 blue, N keeps its 1.0 violet, and B and C
-// move to cyan and magenta. Flagged for the S1 review.
+// Since 17 Nov 2026 (user request, BR-EXEC-011, GAP-029 resolved) these are Sales Pulse 2.0's
+// (DSR-fe) categorical hues, in its order: DSR has no colour per class, its
+// share donut colours slices by rank (SharePie HUES), which reads A, B, C, N.
+// Fixed to the classes here so a class is one colour everywhere. Others takes
+// DSR's 'Other / unmapped' grey. Same hex in light and dark, as in DSR.
+// (Before: a non-RAG set, A #2563EB, B #0891B2, C #C026D3, N #7C3AED.)
 
-const light = { A: '#2563EB', B: '#0891B2', C: '#C026D3', N: '#7C3AED', Others: '#6B7280' };
-const dark = { A: '#7EA6F8', B: '#4FC3DC', C: '#E07BEF', N: '#B69CF6', Others: '#A19B92' };
+const light = { A: '#3B5BDB', B: '#12A594', C: '#E8590C', N: '#8B5CF6', Others: '#6B7280' };
+const dark = light;
 
 const css = (p: Record<string, string>) => Object.entries(p).map(([k, v]) => `--sp-cls-${k.toLowerCase()}:${v};`).join('');
 

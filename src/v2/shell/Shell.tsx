@@ -10,7 +10,7 @@ import { DEMO_DATA } from '@/v2/config/api';
 import { useDashboardData } from '@/v2/features/data';
 import { useActiveTab, useNav, scrollToKpi } from '@/v2/features/nav';
 import { useStore } from '@/v2/features/store';
-import { TABS } from '@/v2/features/tabs';
+import { SCROLL_TABS, TABS } from '@/v2/features/tabs';
 import { tabHasItems } from '@/v2/features/catalog';
 import { trust } from '@/v2/features/derive';
 import { useFitScreen } from '@/v2/features/fit';
@@ -35,7 +35,7 @@ export function Shell() {
   const [sp] = useSearchParams();
   const [demoOpen, setDemoOpen] = useState(false);
   const data = useDashboardData(tab);
-  const fit = useFitScreen();
+  const fitWindow = useFitScreen();
   // The header height, for the fixed-screen tab and the Details sheets below it (FR-EXEC-025).
   const headerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -90,6 +90,8 @@ export function Shell() {
     );
 
   const activeTab = visibleTabs.some((x) => x.key === tab) ? tab : visibleTabs[0].key;
+  // Service Measure shows all its 1.0 matrices on one page, as 1.0 does, so it scrolls (FR-EXEC-052).
+  const fit = fitWindow && !SCROLL_TABS.includes(activeTab);
 
   return (
     <Box minH="100vh" bg={colors.pageBg}>

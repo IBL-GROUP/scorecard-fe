@@ -124,7 +124,10 @@ export function plan(d: TabData, w: Window) {
     varBud: single ? (Se != null && Btd != null && Btd > 0 ? Se - Btd : null) : multiBud && multiBud.target > 0 ? multiBud.amount - multiBud.target : null,
     projected,
     projectedFinal: single && !includesToday,
+    /** RV-05 on Forecast Accuracy IBL: IBL month target and sales (/forecast-accuracy-monthly). */
     runRate: K.runRate(T, S, days.daysGone, days.totalDays),
+    /** RV-05 on Budget Accuracy TSCL: TSCL month budget and sales (/forecast-accuracy-yearly), FR-EXEC-054. */
+    runRateBud: K.runRate(B, Se, days.daysGone, days.totalDays),
     fam,
     fay,
     gaugeIbl: K.gaugePct(num(fam?.pct ?? null), T),

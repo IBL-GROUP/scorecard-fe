@@ -15,6 +15,9 @@ export const TABS: { key: TabKey; label: string; mid: string; short: string; any
   { key: 'distribution', label: 'RD Data Status', mid: 'RD Data Status', short: 'RD Status', anyOf: ['RD_DATA_STATUS'] },
 ];
 
+/** Tabs that scroll instead of filling the window (FR-EXEC-052: Service Measure, laid out as 1.0). */
+export const SCROLL_TABS: TabKey[] = ['inventory'];
+
 /** Which section an endpoint's data belongs to. */
 export const SECTION_OF: Record<string, Section> = {
   '/sales-summary': 'SUMMARY',

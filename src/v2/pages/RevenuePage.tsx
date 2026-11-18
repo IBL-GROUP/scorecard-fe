@@ -233,13 +233,14 @@ export function RevenuePage({ data }: { data: DashboardData }) {
               delta={{ value: p.attBud != null && p.attBudCmp != null ? p.attBud - p.attBudCmp : null, unit: 'pts', label: cl }}
               {...st.bud}
             />,
+            // Run-rate required against the TSCL month budget, not the IBL target (FR-EXEC-054).
             <ExecTile key="RV-05"
               id="RV-05"
               label="Run-rate required"
-              value={p.runRate.required == null ? '—' : `${money(p.runRate.required)}/day`}
-              caption={p.runRate.current == null ? undefined : `Running ${money(p.runRate.current)}/day`}
-              variance={p.runRate.required != null && p.runRate.current != null ? (p.runRate.current >= p.runRate.required ? 'On course for target' : `Need ${money(p.runRate.required - p.runRate.current)}/day more`) : undefined}
-              {...st.att}
+              value={p.runRateBud.required == null ? '—' : `${money(p.runRateBud.required)}/day`}
+              caption={p.runRateBud.current == null ? undefined : `Running ${money(p.runRateBud.current)}/day`}
+              variance={p.runRateBud.required != null && p.runRateBud.current != null ? (p.runRateBud.current >= p.runRateBud.required ? 'On course for budget' : `Need ${money(p.runRateBud.required - p.runRateBud.current)}/day more`) : undefined}
+              {...st.bud}
             />,
             // Days gone, as on Forecast Accuracy IBL: the budget gauge is read against the same days (FR-EXEC-038).
             <ExecTile key="RV-16-budget" id="RV-16" label="Days gone" value={`${p.days.pct}%`} caption={`${p.days.daysGone} of ${p.days.totalDays} days`} isLoading={false} />,
@@ -316,7 +317,7 @@ export function RevenuePage({ data }: { data: DashboardData }) {
               delta={{ value: p.attIbl != null && p.attIblCmp != null ? p.attIbl - p.attIblCmp : null, unit: 'pts', label: cl }}
               {...st.att}
             />,
-            // Run-rate required, as on Budget Accuracy TSCL; replaced Projected month-end (RV-03), user request 17 Nov 2026 (FR-EXEC-051).
+            // Run-rate required against the IBL month target; replaced Projected month-end (RV-03), user request 17 Nov 2026 (FR-EXEC-051).
             <ExecTile key="RV-05-ibl"
               id="RV-05"
               label="Run-rate required"

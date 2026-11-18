@@ -83,9 +83,10 @@ test('TC-S5-05 TC-EXEC-024 heatmap shift-click (IN-10) opens Inventory Days (IN-
   await settled(page);
   const cell = page.locator('[data-kpi~="IN-10"] td[title^="Click for details"]').first();
   await cell.click({ modifiers: ['Shift'] });
+  // Inventory Days is a card on the page since FR-EXEC-052: it scrolls into view, focused.
   const detail = page.locator('[data-detail="inv-days"]');
-  await expect(detail.locator('> button[aria-expanded]')).toHaveAttribute('aria-expanded', 'true');
   await expect(detail.getByRole('button', { name: /show all/i })).toBeVisible();
+  await expect(detail.getByTestId('inv-focus')).toBeInViewport();
 });
 
 test('TC-S5-05 TC-EXEC-024 Pareto bar (OP-05) opens Dispatch Vs Order (OP-14) filtered to that material', async ({ page }) => {
@@ -115,7 +116,21 @@ test('TC-S5-05 TC-EXEC-024 branch bar on Distribution sets a branch chip, and th
   await expect(remove).toHaveCount(0);
 });
 
-for (const tab of ['revenue', 'inventory', 'fulfilment', 'distribution']) {
+test('TC-S5-05 TC-EXEC-024 every "View details" on Service Measure scrolls to its Inventory Days card (FR-EXEC-052)', async ({ page }) => {
+  await stubServices(page);
+  await page.goto('./?tab=inventory');
+  await settled(page);
+  const links = page.getByRole('button', { name: 'View details', exact: true });
+  const n = await links.count();
+  expect(n).toBeGreaterThan(0);
+  for (let i = 0; i < n; i++) {
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await links.nth(i).click();
+    await expect(page.locator('[data-detail="inv-days"] [data-table-root]')).toBeInViewport();
+  }
+});
+
+for (const tab of ['revenue', 'fulfilment', 'distribution']) {
   test(`TC-S5-05 TC-EXEC-024 every "View details" on ${tab} expands its Operational Detail table`, async ({ page }) => {
     await stubServices(page);
     await page.goto(`./?tab=${tab}`);
@@ -159,7 +174,9 @@ for (const [w, h] of [
       await page.goto(`./?tab=${tab}`);
       await settled(page);
       const overflow = await page.evaluate(() => document.documentElement.scrollHeight - document.documentElement.clientHeight);
-      expect(overflow, `${tab} scrolls by ${overflow}px`).toBeLessThanOrEqual(1);
+      // Service Measure scrolls: all its 1.0 matrices on one page, then the 2.0 additions (FR-EXEC-052).
+      if (tab === 'inventory') expect(overflow, 'Service Measure scrolls').toBeGreaterThan(1);
+      else expect(overflow, `${tab} scrolls by ${overflow}px`).toBeLessThanOrEqual(1);
       const buttons = page.locator('[data-kpi-more]');
       const n = await buttons.count();
       for (let i = 0; i < n; i++) {

@@ -615,9 +615,10 @@ function SkuBody({ sku, data }: { sku: string; data: DashboardData }) {
         <Stat label="Branches below threshold" value={th != null ? vals.filter((x) => x.v < th).length : DASH} sub={`Threshold ${days(th)}`} />
         <Stat label="Fill rate" value={pct1(f.pct)} rag={rag(f.pct, 'fillRate')} sub={disp.length ? `${full(f.unfulfilled)} units short` : 'No orders in period'} />
       </StatGrid>
+      {/* The drill ends here: Class → SKU → cover by branch. A branch bar opens nothing (user request, 17 Nov 2026; FR-EXEC-053). */}
       <Section title="Cover by branch" hint="Bar = cover · tick = benchmark · red zone = below threshold">
         {vals.map((x) => (
-          <Bullet key={x.b} label={x.b} actual={x.v} target={bm} threshold={th} max={max} color={clsColor(r?.classification ?? 'Others')} rag={th != null && x.v < th ? 'red' : null} right={x.v === 0 ? 'No stock' : days(x.v)} onClick={() => push({ kind: 'branch', branch: x.b })} />
+          <Bullet key={x.b} label={x.b} actual={x.v} target={bm} threshold={th} max={max} color={clsColor(r?.classification ?? 'Others')} rag={th != null && x.v < th ? 'red' : null} right={x.v === 0 ? 'No stock' : days(x.v)} />
         ))}
       </Section>
       {disp.length > 0 && (

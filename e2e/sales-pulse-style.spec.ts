@@ -106,7 +106,7 @@ test('TC-EXEC-049 horizontal bars in the Sales Pulse style: A→Z rows, value ba
   const checks: [tab: string, sheet: string | null, kpis: string[]][] = [
     ['revenue', null, ['RV-11']],
     ['revenue', 'Sales & mix', ['RV-10']],
-    ['inventory', 'Service', ['IN-11', 'IN-16']],
+    ['inventory', null, ['IN-11', 'IN-16']],
     ['distribution', 'Reporting', ['DH-05']],
   ];
   for (const [tab, sheet, kpis] of checks) {

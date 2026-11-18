@@ -236,8 +236,8 @@ function DetailsSheet({ p, onClose }: { p: Prepared; onClose: () => void }) {
  * `asideTopic` is one more topic panel, shown in the side column under
  * `aside` (Summary: Plan alignment under Risks & Opportunities, FR-EXEC-036).
  */
-export function AreaLayout({ topics, top, aside, asideKpi, asideTopic }: { topics: Topic[]; top?: ReactNode; aside?: ReactNode; asideKpi?: string; asideTopic?: Topic }) {
-  const fit = useFitScreen();
+export function AreaLayout({ topics, top, aside, asideKpi, asideTopic, scroll }: { topics: Topic[]; top?: ReactNode; aside?: ReactNode; asideKpi?: string; asideTopic?: Topic; /** Never the fixed-screen layout (a page that scrolls, FR-EXEC-052). */ scroll?: boolean }) {
+  const fit = useFitScreen() && !scroll;
   const { metricMode, shows } = useStore();
   const [openKey, setOpenKey] = useState<string | null>(null);
   const opener = useRef<HTMLElement | null>(null);

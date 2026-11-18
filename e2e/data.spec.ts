@@ -58,9 +58,9 @@ for (const [preset, presetLabel] of PRESETS) {
 }
 
 /** Every Zone 4 section, its tab, and the topic whose Details sheet holds it (FR-EXEC-025). */
-const DETAILS: [tab: string, id: string, topic: string][] = [
+const DETAILS: [tab: string, id: string, topic: string | null][] = [
   ['revenue', 'rev-acc', 'Forecast Accuracy IBL'],
-  ['inventory', 'inv-days', 'Service'],
+  ['inventory', 'inv-days', null], // on the page, as 1.0 (FR-EXEC-052)
   ['fulfilment', 'dispatch', 'Orders'],
   ['fulfilment', 'wip', 'Production'],
   ['fulfilment', 'rmpm', 'Materials & service'],
@@ -72,10 +72,10 @@ for (const [tab, id, topic] of DETAILS) {
     const t = await stubServices(page, { planner: true });
     await page.goto(`./?tab=${tab}`);
     await settled(page);
-    await page.getByRole('button', { name: `${topic}: details`, exact: true }).click();
+    if (topic) await page.getByRole('button', { name: `${topic}: details`, exact: true }).click();
     const detail = page.locator(`[data-detail="${id}"]`);
     const toggle = detail.locator('> button[aria-expanded]');
-    if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+    if ((await toggle.count()) && (await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
     await settled(page);
     const tables = detail.locator('[data-table-root]');
     const n = await tables.count();

@@ -33,8 +33,8 @@ means at least one of its test cases points at a test file.
 | NAV | 11 | 8 | 0 | 1 | 0 |
 | TBL | 5 | 4 | 0 | 1 | 0 |
 | SPEC | 15 | 15 | 15 | 3 | 2 |
-| EXEC | 74 | 70 | 51 | 8 | 3 |
-| **Total** | 217 | 177 | 67 | 29 | 29 |
+| EXEC | 77 | 74 | 55 | 8 | 2 |
+| **Total** | 220 | 181 | 71 | 29 | 28 |
 
 ## MET — Supply-chain metrics (domain)
 
@@ -298,7 +298,7 @@ Open gaps: GAP-013, GAP-028
 
 Spec: [features/FEAT-EXEC-executive-dashboard.md](features/FEAT-EXEC-executive-dashboard.md)
 
-Open gaps: GAP-029, GAP-030, GAP-031
+Open gaps: GAP-030, GAP-031
 
 | Requirement | Status | Implementation | Test cases | Automated | Acceptance criteria | API operations |
 |---|---|---|---|---|---|---|
@@ -352,10 +352,13 @@ Open gaps: GAP-029, GAP-030, GAP-031
 | FR-EXEC-049 | Proposed | `src/v2/components/exec/AreaLayout.tsx#TopicPanel`<br>`src/v2/components/detail/DetailSheets.tsx#AlignClassBody`<br>`src/v2/features/detail.tsx#titleOf`<br>`src/v2/pages/topics/PlanAlignment.tsx#usePlanAlignmentTopic`<br>`src/v2/features/data.ts#fetchRows` | TC-EXEC-032, TC-EXEC-056 | Yes | — | — |
 | FR-EXEC-050 | Proposed | `src/v2/features/tabs.ts#TABS`<br>`src/v2/pages/topics/PlanAlignment.tsx#usePlanAlignmentTopic`<br>`src/v2/features/detail.tsx#KIND_LABEL`<br>`src/v2/components/exec/AreaLayout.tsx#AreaLayout` | TC-EXEC-057 | Yes | — | — |
 | FR-EXEC-051 | Proposed | `src/v2/pages/RevenuePage.tsx#RevenuePage`<br>`src/v2/pages/OverviewPage.tsx#OverviewPage`<br>`src/v2/features/kpis.ts#runRate`<br>`src/v2/features/catalog.ts#PRD_ITEMS` | TC-EXEC-031, TC-EXEC-058 | Yes | — | — |
+| FR-EXEC-052 | Proposed | `src/v2/pages/InventoryPage.tsx#InventoryPage`<br>`src/v2/features/tabs.ts#SCROLL_TABS`<br>`src/v2/shell/Shell.tsx#Shell`<br>`src/v2/components/exec/AreaLayout.tsx#AreaLayout` | TC-EXEC-032, TC-EXEC-060 | Yes | — | — |
+| FR-EXEC-053 | Proposed | `src/v2/components/detail/DetailSheets.tsx#DetailLayer` | TC-EXEC-061 | Yes | — | — |
+| FR-EXEC-054 | Proposed | `src/v2/features/derive.ts#plan`<br>`src/v2/pages/RevenuePage.tsx#RevenuePage`<br>`src/v2/features/kpis.ts#runRate` | TC-EXEC-063 | Yes | — | — |
 | NFR-EXEC-001 | Proposed | `src/v2/components/exec/Panels.tsx#TileRow` | TC-EXEC-011, TC-EXEC-029 | Yes | — | — |
 | NFR-EXEC-002 | Proposed | `src/v2/constants/theme.ts#themeCss` | TC-EXEC-011 | No | — | — |
 | NFR-EXEC-003 | Proposed | `src/v2/components/exec/ExecTile.tsx#ExecTile`<br>`src/v2/components/exec/Rag.tsx#RagBadge`<br>`src/v2/components/exec/Rag.tsx#RagDot`<br>`src/v2/components/select/MultiSelect.tsx#MultiSelect`<br>`src/v2/components/data-table/DataTable.tsx#DataTable`<br>`src/v2/constants/theme.ts#light` | TC-EXEC-028 | Yes | — | — |
-| NFR-EXEC-004 | Proposed | `src/v2/features/fit.ts#useFitScreen`<br>`src/v2/shell/Shell.tsx#Shell`<br>`src/v2/components/exec/AreaLayout.tsx#AreaLayout` | TC-EXEC-032 | Yes | AC-EXEC-008 | — |
+| NFR-EXEC-004 | Proposed | `src/v2/features/fit.ts#useFitScreen`<br>`src/v2/shell/Shell.tsx#Shell`<br>`src/v2/components/exec/AreaLayout.tsx#AreaLayout`<br>`src/v2/features/tabs.ts#SCROLL_TABS` | TC-EXEC-032 | Yes | AC-EXEC-008 | — |
 | BR-EXEC-001 | Proposed | `src/v2/features/kpis.ts#attainmentToDate`<br>`src/v2/features/kpis.ts#projectedMonthEnd` | TC-EXEC-004, TC-EXEC-021 | Yes | AC-EXEC-002 | — |
 | BR-EXEC-002 | Proposed | `src/v2/features/derive.ts#plan`<br>`src/v2/features/period.ts#categoryCallEnds` | TC-EXEC-008, TC-EXEC-022, TC-EXEC-025 | Yes | AC-EXEC-003 | — |
 | BR-EXEC-003 | Proposed | `src/v2/features/period.ts#comparisonWindow` | TC-EXEC-008, TC-EXEC-022, TC-EXEC-025 | Yes | — | — |
@@ -366,7 +369,7 @@ Open gaps: GAP-029, GAP-030, GAP-031
 | BR-EXEC-008 | Proposed | `src/v2/features/kpiThresholds.ts#kpiThresholds`<br>`src/v2/features/kpiThresholds.ts#ragOf` | TC-EXEC-011, TC-EXEC-021 | Yes | AC-EXEC-002 | — |
 | BR-EXEC-009 | Proposed | `src/v2/features/kpis.ts#buildRisks`<br>`src/v2/features/kpiThresholds.ts#riskRules` | TC-EXEC-005, TC-EXEC-021 | Yes | — | — |
 | BR-EXEC-010 | Proposed | `src/v2/features/derive.ts#iblShare`<br>`src/v2/features/derive.ts#budShare`<br>`src/v2/features/kpis.ts#varianceByClass` | TC-EXEC-017 | Yes | — | — |
-| BR-EXEC-011 | Proposed | `src/v2/constants/classColors.ts#CLS_COLOR` | — | No | — | — |
+| BR-EXEC-011 | Proposed | `src/v2/constants/classColors.ts#CLS_COLOR`<br>`src/v2/constants/classColors.ts#classColorCss` | TC-EXEC-062 | Yes | — | — |
 | BR-EXEC-012 | Proposed | `src/v2/features/derive.ts#varBud`<br>`src/v2/pages/topics/PlanAlignment.tsx#alignment` | TC-EXEC-021 | Yes | — | — |
 | DR-EXEC-001 | Proposed | `src/v2/api/types.ts#num`<br>`src/v2/features/data.ts#buildSpecs` | — | No | — | — |
 | DR-EXEC-002 | Proposed | `src/v2/demo/demoData.ts#DemoModel` | — | No | — | — |
