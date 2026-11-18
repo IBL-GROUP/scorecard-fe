@@ -22,7 +22,7 @@ import { helpFor } from '@/v2/constants/help';
 import { type CategoryAccuracyRow, type SalesSummaryRow, type SalesTypeRow, type TotalSkuRow } from '@/v2/api/types';
 import { rowsOf, type DashboardData } from '@/v2/features/data';
 import { plan, status } from '@/v2/features/derive';
-import { attainmentTrend, categoryCells, classHistory, classRanking, salesTypeSplit, type MonthClass, rangeActivation, salesSummary, varianceByClass } from '@/v2/features/kpis';
+import { attainmentTrend, categoryCells, classHistory, salesTypeSplit, type MonthClass, rangeActivation, salesSummary, varianceByClass } from '@/v2/features/kpis';
 import { kpiThresholds, rag } from '@/v2/features/kpiThresholds';
 import { change, full, money, pct0, pct1, pkr } from '@/v2/features/format';
 import { monthLabel, periodTag, rangeLabel } from '@/v2/features/period';
@@ -34,7 +34,7 @@ const CLASSES = ['A', 'B', 'C', 'N', 'Others'];
 // The 1.0 gauges divide the whole window's sales by the To month's target
 // (BR-MET-004/005), so over several months they overstate. Kept unchanged as
 // retained 1.0 metrics, with this warning; RV-02/RV-04 use rule F1 instead.
-const MULTI_MONTH_NOTE = "1.0 rule: window sales ÷ one month's plan, so it overstates over several months. Use achievement to date above.";
+const MULTI_MONTH_NOTE = 'Overstated over several months: read achievement to date';
 
 import { useDetail } from '@/v2/features/detail';
 
@@ -60,7 +60,6 @@ export function RevenuePage({ data }: { data: DashboardData }) {
   // Budget rows are monthly: the running month is scaled to the days gone (derive.plan).
   const trend = trendBasis === 'target' ? p.trend : attainmentTrend(budgetCells.map((c) => (c.month === p.paceMonth ? { ...c, target: c.target * p.budShare } : c)));
   const variance = varianceByClass(p.cells, p.currentMonth, p.currentMonth === p.paceMonth ? p.iblShare : 1);
-  const budgetRanking = classRanking(budgetCells, p.currentMonth);
   // RV-15 / RV-14 side charts: 3 months of accuracy per class, as 1.0 (FR-EXEC-041).
   const budgetHistory = classHistory([rowsOf<CategoryAccuracyRow>(d.catY1), rowsOf<CategoryAccuracyRow>(d.catY0)], data.window.end);
   const iblHistory = classHistory([rowsOf<CategoryAccuracyRow>(d.cat1), rowsOf<CategoryAccuracyRow>(d.cat0)], data.window.end);
@@ -113,7 +112,7 @@ export function RevenuePage({ data }: { data: DashboardData }) {
               label="Sales (TP)"
               value={pkr(sales.total)}
               // As Sales Pulse 2.0's Sales TP card (FR-EXEC-048): achievement to date (EX-01's rule) and the comparison.
-              variance={p.attIbl == null || p.Ttd == null ? undefined : `${pct0(p.attIbl)} of ${money(p.Ttd)} target to date`}
+              more={p.attIbl == null || p.Ttd == null ? undefined : `${pct0(p.attIbl)} of ${money(p.Ttd)} target to date`}
               delta={{ value: change(sales.total, salesCmp.total), label: cl }}
               split={salesSplit.map((x) => ({ ...x, text: money(x.value) }))}
               {...st.sales}
@@ -122,7 +121,7 @@ export function RevenuePage({ data }: { data: DashboardData }) {
             </ExecTile>,
           ],
           lead: (
-            <ChartCard title="Sales Summary" subtitle="By class (1.0 card)" colSpan={4} height="auto" isLoading={st.sales.isLoading} help={helpFor('RV-13')} dataKpi="RV-13" expandable={false}>
+            <ChartCard title="Sales Summary" subtitle="By class" colSpan={4} height="auto" isLoading={st.sales.isLoading} help={helpFor('RV-13')} dataKpi="RV-13" expandable={false}>
               {CardState({ locked: st.sales.locked, error: st.sales.error, empty: !sales.rows.length }) ?? (
                 <>
                 <Box as="table" w="100%" fontSize="13px">
@@ -177,7 +176,6 @@ export function RevenuePage({ data }: { data: DashboardData }) {
                     </Box>
                   </tbody>
                 </Box>
-                <Legend items={[{ label: 'Class colour', color: clsColor('A'), colors: CLASSES.map(clsColor) }, { label: 'Share of sales', color: colors.salesSoft }]} />
                 </>
               )}
             </ChartCard>
@@ -200,17 +198,16 @@ export function RevenuePage({ data }: { data: DashboardData }) {
                           </BarChart>
                         </ResponsiveContainer>
                       </Box>
-                      <Legend items={CLASSES.map((c) => ({ label: `${c === 'Others' ? 'Other' : `Class ${c}`} share of sales`, color: clsColor(c) }))} />
+                      <Legend items={CLASSES.map((c) => ({ label: c === 'Others' ? 'Other' : `Class ${c}`, color: clsColor(c) }))} />
                     </Flex>
                   )}
                 </ChartCard>
                 <ChartCard title="Range activation" subtitle="SKUs that sold ÷ SKUs in the range" colSpan={6} height="220px" isLoading={st.range.isLoading} help={helpFor('RV-10')} dataKpi="RV-10" headerRight={<Text fontSize="12px" color={colors.mutedText}>Total {pct0(range.total)}</Text>}>
                   {CardState({ locked: st.range.locked, error: st.range.error, empty: !range.rows.some((r) => r.inRange > 0) }) ?? (
                     <HBars
-                      rows={range.rows.filter((r) => visibleClasses.includes(r.cls)).map((r) => ({ key: r.cls, label: `Class ${r.cls}`, value: r.pct, color: clsColor(r.cls), valueText: pct0(r.pct), note: `${full(r.sold)} of ${full(r.inRange)} SKUs` }))}
+                      rows={range.rows.filter((r) => visibleClasses.includes(r.cls)).map((r) => ({ key: r.cls, label: `Class ${r.cls}`, value: r.pct, color: clsColor(r.cls), valueText: pct0(r.pct), title: `${full(r.sold)} of ${full(r.inRange)} SKUs` }))}
                       fmt={pct0}
                       max={100}
-                      legend={[{ label: 'SKUs sold ÷ SKUs in range (class colour)', color: clsColor('A'), colors: CLASSES.map(clsColor) }]}
                     />
                   )}
                 </ChartCard>
@@ -229,7 +226,7 @@ export function RevenuePage({ data }: { data: DashboardData }) {
               value={pct1(p.attBud)}
               rag={rag(p.attBud, 'attainment')}
               band="attainment"
-              variance={p.varBud == null ? undefined : `vs pace: ${p.varBud >= 0 ? '+' : '−'}${money(Math.abs(p.varBud))}`}
+              more={p.varBud == null ? undefined : `vs pace: ${p.varBud >= 0 ? '+' : '−'}${money(Math.abs(p.varBud))}`}
               delta={{ value: p.attBud != null && p.attBudCmp != null ? p.attBud - p.attBudCmp : null, unit: 'pts', label: cl }}
               {...st.bud}
             />,
@@ -238,8 +235,10 @@ export function RevenuePage({ data }: { data: DashboardData }) {
               id="RV-05"
               label="Run-rate required"
               value={p.runRateBud.required == null ? '—' : `${money(p.runRateBud.required)}/day`}
-              caption={p.runRateBud.current == null ? undefined : `Running ${money(p.runRateBud.current)}/day`}
-              variance={p.runRateBud.required != null && p.runRateBud.current != null ? (p.runRateBud.current >= p.runRateBud.required ? 'On course for budget' : `Need ${money(p.runRateBud.required - p.runRateBud.current)}/day more`) : undefined}
+              more={[
+                p.runRateBud.required != null && p.runRateBud.current != null ? (p.runRateBud.current >= p.runRateBud.required ? 'On course for budget' : `Need ${money(p.runRateBud.required - p.runRateBud.current)}/day more`) : null,
+                p.runRateBud.current == null ? null : `Running ${money(p.runRateBud.current)}/day`,
+              ].filter(Boolean)}
               {...st.bud}
             />,
             // Days gone, as on Forecast Accuracy IBL: the budget gauge is read against the same days (FR-EXEC-038).
@@ -263,7 +262,7 @@ export function RevenuePage({ data }: { data: DashboardData }) {
           details: (
             <>
               <CardGrid mb={3}>
-                <ChartCard title="Variance to plan by class" subtitle={`This month, plan prorated to ${p.days.pct}% of days gone`} colSpan={12} height="300px" isLoading={st.cat.isLoading} help={helpFor('RV-08')} dataKpi="RV-08">
+                <ChartCard title="Variance to plan by class" subtitle="This month, plan to date" colSpan={12} height="300px" isLoading={st.cat.isLoading} help={helpFor('RV-08')} dataKpi="RV-08">
               {CardState({ locked: st.cat.locked, error: st.cat.error, empty: !variance.steps.length }) ?? (
                 <Flex direction="column" h="100%">
                 <Box flex={1} minH={0}>
@@ -313,7 +312,7 @@ export function RevenuePage({ data }: { data: DashboardData }) {
               value={pct1(p.attIbl)}
               rag={rag(p.attIbl, 'attainment')}
               band="attainment"
-              variance={p.varIbl == null ? undefined : `vs pace: ${p.varIbl >= 0 ? '+' : '−'}${money(Math.abs(p.varIbl))}`}
+              more={p.varIbl == null ? undefined : `vs pace: ${p.varIbl >= 0 ? '+' : '−'}${money(Math.abs(p.varIbl))}`}
               delta={{ value: p.attIbl != null && p.attIblCmp != null ? p.attIbl - p.attIblCmp : null, unit: 'pts', label: cl }}
               {...st.att}
             />,
@@ -322,8 +321,10 @@ export function RevenuePage({ data }: { data: DashboardData }) {
               id="RV-05"
               label="Run-rate required"
               value={p.runRate.required == null ? '—' : `${money(p.runRate.required)}/day`}
-              caption={p.runRate.current == null ? undefined : `Running ${money(p.runRate.current)}/day`}
-              variance={p.runRate.required != null && p.runRate.current != null ? (p.runRate.current >= p.runRate.required ? 'On course for target' : `Need ${money(p.runRate.required - p.runRate.current)}/day more`) : undefined}
+              more={[
+                p.runRate.required != null && p.runRate.current != null ? (p.runRate.current >= p.runRate.required ? 'On course for target' : `Need ${money(p.runRate.required - p.runRate.current)}/day more`) : null,
+                p.runRate.current == null ? null : `Running ${money(p.runRate.current)}/day`,
+              ].filter(Boolean)}
               {...st.att}
             />,
             <ExecTile key="RV-16" id="RV-16" label="Days gone" value={`${p.days.pct}%`} caption={`${p.days.daysGone} of ${p.days.totalDays} days`} isLoading={false} />,
@@ -348,7 +349,7 @@ export function RevenuePage({ data }: { data: DashboardData }) {
               <CardGrid mb={3}>
                 <ChartCard
               title={trendBasis === 'target' ? 'Achievement by class vs target, 6 months' : 'Achievement by class vs budget, 6 months'}
-              subtitle="100% = on plan · amber band 90–100% · this month pace-adjusted"
+              subtitle="This month pace-adjusted"
               colSpan={12}
               height="300px"
               isLoading={trendBasis === 'target' ? st.cat.isLoading : st.catY.isLoading}
@@ -420,9 +421,6 @@ export function RevenuePage({ data }: { data: DashboardData }) {
                     />
                   ))}
                 </Grid>
-                <Text fontSize="11.5px" color={colors.mutedText} mt={2} px={2}>
-                  Budget ranking this month: {budgetRanking.map((r) => `${r.cls} ${pct0(r.pct)}`).join(' · ') || '—'}
-                </Text>
               </OperationalDetail>
             </>
           ),

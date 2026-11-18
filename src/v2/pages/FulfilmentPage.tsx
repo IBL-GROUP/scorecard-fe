@@ -112,7 +112,7 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
               value={pct1(f.pct)}
               rag={fillRag}
               band="fillRate"
-              variance="Target ≥ 95% · by quantity"
+              more="Target ≥ 95% · by quantity"
               delta={{ value: f.pct != null && f.cmpPct != null ? f.pct - f.cmpPct : null, unit: 'pts', label: cmpLabel }}
               {...sDispatchCmp}
             />,
@@ -120,7 +120,7 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
               id="OP-02"
               label="Unfulfilled Quantity"
               value={units(f.unfulfilled)}
-              caption={`${full(f.ordered)} ordered · ${full(f.delivered)} delivered`}
+              more={`${full(f.ordered)} ordered · ${full(f.delivered)} delivered`}
               delta={{ value: change(f.unfulfilled, f.cmpUnfulfilled), label: cmpLabel, upIsGood: false }}
               {...sDispatchCmp}
             />,
@@ -129,7 +129,7 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
               label="Materials Below Fill Target"
               value={`${below.below} of ${below.total}`}
               valueSuffix="materials"
-              caption="Delivery below 90%"
+              more="Delivery below 90%"
               {...sDispatch}
             />,
           ],
@@ -137,7 +137,7 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
             <ChartCard
               dataKpi="OP-03"
               title="Fill Rate by Channel"
-              subtitle="Delivered ÷ ordered quantity · target 95% · click a bar to filter"
+              subtitle="Delivered ÷ ordered quantity"
               colSpan={{ base: 1, lg: 5 }}
               height="300px"
               isLoading={sDispatch.isLoading}
@@ -154,7 +154,6 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
                     color: c.rag ? RAG_META[c.rag].color : colors.sales,
                     valueText: `${c.pct}%`,
                     priorText: cmpFill.get(c.channel) == null ? '—' : `${Math.round((cmpFill.get(c.channel) as number) * 10) / 10}%`,
-                    note: `${kpiThresholds.fillRate.green}% target`,
                     onClick: () => detail.open({ kind: 'channel', channel: c.channel }),
                   }))}
                   fmt={(n) => `${n}%`}
@@ -170,7 +169,7 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
                 <ChartCard
                   dataKpi="OP-05"
                   title="Top 10 Unfulfilled Materials"
-                  subtitle="Unfulfilled quantity and cumulative share · click a bar to see its orders in Dispatch Vs Order"
+                  subtitle="Unfulfilled quantity and cumulative share"
                   colSpan={12}
                   height="300px"
                   isLoading={sDispatch.isLoading}
@@ -249,6 +248,8 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
         {
           key: 'production',
           title: 'Production',
+          // Every figure here ignores the filters: said once for the panel (FR-EXEC-055).
+          note: DATES_ONLY,
           tiles: [
             <ExecTile key="OP-07"
               id="OP-07"
@@ -256,9 +257,8 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
               value={pct1(p.w.completion)}
               rag={rag(p.w.completion, 'productionCompletion')}
               band="productionCompletion"
-              variance="Target ≥ 90%"
+              more="Target ≥ 90%"
               delta={{ value: p.w.completion != null && p.wCmp.completion != null ? p.w.completion - p.wCmp.completion : null, unit: 'pts', label: cmpLabel }}
-              scopeNote={DATES_ONLY}
               {...sWip}
             />,
             <ExecTile key="OP-06"
@@ -266,16 +266,14 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
               label="WIP Value"
               value={pkr(p.w.value)}
               delta={{ value: change(p.w.value, p.wCmp.value), label: cmpLabel, upIsGood: false }}
-              scopeNote={DATES_ONLY}
               {...status(d, 'wip', 'wipCmp')}
             />,
-            <ExecTile key="OP-08" id="OP-08" label="Open Production Orders" value={full(p.w.openOrders)} caption="Received below item quantity" scopeNote={DATES_ONLY} {...sWip} />,
+            <ExecTile key="OP-08" id="OP-08" label="Open Production Orders" value={full(p.w.openOrders)} more="Received below item quantity" {...sWip} />,
           ],
           lead: (
             <ChartCard
               dataKpi="OP-09"
               title="WIP Value by Plant and Material Type"
-              subtitle={`ⓘ ${DATES_ONLY}`}
               colSpan={{ base: 1, lg: 6 }}
               height="300px"
               isLoading={sWip.isLoading}
@@ -303,7 +301,7 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
           ),
           details: (
             <>
-              <OperationalDetail id="wip" kpi="OP-15" title="Work in Progress" subtitle={`1.0 table and detail filters · ${DATES_ONLY}`}>
+              <OperationalDetail id="wip" kpi="OP-15" title="Work in Progress" subtitle="1.0 table">
                 {CardState({ ...sWip }) ?? (
                   <>
                     <Flex gap={4} wrap="wrap" px={2} py={2} align="center">
@@ -361,7 +359,7 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
               value={pct1(p.r.onHoldPct)}
               rag={holdRag}
               band="onHoldPct"
-              variance={`${pkr(p.r.held)} blocked, in QI, restricted or returned`}
+              more={`${pkr(p.r.held)} blocked, in QI, restricted or returned`}
               delta={{ value: p.r.onHoldPct != null && p.rCmp.onHoldPct != null ? p.r.onHoldPct - p.rCmp.onHoldPct : null, unit: 'pts', label: cmpLabel, upIsGood: false }}
               scopeNote={DATES_ONLY}
               {...sRpm}
@@ -372,8 +370,7 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
               value={pct1(svc.level)}
               rag={rag(svc.level, 'serviceLevel')}
               band="serviceLevel"
-              variance={`${full(svc.above)} of ${full(svc.above + svc.below)} SKUs above threshold`}
-              caption="Open the branch heatmap"
+              more={`${full(svc.above)} of ${full(svc.above + svc.below)} SKUs above threshold`}
               goTo={{ tab: 'inventory', focus: 'IN-10' }}
               {...status(d, 'aboveBelow')}
             />,
@@ -382,7 +379,7 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
             <ChartCard
               dataKpi="OP-12"
               title="RMPM Usability by Plant"
-              subtitle={`Share of value by stock state · ⓘ ${DATES_ONLY}`}
+              subtitle={`Share of value by stock state · ${DATES_ONLY}`}
               colSpan={{ base: 1, lg: 6 }}
               height="300px"
               isLoading={sRpm.isLoading}
@@ -410,7 +407,7 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
           ),
           details: (
             <>
-              <OperationalDetail id="rmpm" kpi="OP-16" title="Raw and Packing Material (RMPM)" subtitle={`1.0 table and plant filter · ${DATES_ONLY}`}>
+              <OperationalDetail id="rmpm" kpi="OP-16" title="Raw and Packing Material (RMPM)" subtitle={`1.0 table · ${DATES_ONLY}`}>
                 {CardState({ ...sRpm }) ?? (
                   <>
                     <Flex gap={4} px={2} py={2}>

@@ -41,7 +41,7 @@ export function usePlanAlignmentTopic(d: TabData, w: Window, onlyCls: string | n
     key: 'alignment',
     title: 'Forecast vs budget',
     lead: (
-      <ChartCard title="Forecast vs budget by class" subtitle="IBL target ÷ TSCL budget · line = 100%, forecast equals budget" colSpan={7} height="240px" isLoading={st.ibl.isLoading} help={helpFor('RV-11')} dataKpi="RV-11">
+      <ChartCard title="Forecast vs budget by class" subtitle="IBL target ÷ TSCL budget" colSpan={7} height="240px" isLoading={st.ibl.isLoading} help={helpFor('RV-11')} dataKpi="RV-11">
         {CardState({ locked: st.ibl.locked, error: st.ibl.error, empty: !alignment.length, emptyText: 'No TSCL budget is loaded for this month' }) ?? (
           <HBars
             sort="keep"
@@ -52,13 +52,12 @@ export function usePlanAlignmentTopic(d: TabData, w: Window, onlyCls: string | n
               target: 100,
               color: RAG_META[rag(a.pct, 'planAlignment') ?? 'green'].color,
               valueText: pct0(a.pct),
-              note: `gap ${a.gap >= 0 ? '+' : '−'}${money(Math.abs(a.gap))}`,
-              // Click a class → its SKUs (FR-EXEC-049); "All classes" is the total.
+              // Click a class → its SKUs (FR-EXEC-049); "All classes" is the total. The gap shows on hover (FR-EXEC-055).
               onClick: a.cls === 'Total' ? undefined : () => detail.open({ kind: 'alignClass', cls: a.cls }),
-              title: a.cls === 'Total' ? undefined : 'Click for its SKUs',
+              title: `Gap ${a.gap >= 0 ? '+' : '−'}${money(Math.abs(a.gap))}`,
             }))}
             fmt={pct0}
-            legend={[...ragLegend('planAlignment', { shape: 'bar', what: 'forecast ÷ budget' }), { label: '100% = forecast equals budget', color: colors.target, shape: 'tick' }]}
+            legend={[...ragLegend('planAlignment', { shape: 'bar', what: 'forecast ÷ budget' }), { label: '100%', color: colors.target, shape: 'tick' }]}
           />
         )}
       </ChartCard>

@@ -178,7 +178,7 @@ export function InventoryPage({ data }: { data: DashboardData }) {
       <ChartCard
         dataKpi="IN-17"
         title="Inventory Days"
-        subtitle={`Class → SKU × 14 branches + Total${invFocus ? ` · focus: ${invFocus.branch}, Class ${invFocus.cls}` : branchChip ? ` · focus: ${branchChip}` : ''}`}
+        subtitle={`By class and SKU${invFocus ? ` · focus: ${invFocus.branch}, Class ${invFocus.cls}` : branchChip ? ` · focus: ${branchChip}` : ''}`}
         colSpan={12}
         height="400px"
         isLoading={sInv.isLoading}
@@ -226,7 +226,7 @@ export function InventoryPage({ data }: { data: DashboardData }) {
               onLeaf={(r) => detail.open({ kind: 'sku', sku: r.sku })}
             />
             <Text fontSize="11.5px" color={colors.mutedText} mt={2} px={2}>
-              Total = simple average of branches with a value, not stock-weighted. Green cells are at or above the class threshold.
+              Total = simple average of branches.
             </Text>
           </Flex>
         )}
@@ -236,7 +236,7 @@ export function InventoryPage({ data }: { data: DashboardData }) {
 
   // Row 1, column 3: Cover Days by Branch, beside Inventory Days (user request, 17 Nov 2026; FR-EXEC-052).
   const coverByBranchCard = (
-    <ChartCard dataKpi="IN-12" title="Cover Days by Branch" subtitle="Average cover of each class’s SKUs · coloured against the class benchmark" colSpan={{ base: 12, lg: 3 }} height="400px" isLoading={sInv.isLoading} headerRight={<ViewDetails detailId="inv-days" />}>
+    <ChartCard dataKpi="IN-12" title="Cover Days by Branch" subtitle="Average cover days by class" colSpan={{ base: 12, lg: 3 }} height="400px" isLoading={sInv.isLoading} headerRight={<ViewDetails detailId="inv-days" />}>
       {CardState({ ...sInv, empty: !invClasses.length }) ?? (
         <Flex direction="column" h="100%">
           <Box flex={1} minH={0} overflowY="auto" tabIndex={0} role="region" aria-label="Cover days by branch" _focusVisible={{ outline: `2px solid ${colors.brand}`, outlineOffset: '-2px' }}>
@@ -262,7 +262,7 @@ export function InventoryPage({ data }: { data: DashboardData }) {
     <ChartCard
       dataKpi="IN-10"
       title="Service Measure by Branch"
-      subtitle="% of SKUs above threshold · worst branches first · click for the branch, Shift-click for its Inventory Days rows"
+      subtitle="% of SKUs above threshold"
       colSpan={{ base: 12, lg: 6 }}
       height="420px"
       isLoading={sMatrix.isLoading}
@@ -339,7 +339,7 @@ export function InventoryPage({ data }: { data: DashboardData }) {
     <ChartCard dataKpi="IN-16" title="SKUs Against Threshold" colSpan={{ base: 12, md: 6, lg: 3 }} height="420px" isLoading={sSvc.isLoading} headerRight={<ViewDetails detailId="inv-days" />}>
       {CardState({ ...sSvc, empty: !abData.length }) ?? (
         <HBars
-          rows={abData.map((r) => ({ key: r.cls, label: r.cls === 'Others' ? 'Other' : `Class ${r.cls}`, value: r.below, prior: r.above, color: colors.bad, valueText: full(r.below), priorText: full(r.above), note: `${full(r.below + r.above)} SKUs` }))}
+          rows={abData.map((r) => ({ key: r.cls, label: r.cls === 'Others' ? 'Other' : `Class ${r.cls}`, value: r.below, prior: r.above, color: colors.bad, valueText: full(r.below), priorText: full(r.above), title: `${full(r.below + r.above)} SKUs` }))}
           fmt={full}
           legend={[{ label: 'Below threshold (risk)', color: colors.bad }, { label: 'Above threshold', color: colors.prior }]}
         />
@@ -373,12 +373,11 @@ export function InventoryPage({ data }: { data: DashboardData }) {
                 id="IN-01"
                 label="Supply-Chain Working Capital"
                 value={pkr(wcTotal)}
-                caption="At cost: finished goods + WIP + RMPM"
+                more="At cost: finished goods + WIP + RMPM"
                 delta={{ value: change(cur?.total, prevMonth?.total), label: 'vs previous month-end', upIsGood: false }}
-                spark={trend.map((t) => t.total)}
                 {...sWc}
               />,
-              <ExecTile key="IN-02" id="IN-02" label="FG Inventory Value (cost)" value={pkr(s.fgCost)} caption={`At TP: ${pkr(s.fgTp)}`} {...status(d, 'coverTotal')} />,
+              <ExecTile key="IN-02" id="IN-02" label="FG Inventory Value (cost)" value={pkr(s.fgCost)} more={`At TP: ${pkr(s.fgTp)}`} {...status(d, 'coverTotal')} />,
             ],
             lead: (
               <ChartCard dataKpi="IN-09" title="Working Capital Trend & Composition" subtitle="Last 6 month-ends, at cost" colSpan={{ base: 12, lg: 6 }} height="280px" isLoading={sTrend.isLoading} variant="bar">
@@ -408,10 +407,10 @@ export function InventoryPage({ data }: { data: DashboardData }) {
             key: 'risk',
             title: 'Stock-out risk',
             tiles: [
-              <ExecTile key="IN-06" id="IN-06" label="Stock-out Risk" value={pct1(sv.risk)} rag={rag(sv.risk, 'stockoutRisk')} band="stockoutRisk" caption={`${full(sv.below)} of ${full(sv.above + sv.below)} SKUs below threshold`} {...sSvc} />,
+              <ExecTile key="IN-06" id="IN-06" label="Stock-out Risk" value={pct1(sv.risk)} rag={rag(sv.risk, 'stockoutRisk')} band="stockoutRisk" more={`${full(sv.below)} of ${full(sv.above + sv.below)} SKUs below threshold`} {...sSvc} />,
             ],
             lead: (
-              <ChartCard dataKpi="IN-11" title="Branch Service Ranking" subtitle="Simple average across classes, not SKU-weighted · bottom 5 highlighted" colSpan={{ base: 12, lg: 5 }} height="460px" isLoading={sMatrix.isLoading}>
+              <ChartCard dataKpi="IN-11" title="Branch Service Ranking" subtitle="Average across classes" colSpan={{ base: 12, lg: 5 }} height="460px" isLoading={sMatrix.isLoading}>
                 {CardState({ ...sMatrix, empty: !ranking.length }) ?? (
                   <HBars
                     sort="keep"

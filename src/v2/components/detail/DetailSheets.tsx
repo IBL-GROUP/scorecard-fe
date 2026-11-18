@@ -301,6 +301,9 @@ function KpiBody({ item, data }: { item: Extract<DetailItem, { kind: 'kpi' }>; d
       </Flex>
       <Flex direction="column" gap="2px" mb={4} fontSize="13px" color={colors.bodyText}>
         {item.variance && <Text>{item.variance}</Text>}
+        {item.more?.map((m, i) => (
+          <Text key={i}>{m}</Text>
+        ))}
         {delta && (
           <Text>
             {delta.value == null ? 'No comparison' : `${delta.value > 0 ? '▲' : delta.value < 0 ? '▼' : '■'} ${Math.abs(delta.value).toFixed(1)}${delta.unit === 'pts' ? ' pts' : '%'} ${delta.label}`}

@@ -193,18 +193,18 @@ export function DistributionPage({ data }: { data: DashboardData }) {
               value={pct1(rd.compliance)}
               rag={rag(rd.compliance, 'rdCompliance')}
               band="rdCompliance"
-              caption={`${rd.reporting} of ${rd.count} RDs reported today`}
+              more={`${rd.reporting} of ${rd.count} RDs reported today`}
               delta={{ value: complianceDelta, unit: 'pts', label: 'vs previous day' }}
               {...sRdCmp}
             />,
-            <ExecTile key="DH-02" id="DH-02" label="Stock Reported Today" value={pkr(rd.reportedToday)} caption="Value of stock RDs reported today" {...sRd} />,
+            <ExecTile key="DH-02" id="DH-02" label="Stock Reported Today" value={pkr(rd.reportedToday)} more="Value of stock RDs reported today" {...sRd} />,
             <ExecTile key="DH-03"
               id="DH-03"
               label="Stale Stock Value"
               value={pkr(rd.staleValue)}
               rag={rag(rd.staleValuePct, 'staleValuePct')}
               band="staleValuePct"
-              caption={`${pct1(rd.staleValuePct)} of stock known only from older reports`}
+              more={`${pct1(rd.staleValuePct)} of stock known only from older reports`}
               delta={{ value: rd.staleValue != null && rd.cmp.staleValue ? ((rd.staleValue - rd.cmp.staleValue) / rd.cmp.staleValue) * 100 : null, label: 'vs previous day', upIsGood: false }}
               {...sRdCmp}
             />,
@@ -239,7 +239,7 @@ export function DistributionPage({ data }: { data: DashboardData }) {
               <CardGrid mb={3}>
                 <ChartCard
                   title="Compliance by Branch"
-                  subtitle="Share of each branch's RDs that reported today · click a bar to filter this tab"
+                  subtitle="Share of each branch's RDs that reported today"
                   colSpan={12}
                   height={`${Math.max(260, byBranch.length * 24 + 40)}px`}
                   isLoading={sRd.isLoading}
@@ -311,9 +311,9 @@ export function DistributionPage({ data }: { data: DashboardData }) {
           key: 'stock',
           title: 'Stock in hand',
           tiles: [
-            <ExecTile key="DH-11" id="DH-11" label="Current Stock in Hand" value={units(rd.current.qty)} valueSuffix={pkr(rd.current.value)} caption={`${pct1(rd.current.share)} of total`} {...sRd} />,
-            <ExecTile key="DH-12" id="DH-12" label="Previous Stock in Hand" value={units(rd.previous.qty)} valueSuffix={pkr(rd.previous.value)} caption={`${pct1(rd.previous.share)} of total`} {...sRd} />,
-            <ExecTile key="DH-13" id="DH-13" label="Total Stock in Hand" value={units(rd.total.qty)} valueSuffix={pkr(rd.total.value)} caption="Includes earlier reports" {...sRd} />,
+            <ExecTile key="DH-11" id="DH-11" label="Current Stock in Hand" value={units(rd.current.qty)} valueSuffix={pkr(rd.current.value)} more={`${pct1(rd.current.share)} of total`} {...sRd} />,
+            <ExecTile key="DH-12" id="DH-12" label="Previous Stock in Hand" value={units(rd.previous.qty)} valueSuffix={pkr(rd.previous.value)} more={`${pct1(rd.previous.share)} of total`} {...sRd} />,
+            <ExecTile key="DH-13" id="DH-13" label="Total Stock in Hand" value={units(rd.total.qty)} valueSuffix={pkr(rd.total.value)} more="Includes earlier reports" {...sRd} />,
           ],
           details: (
             <>

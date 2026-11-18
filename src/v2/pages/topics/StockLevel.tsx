@@ -79,23 +79,23 @@ export function useStockLevelTopic(d: TabData, clsChip: string | null): Topic {
     key: 'stock',
     title: 'Stock level',
     tiles: [
-      <ExecTile key="IN-03" id="IN-03" label="Coverage Index" value={pct1(s.coverage)} rag={rag(s.coverage, 'coverage')} band="coverage" variance={`${days(s.totalCd)} vs ${days(s.wBm)} benchmark`} {...sStock} />,
+      <ExecTile key="IN-03" id="IN-03" label="Coverage Index" value={pct1(s.coverage)} rag={rag(s.coverage, 'coverage')} band="coverage" more={`${days(s.totalCd)} vs ${days(s.wBm)} benchmark`} {...sStock} />,
       <ExecTile key="IN-04"
         id="IN-04"
         label="Excess Inventory Value"
         value={pkr(s.excess.value)}
         rag={excessRag}
         band="excessPct"
-        variance={`${pct1(s.excess.pct)} of FG at cost`}
+        more={`${pct1(s.excess.pct)} of FG at cost`}
         {...sStock}
       />,
-      <ExecTile key="IN-05" id="IN-05" label="Cover Shortfall Value (TP)" value={pkr(s.shortfallValue)} rag={sStock.isLoading ? null : shortRag} caption={s.shortfall.length ? `Below threshold: ${s.shortfall.map((x) => x.cls).join(', ')}` : 'No class below threshold'} {...sStock} />,
+      <ExecTile key="IN-05" id="IN-05" label="Cover Shortfall Value (TP)" value={pkr(s.shortfallValue)} rag={sStock.isLoading ? null : shortRag} more={s.shortfall.length ? `Below threshold: ${s.shortfall.map((x) => x.cls).join(', ')}` : 'No class below threshold'} {...sStock} />,
     ],
     lead: (
       <ChartCard
         dataKpi="IN-07"
         title="Cover Days vs Benchmark by Class"
-        subtitle={`${leadBasis === 'TP' ? 'Cover days valued at trade price (TP)' : 'Cover days valued at item cost (EFP) · coverage % and status stay on TP'}${coverDays == null ? '' : ` · daily target = month target ÷ ${coverDays} days`}`}
+        subtitle={`${leadBasis === 'TP' ? 'Valued at trade price (TP)' : 'Valued at item cost (EFP)'}${coverDays == null ? '' : ` · target ÷ ${coverDays} days`}`}
         colSpan={{ base: 12, lg: 6 }}
         height="280px"
         isLoading={sStock.isLoading}
@@ -197,7 +197,7 @@ export function useStockLevelTopic(d: TabData, clsChip: string | null): Topic {
           </ChartCard>
         </CardGrid>
         <CardGrid mb={3}>
-          <ChartCard dataKpi="IN-08" title="Excess / Shortfall Bridge" subtitle="FG at cost → less excess above benchmark → right-sized; shortfall (TP) in red" colSpan={12} height="460px" isLoading={sStock.isLoading}>
+          <ChartCard dataKpi="IN-08" title="Excess / Shortfall Bridge" subtitle="FG at cost to right-sized" colSpan={12} height="460px" isLoading={sStock.isLoading}>
             {CardState({ ...sStock, empty: !s.cls.length }) ?? (
               <Flex direction="column" h="100%">
               <Box flex={1} minH={0}>

@@ -12,7 +12,6 @@ import { useDetail } from '@/v2/features/detail';
 import { useNav } from '@/v2/features/nav';
 import { useStore } from '@/v2/features/store';
 import { TABS, type TabKey } from '@/v2/features/tabs';
-import { Sparkline } from './charts';
 
 export interface TileDelta {
   /** Change, in % or points. null = "No comparison". */
@@ -34,8 +33,9 @@ export interface ExecTileProps {
   bandUnit?: string;
   /** Variance against target, e.g. "vs pace: −18.3M". */
   variance?: ReactNode;
+  /** Supporting figures shown in the detail sheet only, not on the tile (FR-EXEC-055). */
+  more?: ReactNode | ReactNode[];
   delta?: TileDelta;
-  spark?: (number | null)[];
   caption?: ReactNode;
   isLoading?: boolean;
   /** true = failed to load; 'pending' = source not in BigQuery yet (SOURCE_PENDING). */
@@ -62,18 +62,13 @@ export interface TileSplitPart {
   color: string;
 }
 
-/** The split line under a tile's value, as Sales Pulse 2.0 draws it: one bar, then each part with its share. */
+/** The split under a tile's value: each part with its amount and share, as text; no bar (no graph on a tile, FR-EXEC-056). */
 function SplitLine({ parts }: { parts: TileSplitPart[] }) {
   const total = parts.reduce((a, x) => a + Math.max(0, x.value), 0);
   if (!total) return null;
   return (
     <Box mt="4px" data-split>
-      <Flex h="6px" borderRadius="3px" overflow="hidden" bg={colors.sunkBg} role="img" aria-label={parts.map((x) => `${x.label} ${x.text}`).join(', ')}>
-        {parts.map((x) => (
-          <Box key={x.label} h="100%" w={`${(Math.max(0, x.value) / total) * 100}%`} bg={x.color} title={`${x.label}: ${x.text}`} />
-        ))}
-      </Flex>
-      <Flex mt="5px" gap="4px 12px" wrap="wrap" fontSize="11.5px" color={colors.mutedText}>
+      <Flex gap="4px 12px" wrap="wrap" fontSize="11.5px" color={colors.mutedText}>
         {parts.map((x) => (
           <Flex key={x.label} align="center" gap="5px" whiteSpace="nowrap" data-split-part={x.label}>
             <Box w="8px" h="8px" borderRadius="2px" bg={x.color} flexShrink={0} />
@@ -105,7 +100,7 @@ export function ExecTile(p: ExecTileProps) {
       : undefined;
   const clickable = !p.locked && !p.isLoading && !p.error;
   const openSheet = () =>
-    detail.open({ kind: 'kpi', id: p.id, label: p.label, value: p.value, valueSuffix: p.valueSuffix, rag: p.rag, band: p.band, bandUnit: p.bandUnit, variance: p.variance, delta: p.delta, caption: p.caption, action });
+    detail.open({ kind: 'kpi', id: p.id, label: p.label, value: p.value, valueSuffix: p.valueSuffix, rag: p.rag, band: p.band, bandUnit: p.bandUnit, variance: p.variance, delta: p.delta, caption: p.caption, more: p.more == null ? undefined : ([] as ReactNode[]).concat(p.more), action });
   // "1.0 only" in the header hides tiles that carry no 1.0 metric (FR-EXEC-024).
   if (!shows(p.id)) return null;
   return (
@@ -207,7 +202,6 @@ export function ExecTile(p: ExecTileProps) {
               {p.caption}
             </Text>
           )}
-          {p.spark && p.spark.filter((v) => v != null).length > 1 && <Sparkline values={p.spark} />}
           {p.scopeNote && (
             <Text fontSize="11px" color={colors.mutedText}>
               ⓘ {p.scopeNote}

@@ -101,7 +101,9 @@ test('TC-EXEC-049 horizontal bars in the Sales Pulse style: A→Z rows, value ba
   const names = await fill.locator('[data-hbar]').evaluateAll((els) => els.map((e) => e.getAttribute('data-hbar') ?? ''));
   expect(names.length).toBeGreaterThan(1);
   expect(names).toEqual([...names].sort((x, y) => x.localeCompare(y, undefined, { numeric: true, sensitivity: 'base' })));
-  await expect(fill.getByText(/% target/).first()).toBeVisible();
+  // The target is named once, in the legend; rows carry no "95% target" note (FR-EXEC-055).
+  await expect(fill.getByText(/^Target \d+%$/).first()).toBeVisible();
+  await expect(fill.locator('[data-hbar]').filter({ hasText: /% target/ })).toHaveCount(0);
   // The other horizontal bar charts: on a panel, or in its Details sheet.
   const checks: [tab: string, sheet: string | null, kpis: string[]][] = [
     ['revenue', null, ['RV-11']],
@@ -178,12 +180,13 @@ test('TC-EXEC-053 Cover days input: the days the month target is spread over; co
   expect(realErrors(t)).toEqual([]);
 });
 
-test('TC-EXEC-055 Sales (TP) tile as Sales Pulse: value, % of target to date, comparison, and a bar split Rd / Ibl / Pharma Healthcare to trade', async ({ page }) => {
+test('TC-EXEC-055 Sales (TP) tile as Sales Pulse: value, comparison and a bar split Rd / Ibl / Pharma Healthcare to trade; % of target to date in its detail page', async ({ page }) => {
   const t = await stubServices(page);
   await page.goto('./?tab=revenue');
   await settled(page);
   const tile = page.locator('[data-kpi="RV-01"][data-tile]');
-  await expect(tile).toContainText(/\d+% of [\d.,]+[MK]? target to date/);
+  // Achievement to date moved off the tile into its detail page (FR-EXEC-055).
+  await expect(tile).not.toContainText('target to date');
   await expect(tile.locator('[data-sales-comparison]')).toContainText(/vs [\d.,]+[MK]? in /);
   const split = tile.locator('[data-split]');
   await expect(split).toBeVisible();
@@ -193,6 +196,8 @@ test('TC-EXEC-055 Sales (TP) tile as Sales Pulse: value, % of target to date, co
   const shares = (await split.innerText()).match(/\((\d+(?:\.\d)?)%\)/g)!.map((x) => Number(x.slice(1, -2)));
   expect(Math.round(shares.reduce((a, b) => a + b, 0))).toBe(100);
   expect(t.apiCalls.some((x) => x.path === '/sales-summary/by-sales-type')).toBe(true);
+  await tile.locator('button[aria-label$=": details"]').click();
+  await expect(page.getByRole('dialog').getByText(/\d+% of [\d.,]+[MK]? target to date/)).toBeVisible();
   expect(realErrors(t)).toEqual([]);
 });
 

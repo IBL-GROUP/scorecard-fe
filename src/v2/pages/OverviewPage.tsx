@@ -196,9 +196,8 @@ export function OverviewPage({ data }: { data: DashboardData }) {
         value={tiles.att.value}
         rag={tiles.att.rag}
         band="attainment"
-        variance={p.varIbl == null ? undefined : `vs pace: ${p.varIbl >= 0 ? '+' : '−'}${money(Math.abs(p.varIbl))}`}
+        more={p.varIbl == null ? undefined : `vs pace: ${p.varIbl >= 0 ? '+' : '−'}${money(Math.abs(p.varIbl))}`}
         delta={{ value: p.attIbl != null && p.attIblCmp != null ? p.attIbl - p.attIblCmp : null, unit: 'pts', label: cl }}
-        spark={p.spark}
         {...st.att}
         goTo={{ tab: 'revenue', focus: 'RV-02' }}
       />
@@ -211,7 +210,8 @@ export function OverviewPage({ data }: { data: DashboardData }) {
         value={tiles.proj.value}
         rag={tiles.proj.rag}
         band="projected"
-        caption={p.single ? (p.projectedFinal ? 'Final: the month is complete' : `If today's run-rate holds · ${p.days.pct}% of the month gone`) : 'Shown for a single month only'}
+        caption={p.single ? undefined : 'Single month only'}
+        more={p.single ? (p.projectedFinal ? 'Final: the month is complete' : `If today's run-rate holds · ${p.days.pct}% of the month gone`) : undefined}
         {...st.att}
         goTo={{ tab: 'revenue', focus: 'RV-02' }}
       />
@@ -224,7 +224,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
         value={tiles.bud.value}
         rag={tiles.bud.rag}
         band="attainment"
-        variance={p.varBud == null ? undefined : `vs pace: ${p.varBud >= 0 ? '+' : '−'}${money(Math.abs(p.varBud))}`}
+        more={p.varBud == null ? undefined : `vs pace: ${p.varBud >= 0 ? '+' : '−'}${money(Math.abs(p.varBud))}`}
         delta={{ value: p.attBud != null && p.attBudCmp != null ? p.attBud - p.attBudCmp : null, unit: 'pts', label: cl }}
         {...st.bud}
         goTo={{ tab: 'revenue', focus: 'RV-04' }}
@@ -238,7 +238,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
         value={tiles.svc.value}
         rag={tiles.svc.rag}
         band="serviceLevel"
-        caption={sv.worst?.avg != null ? `Lowest: ${sv.worst.branch} ${Math.round(sv.worst.avg)}%` : undefined}
+        more={sv.worst?.avg != null ? `Lowest: ${sv.worst.branch} ${Math.round(sv.worst.avg)}%` : undefined}
         {...st.svc}
         goTo={{ tab: 'inventory', focus: 'IN-10' }}
       />
@@ -252,7 +252,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
         rag={tiles.fill.rag}
         band="fillRate"
         delta={{ value: f.pct != null && f.cmpPct != null ? f.pct - f.cmpPct : null, unit: 'pts', label: cl }}
-        caption="By quantity"
+        more="By quantity"
         {...st.fill}
         goTo={{ tab: 'fulfilment', focus: 'OP-01' }}
       />
@@ -265,7 +265,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
         value={tiles.cov.value}
         rag={tiles.cov.rag}
         band="coverage"
-        variance={`${days(s.totalCd)} cover vs ${days(s.wBm)} benchmark`}
+        more={`${days(s.totalCd)} cover vs ${days(s.wBm)} benchmark`}
         {...st.cover}
         goTo={{ tab: 'revenue', focus: 'IN-03' }}
       />
@@ -278,23 +278,10 @@ export function OverviewPage({ data }: { data: DashboardData }) {
         value={pkr(wcNow?.total)}
         valueSuffix="at cost"
         delta={{ value: change(wcNow?.total, wcPrev?.total), label: 'vs previous month-end', upIsGood: false }}
-        spark={wc.map((x) => x.total || null)}
         {...st.wc}
         goTo={{ tab: 'inventory', focus: 'IN-01' }}
-      >
-        <Flex h="6px" borderRadius="3px" overflow="hidden" title="Finished goods / WIP / RMPM" mt="2px">
-          {wcNow && wcNow.total > 0 && (
-            <>
-              <Box w={`${(wcNow.fg / wcNow.total) * 100}%`} bg={colors.sales} />
-              <Box w={`${(wcNow.wip / wcNow.total) * 100}%`} bg={colors.target} />
-              <Box w={`${(wcNow.rpm / wcNow.total) * 100}%`} bg={colors.prior} />
-            </>
-          )}
-        </Flex>
-        <Text fontSize="11px" color={colors.mutedText}>
-          FG {money(wcNow?.fg)} · WIP {money(wcNow?.wip)} · RMPM {money(wcNow?.rpm)}
-        </Text>
-      </ExecTile>
+        more={`FG ${money(wcNow?.fg)} · WIP ${money(wcNow?.wip)} · RMPM ${money(wcNow?.rpm)}`}
+      />
     ),
     exc: (
       <ExecTile
@@ -305,7 +292,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
         valueSuffix="at cost"
         rag={tiles.exc.rag}
         band="excessPct"
-        variance={`${pct1(s.excess.pct)} of finished goods above benchmark`}
+        more={`${pct1(s.excess.pct)} of finished goods above benchmark`}
         {...st.cover}
         goTo={{ tab: 'revenue', focus: 'IN-08' }}
       />
@@ -318,7 +305,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
         value={tiles.rd.value}
         rag={tiles.rd.rag}
         band="rdCompliance"
-        caption={`${rd.reporting} of ${rd.count} RDs reported today`}
+        more={`${rd.reporting} of ${rd.count} RDs reported today`}
         scopeNote={DATES_ONLY}
         {...st.rd}
         goTo={{ tab: 'distribution', focus: 'DH-01' }}
@@ -327,7 +314,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
   };
 
   const attTrend = (
-    <ChartCard title="Sales achievement, 6 months" subtitle="All classes, vs IBL target · 100% = on target · this month pace-adjusted" colSpan={6} height="240px" isLoading={st.att.isLoading} help={helpFor('RV-06')} dataKpi="EX-01">
+    <ChartCard title="Sales achievement, 6 months" subtitle="All classes, vs IBL target" colSpan={6} height="240px" isLoading={st.att.isLoading} help={helpFor('RV-06')} dataKpi="EX-01">
       {CardState({ locked: st.att.locked, error: st.att.error, empty: !p.trend.length }) ?? (
         <Flex direction="column" h="100%">
         <Box flex={1} minH={0}>
@@ -356,7 +343,7 @@ export function OverviewPage({ data }: { data: DashboardData }) {
   );
 
   const wcTrend = (
-    <ChartCard title="Working capital composition, 6 month-ends" subtitle="Finished goods at cost, WIP and RMPM" colSpan={6} height="240px" isLoading={st.wc.isLoading} help={helpFor('IN-09')} dataKpi="EX-07">
+    <ChartCard title="Working capital composition, 6 month-ends" subtitle="At cost" colSpan={6} height="240px" isLoading={st.wc.isLoading} help={helpFor('IN-09')} dataKpi="EX-07">
       {CardState({ locked: st.wc.locked, error: st.wc.error, empty: !wc.some((x) => x.total > 0) }) ?? (
         <DsBarChart
           data={wc.map((x) => ({ month: monthLabel(x.month), fg: x.fg, wip: x.wip, rpm: x.rpm }))}

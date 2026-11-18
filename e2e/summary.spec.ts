@@ -83,3 +83,42 @@ test('TC-EXEC-058 Forecast Accuracy IBL: Run-rate required replaces Projected mo
   await expect(ibl.locator('[data-kpi="RV-02"] [aria-label="6-month trend"]')).toHaveCount(0);
   expect(realErrors(t)).toEqual([]);
 });
+
+test('TC-EXEC-064 tiles show only label, value and status: supporting figures move to the detail page; a filters-ignored note once per panel', async ({ page }) => {
+  const t = await stubServices(page);
+  await page.goto('./?tab=revenue');
+  await settled(page);
+  // No "vs pace", "Running …/day", "Need …/day more" or "On course" on any tile face (FR-EXEC-055).
+  await expect(page.locator('[data-tile]').filter({ hasText: /vs pace|Running [\d.,]+[MK]?\/day|\/day more|On course for/ })).toHaveCount(0);
+  // They are in the tile's detail page instead.
+  const budget = page.locator('section[aria-label="Budget Accuracy TSCL"]');
+  await budget.locator('[data-kpi="RV-04"] button[aria-label$=": details"]').click();
+  await expect(page.getByRole('dialog').getByText(/vs pace: [+−]/)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await budget.locator('[data-kpi="RV-05"] button[aria-label$=": details"]').click();
+  await expect(page.getByRole('dialog').getByText(/Running [\d.,]+[MK]?\/day/)).toBeVisible();
+  await page.keyboard.press('Escape');
+  // Production ignores the filters: said once in the panel header, not on each tile.
+  await page.goto('./?tab=fulfilment');
+  await settled(page);
+  const production = page.locator('section[aria-label="Production"]');
+  await expect(production.locator('[data-topic-note]')).toContainText('Filters not applied: dates only');
+  await expect(production.locator('[data-tile]').filter({ hasText: 'Filters not applied' })).toHaveCount(0);
+  expect(realErrors(t)).toEqual([]);
+});
+
+test('TC-EXEC-065 no graph on any tile: no sparkline, no split bar, no chart; the Sales (TP) split stays as text', async ({ page }) => {
+  const t = await stubServices(page);
+  for (const tab of ['overview', 'revenue', 'inventory', 'fulfilment', 'distribution']) {
+    await page.goto(`./?tab=${tab}`);
+    await settled(page);
+    await expect(page.locator('[data-tile]').first(), `${tab}: tiles`).toBeVisible();
+    await expect(page.locator('[data-tile] [aria-label="6-month trend"]'), `${tab}: sparklines`).toHaveCount(0);
+    await expect(page.locator('[data-tile] [data-split] [role="img"]'), `${tab}: split bars`).toHaveCount(0);
+    await expect(page.locator('[data-tile] .recharts-wrapper'), `${tab}: charts`).toHaveCount(0);
+  }
+  await page.goto('./?tab=revenue');
+  await settled(page);
+  await expect(page.locator('[data-kpi="RV-01"][data-tile] [data-split-part]')).toHaveCount(3);
+  expect(realErrors(t)).toEqual([]);
+});

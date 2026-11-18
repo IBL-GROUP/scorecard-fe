@@ -32,6 +32,8 @@ export interface Topic {
   details?: ReactNode;
   /** Instead of a Details sheet, the panel button runs this (Overview: open the domain tab). */
   open?: { label: string; run: () => void };
+  /** A scope note shown once in the panel header instead of on each tile and chart (FR-EXEC-055). */
+  note?: string;
 }
 
 type Counts = Record<Rag, number>;
@@ -145,6 +147,11 @@ function TopicPanel({ p, fit, span, isOpen, onDetails }: { p: Prepared; fit: boo
           </Text>
         )}
         <Verdict counts={counts} />
+        {topic.note && (
+          <Text fontSize="11px" color={colors.mutedText} data-topic-note>
+            ⓘ {topic.note}
+          </Text>
+        )}
         <Box ml="auto" />
         {topic.open && (
           <Box {...panelButton} onClick={topic.open.run}>

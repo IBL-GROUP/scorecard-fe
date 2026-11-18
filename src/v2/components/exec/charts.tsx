@@ -16,24 +16,6 @@ export const tooltipStyle = {
   itemStyle: { color: colors.bodyText },
 } as const;
 
-export function Sparkline({ values, color = colors.sales, height = 26 }: { values: (number | null)[]; color?: string; height?: number }) {
-  const pts = values.map((v, i) => ({ v, i })).filter((p): p is { v: number; i: number } => p.v != null);
-  if (pts.length < 2) return null;
-  const min = Math.min(...pts.map((p) => p.v));
-  const max = Math.max(...pts.map((p) => p.v));
-  const w = 120;
-  const x = (i: number) => (i / (values.length - 1)) * (w - 4) + 2;
-  const y = (v: number) => (max === min ? height / 2 : height - 3 - ((v - min) / (max - min)) * (height - 6));
-  const d = pts.map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ');
-  const last = pts[pts.length - 1];
-  return (
-    <svg width="100%" height={height} viewBox={`0 0 ${w} ${height}`} preserveAspectRatio="none" aria-label="6-month trend" role="img">
-      <path d={d} fill="none" stroke={color} strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
-      <circle cx={x(last.i)} cy={y(last.v)} r="2.2" fill={color} />
-    </svg>
-  );
-}
-
 /** The 1.0 accuracy gauge, kept (RV-14, RV-15): a half-ring from 0 to 120%. */
 /** The 1.0 gauge footer (FR-EXEC-040): target and achieved side by side, then how far above or below target. */
 export interface GaugeFooter {

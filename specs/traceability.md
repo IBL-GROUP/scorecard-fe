@@ -33,8 +33,8 @@ means at least one of its test cases points at a test file.
 | NAV | 11 | 8 | 0 | 1 | 0 |
 | TBL | 5 | 4 | 0 | 1 | 0 |
 | SPEC | 15 | 15 | 15 | 3 | 2 |
-| EXEC | 77 | 74 | 55 | 8 | 2 |
-| **Total** | 220 | 181 | 71 | 29 | 28 |
+| EXEC | 79 | 76 | 57 | 8 | 2 |
+| **Total** | 222 | 183 | 73 | 29 | 28 |
 
 ## MET — Supply-chain metrics (domain)
 
@@ -355,6 +355,8 @@ Open gaps: GAP-030, GAP-031
 | FR-EXEC-052 | Proposed | `src/v2/pages/InventoryPage.tsx#InventoryPage`<br>`src/v2/features/tabs.ts#SCROLL_TABS`<br>`src/v2/shell/Shell.tsx#Shell`<br>`src/v2/components/exec/AreaLayout.tsx#AreaLayout` | TC-EXEC-032, TC-EXEC-060 | Yes | — | — |
 | FR-EXEC-053 | Proposed | `src/v2/components/detail/DetailSheets.tsx#DetailLayer` | TC-EXEC-061 | Yes | — | — |
 | FR-EXEC-054 | Proposed | `src/v2/features/derive.ts#plan`<br>`src/v2/pages/RevenuePage.tsx#RevenuePage`<br>`src/v2/features/kpis.ts#runRate` | TC-EXEC-063 | Yes | — | — |
+| FR-EXEC-055 | Proposed | `src/v2/components/exec/ExecTile.tsx#more`<br>`src/v2/components/detail/DetailSheets.tsx#KpiBody`<br>`src/v2/components/exec/AreaLayout.tsx#note`<br>`src/v2/pages/RevenuePage.tsx#RevenuePage`<br>`src/v2/pages/OverviewPage.tsx#OverviewPage`<br>`src/v2/pages/InventoryPage.tsx#InventoryPage`<br>`src/v2/pages/FulfilmentPage.tsx#FulfilmentPage`<br>`src/v2/pages/DistributionPage.tsx#DistributionPage`<br>`src/v2/pages/topics/StockLevel.tsx#useStockLevelTopic`<br>`src/v2/pages/topics/PlanAlignment.tsx#usePlanAlignmentTopic` | TC-EXEC-049, TC-EXEC-055, TC-EXEC-064 | Yes | — | — |
+| FR-EXEC-056 | Proposed | `src/v2/components/exec/ExecTile.tsx#ExecTile`<br>`src/v2/components/exec/ExecTile.tsx#SplitLine` | TC-EXEC-055, TC-EXEC-065 | Yes | — | — |
 | NFR-EXEC-001 | Proposed | `src/v2/components/exec/Panels.tsx#TileRow` | TC-EXEC-011, TC-EXEC-029 | Yes | — | — |
 | NFR-EXEC-002 | Proposed | `src/v2/constants/theme.ts#themeCss` | TC-EXEC-011 | No | — | — |
 | NFR-EXEC-003 | Proposed | `src/v2/components/exec/ExecTile.tsx#ExecTile`<br>`src/v2/components/exec/Rag.tsx#RagBadge`<br>`src/v2/components/exec/Rag.tsx#RagDot`<br>`src/v2/components/select/MultiSelect.tsx#MultiSelect`<br>`src/v2/components/data-table/DataTable.tsx#DataTable`<br>`src/v2/constants/theme.ts#light` | TC-EXEC-028 | Yes | — | — |

@@ -140,7 +140,6 @@ export function plan(d: TabData, w: Window) {
     budShare,
     /** `YYYY-MM` of the month that is still running (or the window's last month). */
     paceMonth: curYm,
-    spark: trend.map((r) => r.Total as number | null),
     currentMonth: w.end.slice(0, 7),
     iblRows,
     // No TSCL budget loaded → no alignment (the API sends 0, which would read as a Red 0%).

@@ -26,6 +26,8 @@ export type DetailItem =
       variance?: ReactNode;
       delta?: TileDelta;
       caption?: ReactNode;
+      /** Supporting figures kept off the tile face (FR-EXEC-055). */
+      more?: ReactNode[];
       action?: SheetAction;
     }
   | { kind: 'class'; cls: string }
