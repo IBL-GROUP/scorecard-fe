@@ -4,11 +4,11 @@
 
 import { Box, Flex, Text } from '@chakra-ui/react';
 import { useEffect, useRef, useState } from 'react';
-import { ScrollRestoration, useSearchParams } from 'react-router-dom';
+import { ScrollRestoration } from 'react-router-dom';
 import { colors } from '@/v2/constants/theme';
 import { DEMO_DATA } from '@/v2/config/api';
 import { useDashboardData } from '@/v2/features/data';
-import { useActiveTab, useNav, scrollToKpi } from '@/v2/features/nav';
+import { useActiveTab, useFocus, useNav, scrollToKpi } from '@/v2/features/nav';
 import { useStore } from '@/v2/features/store';
 import { SCROLL_TABS, TABS } from '@/v2/features/tabs';
 import { tabHasItems } from '@/v2/features/catalog';
@@ -22,8 +22,8 @@ import { setUsageTab } from '@/v2/features/usage';
 import { DetailLayer } from '@/v2/components/detail/DetailSheets';
 import { ErrorBoundary } from '@/v2/components/ErrorBoundary';
 import { notify, NotifyHost } from '@/v2/components/notify';
-import { OverviewPage } from '@/v2/pages/OverviewPage';
-import { RevenuePage } from '@/v2/pages/RevenuePage';
+import { PulsePage } from '@/v2/pages/PulsePage';
+import { SummaryPage } from '@/v2/pages/SummaryPage';
 import { InventoryPage } from '@/v2/pages/InventoryPage';
 import { FulfilmentPage } from '@/v2/pages/FulfilmentPage';
 import { DistributionPage } from '@/v2/pages/DistributionPage';
@@ -32,7 +32,6 @@ export function Shell() {
   const tab = useActiveTab();
   const nav = useNav();
   const st = useStore();
-  const [sp] = useSearchParams();
   const [demoOpen, setDemoOpen] = useState(false);
   const data = useDashboardData(tab);
   const fitWindow = useFitScreen();
@@ -59,7 +58,7 @@ export function Shell() {
   }, [failed]);
 
   // Scroll to the focused KPI after a tile click (PRD 5.4).
-  const focus = sp.get('focus');
+  const focus = useFocus();
   useEffect(() => {
     if (!focus) return;
     const id = setTimeout(() => scrollToKpi(focus), 120);
@@ -103,10 +102,8 @@ export function Shell() {
 
       <Box
         as="main"
-        px={{ base: 4, md: 6 }}
+        px={4}
         py={fit ? 3 : 4}
-        maxW="1920px"
-        mx="auto"
         // Desktop: the tab fills the window below the header and the page does not scroll (NFR-EXEC-004).
         h={fit ? 'calc(100vh - var(--sp-top, 110px))' : undefined}
         overflow={fit ? 'hidden' : undefined}
@@ -116,8 +113,8 @@ export function Shell() {
           <DataAsOf closing={t.closing} freshness={t.freshness} />
         </Box>
         <ErrorBoundary>
-        {activeTab === 'overview' && <OverviewPage data={data} />}
-        {activeTab === 'revenue' && <RevenuePage data={data} />}
+        {activeTab === 'overview' && <PulsePage data={data} />}
+        {activeTab === 'revenue' && <SummaryPage data={data} />}
         {activeTab === 'inventory' && <InventoryPage data={data} />}
         {activeTab === 'fulfilment' && <FulfilmentPage data={data} />}
         {activeTab === 'distribution' && <DistributionPage data={data} />}

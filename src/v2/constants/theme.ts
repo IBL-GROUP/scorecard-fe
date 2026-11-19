@@ -8,6 +8,7 @@ import { compact } from '@/v2/features/format';
 // Colours carry meaning, the same way everywhere:
 //   Sales        = Cobalt          → `sales` / `current`
 //   earlier sales (B period) = light Cobalt → `prior` (same measure, earlier)
+//   same days last year = muted red (#BA5A5A) → `lastYear` (the third comparison bar)
 //   Target       = Teal            → `target` (lines, bars, the 100% marker)
 //   good / close / behind = green / amber / red, always with ▲▼ or a label
 
@@ -24,9 +25,7 @@ const light: Palette = {
 
   sales: '#233A87',
   salesSoft: '#E9EDF8',
-  // good / warn / target darkened slightly in story S5 so text in these
-  // colours reaches WCAG 2.1 AA (4.5:1) on white and on their soft tints.
-  target: '#0A746C',
+  target: '#0E8F86',
   targetSoft: '#E2F4F2',
 
   // A soft Cobalt-grey page so the white cards stand out (light mode was
@@ -44,11 +43,11 @@ const light: Palette = {
   bodyText: '#374151',
   mutedText: '#5F636F',
 
-  good: '#18703B',
+  good: '#1D7F45',
   goodSoft: '#E3F3EA',
   bad: '#C0392B',
   badSoft: '#FBE7E5',
-  warn: '#8F5C0E',
+  warn: '#B7791F',
   warnSoft: '#FDF0DC',
 
   navbarBg: '#FFFFFF',
@@ -56,6 +55,7 @@ const light: Palette = {
   navbarActive: '#E9EDF8',
 
   prior: '#AFBCE6',
+  lastYear: '#BA5A5A',
   current: '#233A87',
 
   gridStroke: '#E7E9ED',
@@ -113,6 +113,7 @@ const dark: Palette = {
   navbarActive: '#2B2926',
 
   prior: '#5E5A6E',
+  lastYear: '#BA5A5A',
   current: '#8EA2F0',
 
   gridStroke: '#2A2825',
@@ -166,7 +167,20 @@ const svgTextCss = ['9', '10', '10.5', '11', '11.5', '12', '12.5', '13', '14', '
   .map((n) => `svg text[font-size="${n}"],svg tspan[font-size="${n}"]{font-size:${n}px}`)
   .join('');
 
-export const themeCss = baseCss + motionCss + svgTextCss;
+// ── Tables ──
+// .sp-pin on a table row (a grid inside the sideways scroller) keeps its first
+// cell — the row's name — in place while the figures scroll under it. The cell
+// takes the row's own background (hover, selected), so rows need a solid one.
+// A transparent left border the width of the row's padding (--pin-px, 12px by
+// default) is painted with that background, so the name keeps its margin from
+// the edge. isolation keeps each row's pinned cell under the sticky header and
+// Total rows. That cell covers the row's left edge, so a selected row's bar
+// (aria-current, inset box-shadow on the row) is drawn on the cell as well.
+const tableCss = `.sp-pin{isolation:isolate}
+.sp-pin>:first-child{position:sticky;left:0;z-index:1;background:inherit;margin-left:calc(-1 * var(--pin-px,12px));border-left:var(--pin-px,12px) solid transparent}
+.sp-pin[aria-current]>:first-child{background-image:linear-gradient(${v('brand')},${v('brand')});background-size:3px 100%;background-repeat:no-repeat;background-origin:border-box}`;
+
+export const themeCss = baseCss + motionCss + svgTextCss + tableCss;
 
 export const colors = {
   brand: v('brand'),
@@ -212,6 +226,7 @@ export const colors = {
   navbarActive: v('navbarActive'),
 
   prior: v('prior'),
+  lastYear: v('lastYear'),
   current: v('current'),
 
   gridStroke: v('gridStroke'),
@@ -245,6 +260,28 @@ export const colors = {
   bandSales: v('bandSales'),
   bandTarget: v('bandTarget'),
 } as const;
+
+/**
+ * One decimal at most, and none when it is zero: 222.2 · 222 · 1,027.7.
+ * Every money, percent and points figure on the dashboard goes through this.
+ */
+export function fmt1(n: number): string {
+  const s = n.toLocaleString('en-US', { maximumFractionDigits: 1 });
+  return s === '-0' ? '0' : s;
+}
+
+// One rule for every number on the dashboard: millions, never B or K.
+//  - Below 100,000 → the exact number: 1,255 · 10,646 · 50,623
+//  - 100,000 and up → millions with fmt1: 0.8M · 53.8M · 2,906.6M · 240M
+export const SMALL_LIMIT = 100_000;
+
+export function formatMillions(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '—';
+  if (Math.abs(n) < SMALL_LIMIT) return Math.round(n).toLocaleString('en-US');
+  return `${fmt1(n / 1_000_000)}M`;
+}
+
+/** Tables, charts, insights, pop-ups: 53.8M. */
 
 // ─── Gradients ──────────────────────────────────────────────────────────────
 // Kept for API compatibility. The 2.0 look is flat, so these resolve to solid

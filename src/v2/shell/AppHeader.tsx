@@ -7,7 +7,7 @@ import { Box, Flex, Text } from '@chakra-ui/react';
 import { useState } from 'react';
 import { FiBookOpen, FiMoon, FiSettings, FiSun } from 'react-icons/fi';
 import { Logo } from '@/v2/components/brand';
-import { MeasureRow, MoreMenu, splitShown, useOverflow } from '@/v2/components/overflow';
+import { MeasureRow, MoreMenu, splitShown, useOverflow } from '@/v2/ui/overflow';
 import { MethodsOverlay } from '@/v2/components/methods/MethodsOverlay';
 import { RagDot } from '@/v2/components/exec/Rag';
 import { colors } from '@/v2/constants/theme';
@@ -23,7 +23,7 @@ type Tab = (typeof TABS)[number];
 export function DataAsOf({ closing, freshness }: { closing: string | null; freshness: number | null }) {
   const [loadedAt] = useState(() => new Date());
   return (
-    <Flex align="center" gap="6px" fontSize="12.5px" color={colors.bodyText} data-kpi="EX-11" title="Stock snapshot date and when this screen loaded" whiteSpace="nowrap">
+    <Flex align="center" gap="6px" fontSize="13px" color={colors.bodyText} data-kpi="EX-11" title="Stock snapshot date and when this screen loaded" whiteSpace="nowrap">
       <RagDot rag={rag(freshness, 'freshnessDays')} />
       <Text as="span">
         Stock as of <b>{closing ? new Date(`${closing.slice(0, 10)}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</b> · refreshed{' '}
@@ -52,7 +52,7 @@ function ThemeToggle() {
       borderColor={colors.border}
       bg={colors.cardBg}
       color={colors.bodyText}
-      fontSize="12.5px"
+      fontSize="13px"
       fontWeight={500}
       cursor="pointer"
       flexShrink={0}
@@ -171,7 +171,7 @@ export function AppHeader({
         <Text fontSize="14.5px" fontWeight={600} whiteSpace="nowrap" color={colors.midnight} display={{ base: 'none', md: 'block' }}>
           Supply Chain Pulse
         </Text>
-        <Text fontSize="10.5px" fontWeight={700} color={colors.brand} border="1px solid" borderColor={colors.brand} px="4px" borderRadius="3px" lineHeight="14px">
+        <Text fontSize="11px" fontWeight={700} color={colors.brand} border="1px solid" borderColor={colors.brand} px="4px" borderRadius="3px" lineHeight="14px">
           2.0
         </Text>
       </Flex>

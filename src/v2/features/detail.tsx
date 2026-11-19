@@ -3,10 +3,8 @@
 // sheet stacks a deeper sheet on top; the earlier one stays visible to the
 // left and a click on it (or Esc) goes back.
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import type { Rag } from './kpiThresholds';
-import type { BandKey } from './kpiThresholds';
-import type { TileDelta } from '@/v2/components/exec/ExecTile';
+import { createContext, useCallback, useEffect, useContext, useMemo, useState, type ReactNode } from 'react';
+import { colors } from '@/v2/constants/theme';
 
 export interface SheetAction {
   label: string;
@@ -14,54 +12,49 @@ export interface SheetAction {
 }
 
 export type DetailItem =
-  | {
-      kind: 'kpi';
-      id: string;
-      label: string;
-      value: string;
-      valueSuffix?: string;
-      rag?: Rag | null;
-      band?: BandKey;
-      bandUnit?: string;
-      variance?: ReactNode;
-      delta?: TileDelta;
-      caption?: ReactNode;
-      /** Supporting figures kept off the tile face (FR-EXEC-055). */
-      more?: ReactNode[];
-      action?: SheetAction;
-    }
   | { kind: 'class'; cls: string }
   /** Plan alignment drill (FR-EXEC-049): one class's IBL target vs TSCL budget, by SKU. */
   | { kind: 'alignClass'; cls: string }
+  /** Class hierarchy (19 Nov 2026, as Sales Pulse 2.0): a class in a zone (its regions) or a region (its branches). */
+  | { kind: 'geo'; cls: string; zone: string; region?: string }
+  /** A class at one branch: its SKUs' cover there. */
+  | { kind: 'classBranch'; cls: string; branch: string }
   | { kind: 'branch'; branch: string }
   | { kind: 'sku'; sku: string }
   | { kind: 'channel'; channel: string }
   | { kind: 'material'; material: string }
   | { kind: 'order'; order: string }
   | { kind: 'rmpm'; material: string; plant: string }
-  | { kind: 'rd'; code: string };
+  /** A plant's work in progress (Dispatch & WIP, WIP by plant). */
+  | { kind: 'wipPlant'; plant: string }
+  /** A plant's raw and packing material (Dispatch & WIP, RMPM by plant). */
+  | { kind: 'rmpmPlant'; plant: string };
 
 export const KIND_LABEL: Record<DetailItem['kind'], string> = {
-  kpi: 'KPI',
   class: 'Class',
   alignClass: 'Forecast vs budget',
+  geo: 'Zone',
+  classBranch: 'Branch',
   branch: 'Branch',
   sku: 'SKU',
   channel: 'Channel',
   material: 'Material',
   order: 'Production order',
   rmpm: 'Raw / packing material',
-  rd: 'Distributor',
+  wipPlant: 'WIP · plant',
+  rmpmPlant: 'RMPM · plant',
 };
 
 export function titleOf(i: DetailItem): string {
   switch (i.kind) {
-    case 'kpi':
-      return i.label;
     case 'class':
       return i.cls === 'Others' ? 'Other (unclassified)' : `Class ${i.cls}`;
     case 'alignClass':
       return `${i.cls === 'Others' ? 'Other' : `Class ${i.cls}`} · forecast vs budget by SKU`;
+    case 'geo':
+      return i.region ?? i.zone;
+    case 'classBranch':
+      return `${i.cls === 'Others' ? 'Other' : `Class ${i.cls}`} at ${i.branch}`;
     case 'branch':
       return i.branch;
     case 'sku':
@@ -74,8 +67,10 @@ export function titleOf(i: DetailItem): string {
       return i.order;
     case 'rmpm':
       return i.material;
-    case 'rd':
-      return `RD ${i.code}`;
+    case 'wipPlant':
+      return i.plant;
+    case 'rmpmPlant':
+      return i.plant;
   }
 }
 
@@ -118,3 +113,28 @@ export function useDetail() {
   /** From inside a sheet, push; from the page, open. */
   return c;
 }
+
+/**
+ * The row a list opened a sheet from, marked while that sheet is open, as Sales Pulse 2.0 marks
+ * the row whose sheet is showing (soft brand fill, a brand bar on the left). Works on the page and
+ * inside a sheet: open(row, run) remembers the row and the stack before the click; the sheet the
+ * click opened is the first one that differs, and the row stays marked while that sheet is open.
+ */
+export function useOpenedRow() {
+  const { keys } = useDetail();
+  const [mark, setMark] = useState<{ row: string; before: string[]; at: number; sheet: string } | null>(null);
+  useEffect(() => {
+    if (!mark || mark.sheet) return;
+    const at = keys.findIndex((k, i) => k !== mark.before[i]);
+    if (at >= 0) setMark({ ...mark, at, sheet: keys[at] });
+  }, [keys, mark]);
+  const isActive = (row: string) => !!mark && mark.row === row && !!mark.sheet && keys[mark.at] === mark.sheet;
+  const open = (row: string, run: () => void) => {
+    setMark({ row, before: keys, at: -1, sheet: '' });
+    run();
+  };
+  return { isActive, open };
+}
+
+/** Sales Pulse 2.0's marking of the row whose sheet is open (dsr-fe NationalTable Line). */
+export const ACTIVE_ROW = { bg: colors.brandSoft, boxShadow: `inset 3px 0 0 ${colors.brand}` } as const;

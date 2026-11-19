@@ -306,7 +306,8 @@ const ENDPOINTS: Record<string, (m: DemoModel, p: Params) => unknown[]> = {
       const price = between(k + 'pp', 40, 900);
       return {
         materialname: `${type === 'Raw Material' ? 'RM' : 'PM'} ${pick(k + 'n', ['Lactose', 'Starch', 'Gelatin', 'API Base', 'Blister Foil', 'Carton', 'PET Bottle', 'Label', 'Cap', 'Leaflet'])} ${100 + i}`,
-        producttype: type,
+        // The live codes (1.0 and scorecard-be v2): TRAW raw, TPKG packing.
+        producttype: type === 'Raw Material' ? 'TRAW' : 'TPKG',
         plant: plant.code,
         plantname: plant.name,
         storagelocation: `${plant.code}-${type === 'Raw Material' ? 'RM' : 'PM'}`,
@@ -349,7 +350,24 @@ const ENDPOINTS: Record<string, (m: DemoModel, p: Params) => unknown[]> = {
     });
   },
   '/filters': () => SKUS.map((s) => ({ item_code: s.code, item_description: s.name, classification: s.cls === 'Others' ? null : s.cls, division: s.division })),
-  '/filters/branches': () => BRANCHES.map((b, i) => ({ hub_branch_code: b.code, hub_branch_desc: b.name, storage_location_code: 8200 + i })),
+  '/filters/branches': () => BRANCHES.map((b, i) => ({ hub_branch_code: b.code, hub_branch_desc: b.name, storage_location_code: 8200 + i, ...(DEMO_GEO[b.name] ?? { zone: 'Others', region: 'Others' }) })),
+};
+
+/** Zone and region per branch, as scorecard-be v2 answers them from vw_zone_region_data. */
+const DEMO_GEO: Record<string, { zone: string; region: string }> = {
+  Bahawalpur: { zone: 'Central-2', region: 'Bahawalpur' },
+  Faisalabad: { zone: 'Central-1', region: 'Faisalabad' },
+  Gujranwala: { zone: 'Central-1', region: 'Gujranwala' },
+  Hyderabad: { zone: 'South', region: 'Hyd' },
+  Islamabad: { zone: 'North-2', region: 'Isb' },
+  Karachi: { zone: 'South', region: 'Krc (Karachi)' },
+  Korangi: { zone: 'South', region: 'Krg (Karachi)' },
+  Lahore: { zone: 'Central-1', region: 'Lahore' },
+  Mingora: { zone: 'North-1', region: 'Mardan' },
+  Multan: { zone: 'Central-2', region: 'Multan' },
+  Peshawar: { zone: 'North-1', region: 'Peshawar' },
+  Quetta: { zone: 'South', region: 'Quetta' },
+  Sukkur: { zone: 'Central-2', region: 'Sukkur' },
 };
 
 /** Paths the demo answers; also the endpoint list for the coverage check. */

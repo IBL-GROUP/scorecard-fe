@@ -8,15 +8,15 @@ export const ALL_SECTIONS: Section[] = ['SUMMARY', 'SERVICE_MEASURE', 'DISPATCH_
 export type TabKey = 'overview' | 'revenue' | 'inventory' | 'fulfilment' | 'distribution';
 
 export const TABS: { key: TabKey; label: string; mid: string; short: string; anyOf: Section[] }[] = [
-  { key: 'overview', label: 'Executive Overview', mid: 'Overview', short: 'Overview', anyOf: ALL_SECTIONS },
+  { key: 'overview', label: 'Pulse', mid: 'Pulse', short: 'Pulse', anyOf: ALL_SECTIONS },
   { key: 'revenue', label: 'Summary', mid: 'Summary', short: 'Summary', anyOf: ['SUMMARY'] },
   { key: 'inventory', label: 'Service Measure', mid: 'Service Measure', short: 'Service', anyOf: ['SUMMARY', 'SERVICE_MEASURE'] },
   { key: 'fulfilment', label: 'Dispatch & WIP', mid: 'Dispatch & WIP', short: 'Dispatch', anyOf: ['DISPATCH_WIP'] },
   { key: 'distribution', label: 'RD Data Status', mid: 'RD Data Status', short: 'RD Status', anyOf: ['RD_DATA_STATUS'] },
 ];
 
-/** Tabs that scroll instead of filling the window (FR-EXEC-052: Service Measure, laid out as 1.0). */
-export const SCROLL_TABS: TabKey[] = ['inventory'];
+/** Tabs that still scroll on a desktop; each leaves this list once rebuilt to fit the screen like Sales Pulse 2.0. */
+export const SCROLL_TABS: TabKey[] = [];
 
 /** Which section an endpoint's data belongs to. */
 export const SECTION_OF: Record<string, Section> = {

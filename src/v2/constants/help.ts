@@ -52,8 +52,8 @@ export const KPI_HELP: Record<string, HelpText> = {
     'RDs that reported stock today ÷ all active RDs × 100, from /rd-status. Band: Green ≥ 90%, Amber 75–89.9%, Red < 75%.',
   ),
   'EX-10': h(
-    'What needs attention right now: the most severe problems and the biggest opportunities, ranked.',
-    'Rule-based on the data already loaded: red KPIs, branch × class service below 80%, classes below threshold or above 1.5× benchmark, channels below 90% fill rate, RDs silent over 3 days, material on hold over 10%, plan alignment outside 90–110%, classes above 110% of target.',
+    'What in the supply chain needs attention right now, what is going well, and what in the data is missing, ranked.',
+    'Rule-based on the data already loaded: red supply chain KPIs, branch × class service below 80%, classes below threshold or above 1.5× benchmark, channels below 90% fill rate, RDs silent over 3 days, material blocked or in quality inspection over 10%, excess that could be released, KPIs on target, stale stock data, missing benchmarks and distributor stock not reported today.',
   ),
   'EX-11': h(
     'How current the stock figures are, and when the screen last loaded.',
@@ -260,6 +260,38 @@ export const HELP = {
   whereStock: h(
     'How stock value splits between our branches and distributors (RDs), and who holds the most.',
     'Worked out by the card that shows it, from the data already on the screen.',
+  ),
+} satisfies Record<string, HelpText>;
+
+/** The Pulse tab's own parts (the band's figures use the EX entries above). */
+export const PULSE_HELP = {
+  status: h(
+    'How many headline supply chain KPIs are off target: "All on target", "N to watch" (amber) or "N below target" (red).',
+    'The seven Supply chain health KPIs, each judged against its band.',
+  ),
+  wcBar: h(
+    'Working capital split into finished goods, WIP and RMPM, with the finished-goods excess above benchmark hatched.',
+    'Finished goods at cost (/cover-days/total inv_val_efp), Σ WIP Value (/wip), Σ total_val (/rpm); excess as EX-08.',
+  ),
+  health: h(
+    'Every headline supply chain KPI against its target: service level, fill rate, coverage, excess, production completion, RMPM on hold and RD reporting.',
+    'Each bar is the KPI’s value; the tick is its target; the colour is its band (green on target, amber watch, red below). A row opens the KPI on its tab.',
+  ),
+  serviceGrid: h(
+    'The branches with the lowest service level, class by class.',
+    'SKU-% per branch and class from /service-measure; the six lowest branches by average. Green ≥ 90%, amber 80–89.9%, red < 80%. A cell opens that class at that branch.',
+  ),
+} satisfies Record<string, HelpText>;
+
+/** Summary's inventory cards (the others use the KPI entries above). */
+export const SUMMARY_HELP = {
+  inventory: h(
+    'Finished-goods stock we hold, at trade price, with its units and its value at cost.',
+    '/cover-days/total on the latest closing date in the period: Σ qty × trade price (inv_val), Σ qty, Σ qty × item cost (inv_val_efp). Searle’s five business lines, storage locations 80xx, 8206 and 8210.',
+  ),
+  inventoryTarget: h(
+    'The stock we should hold: the benchmark cover days at today’s daily sales target, at trade price.',
+    'Weighted benchmark (Σ benchmark × daily target ÷ Σ daily target, classes with a benchmark) × the daily target (month IBL target ÷ days). Inventory ÷ this = the coverage index (EX-04).',
   ),
 } satisfies Record<string, HelpText>;
 

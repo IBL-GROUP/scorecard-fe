@@ -8,10 +8,11 @@
 //   when the user holds none on this dashboard.
 // Hiding UI is not security (SEC-PERM-001): scorecard-be checks the token.
 
-import { Box, Flex, Link, Spinner, Text } from '@chakra-ui/react';
+import { Box, Flex, Link, Text, VStack } from '@chakra-ui/react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { FiLock } from 'react-icons/fi';
 import { colors } from '@/v2/constants/theme';
+import { BrandLoader } from '@/v2/components/brand';
 import { hasValidSession, joinPortalPath, redeemTicketFromUrl, redirectToPortal } from '@/utils/session';
 import { usePermissions } from '@/api/permissions';
 import { startUsageTracking } from '@/v2/features/usage';
@@ -21,17 +22,6 @@ function Centre({ children }: { children: ReactNode }) {
     <Flex minH="100vh" align="center" justify="center" bg={colors.pageBg} px={4}>
       {children}
     </Flex>
-  );
-}
-
-function Waiting({ text }: { text: string }) {
-  return (
-    <Centre>
-      <Flex direction="column" align="center" gap={3} color={colors.mutedText}>
-        <Spinner size="lg" color={colors.brand} />
-        <Text fontSize="14px">{text}</Text>
-      </Flex>
-    </Centre>
   );
 }
 
@@ -71,35 +61,57 @@ export function AuthGate({ children }: { children: ReactNode }) {
     };
   }, [state]);
 
-  if (state !== 'allowed') return <Waiting text={state === 'redirecting' ? 'Redirecting to sign in…' : 'Signing you in…'} />;
+  if (state !== 'allowed') return <BrandLoader message={state === 'redirecting' ? 'Redirecting to sign in…' : 'Signing you in…'} />;
   return <>{children}</>;
 }
 
-/** No permission anywhere on this dashboard: not an error, so no red. */
+/**
+ * No permission anywhere on this dashboard: Sales Pulse 2.0's screen (dsr-fe
+ * components/no-access/NoAccess). Not an error, so no red: it names the
+ * dashboard, says who to ask and offers the way back to the portal.
+ */
 export function NoAccess({ title = 'You don’t have access', body }: { title?: string; body?: ReactNode }) {
   const portal = import.meta.env.VITE_AUTH_PORTAL_URL ? joinPortalPath('dashboard') : undefined;
   return (
     <Centre>
-      <Box maxW="440px" textAlign="center" bg={colors.cardBg} border="1px solid" borderColor={colors.border} borderRadius="4px" px={8} py={10} data-testid="no-access">
-        <Flex w="56px" h="56px" mx="auto" mb={4} borderRadius="50%" bg={colors.brandSoft} color={colors.brand} align="center" justify="center" fontSize="24px">
+      <VStack
+        gap={5}
+        maxW="440px"
+        textAlign="center"
+        bg="white"
+        borderRadius="2xl"
+        border="1px solid"
+        borderColor="gray.200"
+        boxShadow="0 2px 16px rgba(26,61,143,0.08)"
+        px={10}
+        py={12}
+        data-testid="no-access"
+      >
+        <Flex w="72px" h="72px" borderRadius="full" bg="rgba(26,61,143,0.08)" align="center" justify="center" color="#1a3d8f" fontSize="30px">
           <FiLock />
         </Flex>
-        <Text fontSize="18px" fontWeight={700} color={colors.darkText} mb={2}>
-          {title}
-        </Text>
-        <Text fontSize="14px" color={colors.bodyText} lineHeight="1.6">
-          {body ?? (
-            <>
-              Your account has not been given permission to view <b>Supply Chain Pulse</b>. If you think this is a mistake, ask your administrator for a role that includes it.
-            </>
-          )}
-        </Text>
+        <Box>
+          <Text fontSize="20px" fontWeight="800" color="#1a3d8f" mb={2}>
+            {title}
+          </Text>
+          <Text fontSize="14px" color="gray.600" lineHeight="1.7">
+            {body ?? (
+              <>
+                Your account has not been given permission to view{' '}
+                <Text as="span" fontWeight="700" color="gray.700">
+                  Supply Chain Pulse
+                </Text>
+                . If you think this is a mistake, ask your administrator to grant you a role that includes it.
+              </>
+            )}
+          </Text>
+        </Box>
         {portal && (
-          <Link display="inline-block" mt={5} href={portal} bg={colors.brand} color="white" px={5} py="10px" borderRadius="4px" fontSize="14px" fontWeight={600}>
+          <Link href={portal} bg="#1a3d8f" color="white" px={6} py={3} borderRadius="lg" fontSize="14px" fontWeight="700" _hover={{ bg: '#1e4aa0', textDecoration: 'none' }}>
             Back to dashboards
           </Link>
         )}
-      </Box>
+      </VStack>
     </Centre>
   );
 }
@@ -107,7 +119,7 @@ export function NoAccess({ title = 'You don’t have access', body }: { title?: 
 export function PermissionGate({ children }: { children: ReactNode }) {
   const { isReady, hasAnyInResource, isError } = usePermissions();
   if (isError) return <NoAccess title="Couldn’t check your access" body="The sign-in service didn’t answer. Reload the page, or go back to the dashboards and try again." />;
-  if (!isReady) return <Waiting text="Checking your access…" />;
+  if (!isReady) return <BrandLoader message="Checking your access…" />;
   if (!hasAnyInResource) return <NoAccess />;
   return <>{children}</>;
 }

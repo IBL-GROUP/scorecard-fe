@@ -1,386 +1,309 @@
-// Tab 5: Distribution & Data Health (PRD v2 section 4.5, wireframe 5.2).
-// Can we see stock at our distributors, and can executives trust the numbers?
+// Tab 5: RD Data Status, in Sales Pulse 2.0's pattern (rebuilt 19 Nov 2026, user request
+// "follow the DSR pattern"): highlight cards on top, then — by the Graph / List switch in the
+// filter bar — 1.0's RD Data Status table (DH-14) as Sales Pulse's grouped distributor list
+// (as its RD tab), or the charts: reporting age, compliance by branch, data trust, chronic
+// non-reporters and stock in hand. On a desktop the tab fills the screen.
 
-import { Box, Flex, Text } from '@chakra-ui/react';
-import { useMemo, useState, type ReactNode } from 'react';
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { ChartCard } from '@/v2/components/chart-card';
-import { DataTable } from '@/v2/components/data-table';
-import { Segmented } from '@/v2/components/segmented';
-import { MultiSelect } from '@/v2/components/select/MultiSelect';
-import { ExecTile } from '@/v2/components/exec/ExecTile';
-import { CardGrid, CardState, ChipBar, OperationalDetail, ViewDetails } from '@/v2/components/exec/Panels';
-import { AreaLayout } from '@/v2/components/exec/AreaLayout';
-import { HBars } from '@/v2/components/exec/HBars';
-import { GroupedTable } from '@/v2/components/grouped-table/GroupedTable';
-import { AreaRisks } from './OverviewPage';
-import { Legend, axis, grid, ragLegend, tooltipStyle } from '@/v2/components/exec/charts';
-import { RagBadge, RAG_META } from '@/v2/components/exec/Rag';
-import { InfoTip } from '@/v2/components/overlay';
+import { Box, Flex, Grid, Text } from '@chakra-ui/react';
+import type { ReactNode } from 'react';
+import { ChartCard } from '@/v2/ui/chart-card';
+import { BarChart } from '@/v2/ui/charts';
+import { HighlightCard, HighlightGrid } from '@/v2/ui/highlights';
+import { FigureCell, GroupedTable, type FigureColumn, type GroupNode, type LevelDef, type Sums } from '@/v2/ui/national';
+import { MatrixTable } from '@/v2/ui/matrix';
+import { CardState } from '@/v2/components/exec/Panels';
 import { colors } from '@/v2/constants/theme';
-import { helpFor } from '@/v2/constants/help';
 import { n0, type RdStatusRow } from '@/v2/api/types';
 import type { DashboardData } from '@/v2/features/data';
 import { distribution, status, trust } from '@/v2/features/derive';
 import { chronicNonReporters, rdAgeBuckets, rdComplianceByBranch, uploaded } from '@/v2/features/kpis';
-import { kpiThresholds, rag } from '@/v2/features/kpiThresholds';
-import { useStore } from '@/v2/features/store';
+import { kpiThresholds, rag, riskRules, type Rag } from '@/v2/features/kpiThresholds';
 import { DASH, full, pct0, pct1, pkr, units } from '@/v2/features/format';
+import { COMPARE_ON } from '@/v2/features/period';
+import { useFitScreen } from '@/v2/features/fit';
+import { useTabView } from '@/v2/features/views';
+import { geoOf, type Geo } from '@/v2/features/geo';
 
-type UploadFilter = 'all' | 'uploaded' | 'not';
-
+const INK: Record<Rag, string> = { green: colors.good, amber: colors.warn, red: colors.bad };
+const ink = (r: Rag | null | undefined) => (r ? INK[r] : colors.bodyText);
+const AGE_COLOR = (min: number) => (min <= 1 ? colors.good : min <= 3 ? colors.warn : colors.bad);
 const fmtDate = (s: string | null | undefined) =>
   s ? new Date(`${s.slice(0, 10)}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : DASH;
 
-function TrustPanel({ t, isLoading, locked, bare }: { t: ReturnType<typeof trust>; isLoading: boolean; locked: boolean; bare?: boolean }) {
-  const { shows } = useStore();
-  const fRag = rag(t.freshness, 'freshnessDays');
-  const uRag = rag(t.unclassified, 'unclassifiedPct');
-  const versions = [...new Set(t.bench.map((b) => b.effective_date).filter(Boolean))];
-  const Item = ({ id, label, children }: { id: string; label: string; children: ReactNode }) => (
-    <Box py="6px" borderBottom="1px solid" borderColor={colors.border} _last={{ borderBottom: 'none' }}>
-      <Flex align="center" gap="6px" mb="2px">
-        <Text fontSize="12px" color={colors.mutedText}>
-          {label}
-        </Text>
-        <Text fontSize="10.5px" color={colors.mutedText}>
-          {id}
-        </Text>
-        <Box ml="auto">{helpFor(id) && <InfoTip help={helpFor(id)} size={13} />}</Box>
-      </Flex>
-      {children}
-    </Box>
-  );
-  // 2.0-only: hidden in "1.0 only" mode (FR-EXEC-024).
-  if (!shows('DH-07 DH-08 DH-09 DH-10')) return null;
-  return (
-    <Box data-kpi="DH-07 DH-08 DH-09 DH-10" scrollMarginTop="140px" bg={colors.cardBg} border="1px solid" borderColor={colors.border} borderTop={`3px solid ${colors.brand}`} borderRadius="4px" px={4} py="8px" minW={0}>
-      {/* Inside the Data trust topic panel the panel carries the title. */}
-      {!bare && (
-        <Text fontSize="13px" fontWeight={700} color={colors.darkText} mb="2px">
-          Data trust
-        </Text>
-      )}
-      {locked ? (
-        <Text fontSize="12.5px" color={colors.mutedText}>
-          Needs Summary access
-        </Text>
-      ) : isLoading ? (
-        <Text fontSize="12.5px" color={colors.mutedText}>
-          Loading…
-        </Text>
-      ) : (
-        <>
-          <Item id="DH-07" label="Data freshness">
-            <Flex align="center" gap="8px">
-              <Text fontSize="14px" fontWeight={700} color={colors.darkText}>
-                {t.freshness == null ? DASH : `${t.freshness} day${t.freshness === 1 ? '' : 's'} old`}
-              </Text>
-              <Text fontSize="12px" color={colors.mutedText}>
-                stock as of {fmtDate(t.closing)}
-              </Text>
-              <Box ml="auto">
-                <RagBadge rag={fRag} size="sm" />
-              </Box>
-            </Flex>
-          </Item>
-          <Item id="DH-08" label="Plan data loaded">
-            <Flex direction="column" gap="2px">
-              {t.checks.map((c) => (
-                <Flex key={c.label} align="center" gap="6px" fontSize="12.5px" color={c.ok ? colors.good : colors.bad} fontWeight={600}>
-                  <Text as="span" aria-hidden>
-                    {c.ok ? '✓' : '✕'}
-                  </Text>
-                  <Text as="span" color={colors.bodyText} fontWeight={500}>
-                    {c.label}
-                  </Text>
-                  <Text as="span" ml="auto" fontSize="11.5px">
-                    {c.ok ? 'Loaded' : 'Missing'}
-                  </Text>
-                </Flex>
-              ))}
-            </Flex>
-          </Item>
-          <Item id="DH-09" label="Unclassified sales share">
-            <Flex align="center" gap="8px">
-              <Text fontSize="14px" fontWeight={700} color={colors.darkText}>
-                {pct1(t.unclassified)}
-              </Text>
-              <Box ml="auto">
-                <RagBadge rag={uRag} size="sm" />
-              </Box>
-            </Flex>
-          </Item>
-          <Item id="DH-10" label="Benchmark version in force">
-            <Text fontSize="12.5px" color={colors.bodyText}>
-              {versions.length === 0
-                ? DASH
-                : versions.length === 1
-                  ? `Effective from ${fmtDate(versions[0])} (all classes)`
-                  : t.bench.map((b) => `${b.classification}: ${fmtDate(b.effective_date)}`).join(' · ')}
-            </Text>
-          </Item>
-        </>
-      )}
-    </Box>
-  );
-}
-
-const AGE_COLOR = (min: number) => (min <= 1 ? colors.good : min <= 3 ? colors.warn : colors.bad);
-
-import { useDetail } from '@/v2/features/detail';
-
 export function DistributionPage({ data }: { data: DashboardData }) {
   const d = data.tabs.distribution;
-  const st = useStore();
-  const detail = useDetail();
-  const chip = st.chips.distribution;
+  const fit = useFitScreen();
+  const view = useTabView('distribution');
   const rd = distribution(d);
   const t = trust(d);
   const sRd = status(d, 'rd');
-  const sRdCmp = status(d, 'rd', 'rdCmp');
   const sTrust = status(d, 'closing', 'fam', 'fay', 'bench', 'sales');
-
-  const chipRows = chip?.key === 'branch' ? rd.rows.filter((r) => (r.branch_desc ?? DASH) === chip.value) : rd.rows;
-  const ages = rdAgeBuckets(chipRows);
-  const byBranch = rdComplianceByBranch(rd.rows);
-  const chronic = chronicNonReporters(chipRows).slice(0, 10);
-  const empty = !sRd.isLoading && !sRd.locked && !sRd.error && rd.rows.length === 0;
   const complianceDelta = rd.compliance != null && rd.cmp.compliance != null ? rd.compliance - rd.cmp.compliance : null;
 
-  // ── 1.0 RD filters (FR-RD-002), applied in the browser; all must match ──
-  const [branchCodes, setBranchCodes] = useState<string[]>([]);
-  const [distributors, setDistributors] = useState<string[]>([]);
-  const [upload, setUpload] = useState<UploadFilter>('all');
-  const branchOptions = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const r of rd.rows) m.set(String(r.branch_code ?? ''), r.branch_desc ?? DASH);
-    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([v, l]) => ({ value: v, label: `${v} · ${l}` }));
-  }, [rd.rows]);
-  const distOptions = useMemo(
-    () =>
-      rd.rows
-        .filter((r) => !branchCodes.length || branchCodes.includes(String(r.branch_code ?? '')))
-        .map((r) => ({ value: String(r.ibl_distributor_code), label: `${r.ibl_distributor_code} · ${r.distributor_desc ?? DASH}` })),
-    [rd.rows, branchCodes],
-  );
-  const onBranches = (v: string[]) => {
-    setBranchCodes(v);
-    // Choosing branch codes drops distributors outside them (FR-FILT-008).
-    if (v.length) {
-      const allowed = new Set(rd.rows.filter((r) => v.includes(String(r.branch_code ?? ''))).map((r) => String(r.ibl_distributor_code)));
-      setDistributors((cur) => cur.filter((x) => allowed.has(x)));
-    }
-  };
-  const tableRows = chipRows.filter(
-    (r: RdStatusRow) =>
-      (!branchCodes.length || branchCodes.includes(String(r.branch_code ?? ''))) &&
-      (!distributors.length || distributors.includes(String(r.ibl_distributor_code))) &&
-      (upload === 'all' || (upload === 'uploaded' ? uploaded(r) : !uploaded(r))),
+  // Short and to the point (user, 19 Nov 2026): a label, what it counts, the figure, one line of context.
+  const silent = rd.count - rd.reporting;
+  const highlights = (
+    <HighlightGrid isLoading={sRd.isLoading}>
+      <Box data-kpi="DH-01" minW={0}>
+        <HighlightCard
+          label="Reported today"
+          tone={rag(rd.compliance, 'rdCompliance') === 'green' ? 'good' : 'bad'}
+          name={`${full(rd.reporting)} of ${full(rd.count)} RDs`}
+          value={pct1(rd.compliance)}
+          caption={`Target ${kpiThresholds.rdCompliance.green}%${COMPARE_ON && complianceDelta != null ? ` · ${complianceDelta >= 0 ? '▲' : '▼'} ${Math.abs(complianceDelta).toFixed(1)} pts` : ''}`}
+        />
+      </Box>
+      <Box data-kpi="DH-02" minW={0}>
+        <HighlightCard label="Current stock" tone="sales" name={units(rd.current.qty)} value={pkr(rd.reportedToday)} caption={`${pct0(rd.current.share)} of RD stock`} />
+      </Box>
+      <Box data-kpi="DH-03" minW={0}>
+        <HighlightCard label="Stale stock" tone="bad" name={`${full(silent)} RDs not reported`} value={pkr(rd.staleValue)} caption={`${pct0(rd.staleValuePct)} of RD stock`} />
+      </Box>
+      <Box data-kpi="DH-11 DH-12 DH-13" minW={0}>
+        <HighlightCard label="Stock in hand" tone="target" name={units(rd.total.qty)} value={pkr(rd.total.value)} caption={`Previous ${pkr(rd.previous.value)}`} />
+      </Box>
+      <Box data-kpi="DH-07" minW={0}>
+        <HighlightCard
+          label="Data freshness"
+          tone={rag(t.freshness, 'freshnessDays') === 'green' ? 'good' : 'bad'}
+          name={fmtDate(t.closing)}
+          value={t.freshness == null ? DASH : `${t.freshness} day${t.freshness === 1 ? '' : 's'} old`}
+          caption="Latest stock date"
+        />
+      </Box>
+    </HighlightGrid>
   );
 
   return (
-    <AreaLayout
-      top={<ChipBar tab="distribution" />}
-      topics={[
+    <Flex direction="column" gap={3} h={fit ? '100%' : undefined} minH={0}>
+      {highlights}
+      <Box flex={1} minH={fit ? 0 : '560px'}>
+        {view === 'list' ? (
+          <RdList rows={rd.rows} where={geoOf(data)} loading={sRd.isLoading} />
+        ) : (
+          <RdCharts rd={rd} t={t} states={{ rd: sRd, trust: sTrust }} />
+        )}
+      </Box>
+    </Flex>
+  );
+}
+
+// ── List: 1.0's RD Data Status columns, in Sales Pulse 2.0's grouped table ──
+
+type RdRow = RdStatusRow & Geo & { status: string };
+
+const RD_LEVELS: Record<string, LevelDef<RdRow>> = {
+  zone: { label: 'Zone', key: (r) => r.zone },
+  region: { label: 'Region', key: (r) => r.region },
+  branch: { label: 'Branch', key: (r) => String(r.branch_code ?? '') || r.branch_desc || 'Others', name: (r) => r.branch_desc || 'Others' },
+  status: { label: 'Upload status', key: (r) => r.status },
+  // The RD's code is its own column (as 1.0), not beside the name.
+  rd: { label: 'RD name', key: (r) => String(r.ibl_distributor_code ?? ''), name: (r) => r.distributor_desc || 'Others' },
+};
+
+/** A text cell of the table (codes, names, dates): left of the figures, never added up. */
+const TextCell = ({ children, bold }: { children: ReactNode; bold?: boolean }) => (
+  <Text fontSize="13px" textAlign="center" whiteSpace="nowrap" color={colors.bodyText} fontWeight={bold ? 700 : 400} truncate>
+    {children}
+  </Text>
+);
+
+/**
+ * 1.0's RD Data Status, with its ten columns in its order — RD Name, RD Code, Branch Name, Branch
+ * Code, Current Stock in Hand Units and Value, Previous Stock Date, Units and Value, Days
+ * Difference — in Sales Pulse 2.0's grouped table: Zone › Region › Branch › Distributor by default (as Sales
+ * Pulse), by upload status, or one row per RD as 1.0. Find searches names and codes (1.0's code and name filters);
+ * an RD that did not upload shows its previous stock in red and "—" for current, as 1.0.
+ */
+function RdList({ rows, where, loading }: { rows: RdStatusRow[]; where: (branch: string) => Geo; loading: boolean }) {
+  const list: RdRow[] = rows.map((r) => ({ ...r, ...where(r.branch_desc ?? ''), status: uploaded(r) ? 'Uploaded' : 'Not uploaded' }));
+  const byCode = new Map(list.map((r) => [String(r.ibl_distributor_code ?? ''), r]));
+  const rdOf = (node?: GroupNode) => (node?.level === 'rd' ? byCode.get(node.id.split('rd:').pop() ?? '') : undefined);
+  const dash = (v: number) => (v ? full(v) : '—');
+  // levels: the rows the column describes; zones and regions do not carry an RD's code or date.
+  const textCol = (key: string, header: string, width: string, levels: string[], text: (r: RdRow | undefined, node?: GroupNode) => string): FigureColumn => ({
+    key,
+    header,
+    width,
+    levels,
+    render: (_t, _all, bold, node) => <TextCell bold={bold}>{node ? text(rdOf(node), node) : ''}</TextCell>,
+  });
+  const numCol = (key: string, header: string, show: (t: Sums) => string, color?: (t: Sums, node?: GroupNode) => string | undefined): FigureColumn => ({
+    key,
+    header,
+    width: 'minmax(110px, 1fr)',
+    render: (t, _all, bold, node) => (
+      <FigureCell bold={bold} color={color?.(t, node)}>
+        {show(t)}
+      </FigureCell>
+    ),
+  });
+  // An RD with nothing uploaded today: its previous stock is what is known, in red (1.0).
+  const staleInk = (t: Sums, node?: GroupNode) => (node?.level === 'rd' && !t.cq ? colors.bad : undefined);
+
+  return (
+    <GroupedTable<RdRow>
+      title="RD data status"
+      rows={list}
+      isLoading={loading}
+      levels={RD_LEVELS}
+      wide
+      // Branches under their zone and region, as Sales Pulse 2.0 describes them; the flat list is 1.0's.
+      presets={[
+        { value: 'geo', label: 'Zone › Region › Branch › Distributor', levels: ['zone', 'region', 'branch', 'rd'] },
+        { value: 'status', label: 'Upload status › Zone › Region › Branch › Distributor', levels: ['status', 'zone', 'region', 'branch', 'rd'] },
+        { value: 'rd', label: 'Distributor', levels: ['rd'] },
+      ]}
+      searchPlaceholder="Find RD or branch, name or code…"
+      sums={(r) => ({ rds: 1, cq: n0(r.stock_qty), cv: n0(r.stock_value), pq: n0(r.last_stock_qty), pv: n0(r.last_stock_value), days: n0(r.day_diff) })}
+      columns={[
+        textCol('code', 'RD code', 'minmax(110px, .8fr)', ['rd'], (r) => (r ? String(r.ibl_distributor_code ?? '') : '')),
+        textCol('bname', 'Branch name', 'minmax(130px, 1fr)', ['rd'], (r, node) => (r ? r.branch_desc ?? '—' : node?.level === 'branch' ? node.name : '')),
+        textCol('bcode', 'Branch code', 'minmax(100px, .7fr)', ['branch', 'rd'], (r, node) => (r ? String(r.branch_code ?? '') : node?.level === 'branch' ? (node.id.split('branch:').pop() ?? '').split('/')[0] : '')),
+        numCol('cq', 'Current stock in hand units', (t) => dash(t.cq ?? 0)),
+        numCol('cv', 'Current stock in hand value', (t) => dash(t.cv ?? 0)),
+        textCol('pdate', 'Previous stock date', 'minmax(120px, .9fr)', ['rd'], (r) => (r?.last_stock_date ? r.last_stock_date.slice(0, 10) : '')),
+        numCol('pq', 'Previous stock units', (t) => dash(t.pq ?? 0), staleInk),
+        numCol('pv', 'Previous stock value', (t) => dash(t.pv ?? 0), staleInk),
+        // Days belong to one RD: a group or the Total shows none.
         {
-          key: 'reporting',
-          title: 'Reporting',
-          tiles: [
-            <ExecTile key="DH-01"
-              id="DH-01"
-              label="RD Reporting Compliance"
-              value={pct1(rd.compliance)}
-              rag={rag(rd.compliance, 'rdCompliance')}
-              band="rdCompliance"
-              more={`${rd.reporting} of ${rd.count} RDs reported today`}
-              delta={{ value: complianceDelta, unit: 'pts', label: 'vs previous day' }}
-              {...sRdCmp}
-            />,
-            <ExecTile key="DH-02" id="DH-02" label="Stock Reported Today" value={pkr(rd.reportedToday)} more="Value of stock RDs reported today" {...sRd} />,
-            <ExecTile key="DH-03"
-              id="DH-03"
-              label="Stale Stock Value"
-              value={pkr(rd.staleValue)}
-              rag={rag(rd.staleValuePct, 'staleValuePct')}
-              band="staleValuePct"
-              more={`${pct1(rd.staleValuePct)} of stock known only from older reports`}
-              delta={{ value: rd.staleValue != null && rd.cmp.staleValue ? ((rd.staleValue - rd.cmp.staleValue) / rd.cmp.staleValue) * 100 : null, label: 'vs previous day', upIsGood: false }}
-              {...sRdCmp}
-            />,
-          ],
-          lead: (
-            <ChartCard title="RD Reporting Age" subtitle="Distributors by days since their last stock report" colSpan={{ base: 1, lg: 5 }} height="260px" isLoading={sRd.isLoading} help={helpFor('DH-04')} dataKpi="DH-04">
-              {CardState({ ...sRd, empty }) ?? (
-                <Flex direction="column" h="100%">
-                <Box flex={1} minH={0}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={ages} margin={{ top: 18, right: 8, left: -12, bottom: 0 }}>
-                    <CartesianGrid {...grid} vertical={false} />
-                    <XAxis dataKey="bucket" {...axis} />
-                    <YAxis allowDecimals={false} {...axis} />
-                    <Tooltip {...tooltipStyle} formatter={(v) => [`${v} RDs`, 'Distributors']} />
-                    <Bar dataKey="count" radius={[3, 3, 0, 0]}>
-                      {ages.map((a) => (
-                        <Cell key={a.bucket} fill={AGE_COLOR(a.min)} />
-                      ))}
-                      <LabelList dataKey="count" position="top" fontSize={11} fill={colors.bodyText} />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-                </Box>
-                <Legend items={[{ label: 'Reported within 1 day', color: AGE_COLOR(0) }, { label: '2–3 days since report', color: AGE_COLOR(2) }, { label: 'More than 3 days (stale)', color: AGE_COLOR(4) }]} />
-                </Flex>
-              )}
-            </ChartCard>
-          ),
-          details: (
-            <>
-              <CardGrid mb={3}>
-                <ChartCard
-                  title="Compliance by Branch"
-                  subtitle="Share of each branch's RDs that reported today"
-                  colSpan={12}
-                  height={`${Math.max(260, byBranch.length * 24 + 40)}px`}
-                  isLoading={sRd.isLoading}
-                  help={helpFor('DH-05')}
-                  dataKpi="DH-05"
-                >
-                  {CardState({ ...sRd, empty }) ?? (
-                    <HBars
-                      rows={byBranch.map((b) => {
-                        const r = rag(b.pct, 'rdCompliance');
-                        return {
-                          key: b.branch,
-                          label: b.branch,
-                          value: b.pct,
-                          target: kpiThresholds.rdCompliance.green,
-                          color: r ? RAG_META[r].color : colors.sales,
-                          valueText: pct0(b.pct),
-                          dim: chip?.key === 'branch' && chip.value !== b.branch,
-                          onClick: () => st.setChip('distribution', { key: 'branch', value: b.branch }),
-                        };
-                      })}
-                      fmt={pct0}
-                      max={100}
-                      legend={[...ragLegend('rdCompliance', { shape: 'bar', what: 'reported today' }), { label: `Target ${kpiThresholds.rdCompliance.green}%`, color: colors.target, shape: 'tick' }]}
-                    />
-                  )}
-                </ChartCard>
-              </CardGrid>
-              <CardGrid mb={3}>
-                <ChartCard
-                  title="Chronic Non-Reporters"
-                  subtitle="RDs silent for more than 7 days, largest last-reported stock first"
-                  colSpan={12}
-                  isLoading={sRd.isLoading}
-                  help={helpFor('DH-06')}
-                  headerRight={<ViewDetails detailId="rd-list" />}
-                  expandable={false}
-                  dataKpi="DH-06"
-                >
-                  {CardState({ ...sRd, empty }) ??
-                    (chronic.length === 0 ? (
-                      <Text fontSize="13px" color={colors.good} py={4} textAlign="center" fontWeight={600}>
-                        ✓ No distributor has been silent for more than 7 days
-                      </Text>
-                    ) : (
-                      <DataTable
-                        headerGradient={colors.tableHeaderBg}
-                        headers={['Distributor', 'Branch', 'Days silent', 'Last stock value', 'Last report date']}
-                        rows={chronic.map((r) => ({
-                          onClick: () => detail.open({ kind: 'rd', code: String(r.ibl_distributor_code) }),
-                          cells: [r.distributor_desc ?? DASH, r.branch_desc ?? DASH, String(n0(r.day_diff)), full(n0(r.last_stock_value)), fmtDate(r.last_stock_date)],
-                          cellColors: [undefined, undefined, colors.bad, undefined, undefined],
-                        }))}
-                        pageSize={10}
-                        searchable={false}
-                      />
-                    ))}
-                </ChartCard>
-              </CardGrid>
-            </>
-          ),
-        },
-        {
-          key: 'trust',
-          title: 'Data trust',
-          body: <TrustPanel t={t} isLoading={sTrust.isLoading} locked={!!sTrust.locked} bare />,
-        },
-        {
-          key: 'stock',
-          title: 'Stock in hand',
-          tiles: [
-            <ExecTile key="DH-11" id="DH-11" label="Current Stock in Hand" value={units(rd.current.qty)} valueSuffix={pkr(rd.current.value)} more={`${pct1(rd.current.share)} of total`} {...sRd} />,
-            <ExecTile key="DH-12" id="DH-12" label="Previous Stock in Hand" value={units(rd.previous.qty)} valueSuffix={pkr(rd.previous.value)} more={`${pct1(rd.previous.share)} of total`} {...sRd} />,
-            <ExecTile key="DH-13" id="DH-13" label="Total Stock in Hand" value={units(rd.total.qty)} valueSuffix={pkr(rd.total.value)} more="Includes earlier reports" {...sRd} />,
-          ],
-          details: (
-            <>
-              <OperationalDetail id="rd-list" kpi="DH-14" title="RD Distributor List" subtitle="1.0 RD Data Status table, with its filters">
-                {CardState({ ...sRd, empty }) ?? (
-                  <>
-                    <Flex gap="10px" wrap="wrap" align="flex-end" px={2} py={2}>
-                      <Box minW="220px">
-                        <MultiSelect label="Branch Code / Branch" value={branchCodes} onChange={onBranches} options={branchOptions} placeholder="All branches" />
-                      </Box>
-                      <Box minW="260px">
-                        <MultiSelect label="Distributor" value={distributors} onChange={setDistributors} options={distOptions} placeholder="All distributors" />
-                      </Box>
-                      <Flex direction="column" gap="2px">
-                        <Text fontSize="11px" color={colors.mutedText}>
-                          Upload Count
-                        </Text>
-                        <Segmented<UploadFilter>
-                          size="xs"
-                          ariaLabel="Upload count"
-                          value={upload}
-                          onChange={setUpload}
-                          options={[
-                            { value: 'all', label: 'All' },
-                            { value: 'uploaded', label: 'Uploaded' },
-                            { value: 'not', label: 'Not uploaded' },
-                          ]}
-                        />
-                      </Flex>
-                      <Text ml="auto" fontSize="12px" color={colors.mutedText}>
-                        {tableRows.length} of {rd.rows.length} RDs
-                      </Text>
-                    </Flex>
-                    <GroupedTable<RdStatusRow>
-                      rows={tableRows}
-                      levels={[
-                        { key: 'branch', label: 'Branch', of: (r) => r.branch_desc ?? '' },
-                        { key: 'status', label: 'Upload status', of: (r) => (uploaded(r) ? 'Uploaded' : 'Not uploaded') },
-                      ]}
-                      presets={[
-                        { value: 'branch', label: 'Branch › Distributor', levels: ['branch'] },
-                        { value: 'status', label: 'Upload status › Branch', levels: ['status', 'branch'] },
-                      ]}
-                      leaf={{ label: 'Distributor', key: (r) => String(r.ibl_distributor_code), name: (r) => r.distributor_desc ?? DASH, code: (r) => (r.ibl_distributor_code == null ? undefined : String(r.ibl_distributor_code)) }}
-                      texts={[
-                        { header: 'Previous Date', value: (r) => fmtDate(r.last_stock_date) },
-                        { header: 'Upload Status', value: (r) => (uploaded(r) ? '✓ Uploaded' : '✕ Not uploaded'), color: (r) => (uploaded(r) ? colors.good : colors.bad) },
-                      ]}
-                      figures={[
-                        { header: 'Current Units', value: (r) => n0(r.stock_qty), fmt: full },
-                        { header: 'Current Value', value: (r) => n0(r.stock_value), fmt: full },
-                        { header: 'Previous Units', value: (r) => n0(r.last_stock_qty), fmt: full },
-                        { header: 'Previous Value', value: (r) => n0(r.last_stock_value), fmt: full },
-                        // Days are not added up: a group shows none (FR-EXEC-026).
-                        { header: 'Days Difference', value: (r) => n0(r.day_diff), fmt: (v) => (v == null ? '' : String(v)), group: 'none', color: (r) => { const g = rag(n0(r.day_diff), 'staleRdDays'); return g ? RAG_META[g].color : undefined; } },
-                      ]}
-                      onLeaf={(r) => detail.open({ kind: 'rd', code: String(r.ibl_distributor_code) })}
-                    />
-                  </>
-                )}
-              </OperationalDetail>
-            </>
+          key: 'days',
+          header: 'Days difference',
+          width: 'minmax(110px, 1fr)',
+          levels: ['rd'],
+          render: (t, _all, bold, node) => (
+            <FigureCell bold={bold} color={node?.level === 'rd' ? ink(rag(t.days ?? 0, 'staleRdDays')) : undefined}>
+              {node?.level === 'rd' ? String(t.days ?? 0) : ''}
+            </FigureCell>
           ),
         },
       ]}
-      aside={<AreaRisks data={data} tab="distribution" area="RD Data Status" />}
-      asideKpi="EX-10"
+      exportName="RD Data Status"
+      exportRow={(r) => ({
+        'RD Name': r.distributor_desc ?? '',
+        'RD Code': String(r.ibl_distributor_code ?? ''),
+        'Branch Name': r.branch_desc ?? '',
+        'Branch Code': String(r.branch_code ?? ''),
+        'Current Stock in Hand Units': n0(r.stock_qty),
+        'Current Stock in Hand Value': n0(r.stock_value),
+        'Previous Stock Date': r.last_stock_date ?? '',
+        'Previous Stock Units': n0(r.last_stock_qty),
+        'Previous Stock Value': n0(r.last_stock_value),
+        'Days Difference': n0(r.day_diff),
+      })}
     />
+  );
+}
+
+// ── Graph ──────────────────────────────────────────────────────────────────
+
+type State = ReturnType<typeof status>;
+
+function RdCharts({ rd, t, states }: { rd: ReturnType<typeof distribution>; t: ReturnType<typeof trust>; states: Record<'rd' | 'trust', State> }) {
+  const empty = !states.rd.isLoading && !states.rd.locked && !states.rd.error && rd.rows.length === 0;
+  const ages = rdAgeBuckets(rd.rows);
+  const byBranch = rdComplianceByBranch(rd.rows);
+  const chronic = chronicNonReporters(rd.rows);
+  const versions = [...new Set(t.bench.map((b) => b.effective_date).filter(Boolean))];
+
+  return (
+    <Grid templateColumns={{ base: '1fr', lg: 'repeat(12, minmax(0, 1fr))' }} templateRows={{ lg: 'repeat(2, minmax(0, 1fr))' }} gap={3} h={{ lg: '100%' }} minH={0}>
+      {/* DH-04 */}
+      <ChartCard dataKpi="DH-04" title="RD reporting age" colSpan={{ base: 12, lg: 4 }} isLoading={states.rd.isLoading}>
+        {CardState({ ...states.rd, empty }) ?? (
+          <BarChart
+            data={ages.map((a) => ({ bucket: a.bucket, count: a.count, min: a.min }))}
+            xKey="bucket"
+            bars={[{ key: 'count', label: 'Distributors', color: colors.sales, cellColor: (e) => AGE_COLOR(Number(e.min)) }]}
+            labelFormatter={(v) => full(v)}
+            showLabels
+            height="100%"
+          />
+        )}
+      </ChartCard>
+
+      {/* DH-05 */}
+      <ChartCard dataKpi="DH-05" title="Compliance by branch" colSpan={{ base: 12, lg: 4 }} isLoading={states.rd.isLoading}>
+        {CardState({ ...states.rd, empty }) ?? (
+          <BarChart
+            data={byBranch.map((b) => ({ branch: b.branch, pct: b.pct }))}
+            xKey="branch"
+            orientation="horizontal"
+            rankAscending
+            topN={byBranch.length}
+            bars={[{ key: 'pct', label: 'Reported today', color: colors.sales, cellColor: (e) => ink(rag(Number(e.pct), 'rdCompliance')) }]}
+            referenceValue={kpiThresholds.rdCompliance.green}
+            referenceLabel={`Target ${kpiThresholds.rdCompliance.green}%`}
+            labelFormatter={(v) => pct0(v)}
+            showLabels
+            height="100%"
+          />
+        )}
+      </ChartCard>
+
+      {/* DH-07 … DH-10 */}
+      <ChartCard dataKpi="DH-07 DH-08 DH-09 DH-10" title="Data trust" colSpan={{ base: 12, lg: 4 }} isLoading={states.trust.isLoading}>
+        {CardState({ ...states.trust }) ?? (
+          <MatrixTable
+            nameHeader="Check"
+            cols={[
+              { key: 'v', label: 'Value' },
+              { key: 's', label: 'Status' },
+            ]}
+            rows={[
+              {
+                name: 'Data freshness',
+                cells: [{ text: t.freshness == null ? DASH : `${t.freshness} day${t.freshness === 1 ? '' : 's'} old` }, { text: rag(t.freshness, 'freshnessDays') === 'green' ? 'On track' : 'Stale', color: ink(rag(t.freshness, 'freshnessDays')) }],
+              },
+              ...t.checks.map((c) => ({ name: c.label, cells: [{ text: c.ok ? 'Loaded' : 'Missing' }, { text: c.ok ? '✓' : '✕', color: c.ok ? colors.good : colors.bad }] })),
+              { name: 'Unclassified sales share', cells: [{ text: pct1(t.unclassified) }, { text: rag(t.unclassified, 'unclassifiedPct') === 'green' ? 'On track' : 'Check', color: ink(rag(t.unclassified, 'unclassifiedPct')) }] },
+              {
+                name: 'Benchmark version in force',
+                cells: [{ text: versions.length === 0 ? DASH : versions.length === 1 ? `From ${fmtDate(versions[0])}` : `${versions.length} versions` }, { text: versions.length ? '✓' : '✕', color: versions.length ? colors.good : colors.bad }],
+              },
+            ]}
+          />
+        )}
+      </ChartCard>
+
+      {/* DH-06: every RD silent longer than the rule, largest last stock first. */}
+      <ChartCard dataKpi="DH-06" title={`Chronic non-reporters · silent over ${riskRules.chronicRdDays} days`} colSpan={{ base: 12, lg: 8 }} isLoading={states.rd.isLoading}>
+        {CardState({ ...states.rd, empty, ...(chronic.length ? {} : { empty: true, emptyText: `No distributor has been silent for more than ${riskRules.chronicRdDays} days.` }) }) ?? (
+          <MatrixTable
+            nameHeader="Distributor"
+            cols={[
+              { key: 'b', label: 'Branch' },
+              { key: 'd', label: 'Days silent' },
+              { key: 'v', label: 'Last stock value' },
+              { key: 't', label: 'Last report' },
+            ]}
+            rows={chronic.map((r) => ({
+              name: String(r.ibl_distributor_code ?? ''),
+              label: r.distributor_desc ?? DASH,
+              cells: [{ text: r.branch_desc ?? DASH }, { text: String(n0(r.day_diff)), color: colors.bad }, { text: full(n0(r.last_stock_value)) }, { text: fmtDate(r.last_stock_date) }],
+            }))}
+          />
+        )}
+      </ChartCard>
+
+      {/* DH-11 … DH-13 */}
+      <ChartCard dataKpi="DH-11 DH-12 DH-13" title="Stock in hand" colSpan={{ base: 12, lg: 4 }} isLoading={states.rd.isLoading}>
+        {CardState({ ...states.rd, empty }) ?? (
+          <MatrixTable
+            nameHeader="Stock"
+            cols={[
+              { key: 'q', label: 'Units' },
+              { key: 'v', label: 'Value' },
+              { key: 's', label: 'Share' },
+            ]}
+            rows={[
+              { name: 'Current', label: 'Current (reported today)', cells: [{ text: full(rd.current.qty) }, { text: pkr(rd.current.value) }, { text: pct1(rd.current.share) }] },
+              { name: 'Previous', label: 'Previous (older reports)', cells: [{ text: full(rd.previous.qty) }, { text: pkr(rd.previous.value) }, { text: pct1(rd.previous.share) }] },
+            ]}
+            total={[full(rd.total.qty), pkr(rd.total.value), '100%']}
+          />
+        )}
+      </ChartCard>
+    </Grid>
   );
 }

@@ -136,7 +136,7 @@ function Facet({
       overflow="hidden"
       flexShrink={0}
       maxW="360px"
-      fontSize="12.5px"
+      fontSize="13px"
       border="1px solid"
       borderColor={colors.border}
     >
@@ -284,7 +284,10 @@ export function SearchBar({
   // Close on outside click.
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) {
+      // The click's path as it was dispatched: a control that removes itself on mousedown (a
+      // select's clear ×) is no longer in the page by now, but its path still runs through the panel.
+      const root = rootRef.current;
+      if (root && !e.composedPath().includes(root)) {
         setMenuOpen(false);
         setQuery('');
         setCustomOpen(false);
@@ -655,7 +658,7 @@ export function SearchBar({
                   .filter((f) => !f.loadOptions)
                   .map((f) => (
                     <Flex key={f.key} direction="column" gap="4px" minW={0}>
-                      <Text fontSize="12.5px" fontWeight={600} color={colors.bodyText}>
+                      <Text fontSize="13px" fontWeight={600} color={colors.bodyText}>
                         {f.label}
                       </Text>
                       <Select
@@ -731,7 +734,7 @@ export function SearchBar({
                     <Divider />
                     {rangeDraft ? (
                       <Flex direction="column" gap={2} px={4} py={1}>
-                        <Text fontSize="12.5px" color={colors.mutedText}>
+                        <Text fontSize="13px" color={colors.mutedText}>
                           Days within {monthLabel(period.month)}
                         </Text>
                         <HStack gap={0}>

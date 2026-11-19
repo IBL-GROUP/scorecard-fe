@@ -76,6 +76,19 @@ export interface RpmRow {
   total_val: Num;
   unrestricted_qty: Num;
   total_qty: Num;
+  // The rest of 1.0's RMPM Details columns (scorecard-be v2 /rpm sends them all).
+  gr_blocked_val?: Num;
+  storage_location_val?: Num;
+  stock_transfer_plant_val?: Num;
+  tied_empties_val?: Num;
+  restricted_qty?: Num;
+  qualityinspection_qty?: Num;
+  blocked_qty?: Num;
+  return_qty?: Num;
+  stockintransit_qty?: Num;
+  stocktransferplant_qty?: Num;
+  stocktransferstoragelocation_qty?: Num;
+  tiedempties_qty?: Num;
 }
 export interface RdStatusRow {
   ibl_distributor_code: Num;
@@ -90,7 +103,7 @@ export interface RdStatusRow {
   day_diff: Num;
 }
 export interface FilterItemRow { item_code: string; item_description: string; classification: string | null; division: string | null }
-export interface FilterBranchRow { hub_branch_code: Num; hub_branch_desc: string; storage_location_code: Num }
+export interface FilterBranchRow { hub_branch_code: Num; hub_branch_desc: string; storage_location_code: Num; zone?: string; region?: string }
 
 /** The 14 fixed Inventory Days / Service Measure branches (BR-SVC-001). */
 export const INV_BRANCHES = [

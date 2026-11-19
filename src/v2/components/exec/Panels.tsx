@@ -5,7 +5,7 @@ import { colors } from '@/v2/constants/theme';
 import { useStore, type Chip } from '@/v2/features/store';
 import { anyShown } from '@/v2/features/catalog';
 import { SECTION_LABEL, type Section, type TabKey } from '@/v2/features/tabs';
-import { EmptyChart } from '@/v2/components/charts/EmptyChart';
+import { EmptyChart } from '@/v2/ui/charts/EmptyChart';
 import { ExportNameContext } from '@/v2/components/data-table/DataTable';
 
 /** A zone of the inverted pyramid (PRD 5.1). Hidden in "1.0 only" mode when none of its items carry a 1.0 metric. */
@@ -155,7 +155,7 @@ export function ChipBar({ tab }: { tab: TabKey }) {
   const chip = chips[tab];
   if (!chip) return null;
   return (
-    <Flex align="center" gap="8px" mb={3} fontSize="12.5px">
+    <Flex align="center" gap="8px" mb={3} fontSize="13px">
       <Text color={colors.mutedText}>Showing only</Text>
       <Flex as="button" align="center" gap="6px" px="10px" py="3px" borderRadius="999px" bg={colors.brandSoft} color={colors.brand} fontWeight={600} onClick={() => setChip(tab, null)} aria-label="Clear this filter">
         {CHIP_LABEL[chip.key]}: {chip.value} <FiX />

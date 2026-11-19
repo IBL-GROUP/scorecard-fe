@@ -129,7 +129,7 @@ export function NotifyHost() {
             ×
           </Box>
           {list.length > 1 && (
-            <Text fontSize="10.5px" color={colors.mutedText} whiteSpace="nowrap">
+            <Text fontSize="11px" color={colors.mutedText} whiteSpace="nowrap">
               +{list.length - 1} more
             </Text>
           )}

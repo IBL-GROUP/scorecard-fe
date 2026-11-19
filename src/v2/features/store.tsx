@@ -12,9 +12,14 @@ import { isShown, type MetricMode } from './catalog';
 export interface Filters {
   division: string[];
   classification: string[];
+  /** Zone and region (vw_zone_region_data): they narrow to their branches, as in Sales Pulse 2.0. */
+  zone: string[];
+  region: string[];
   branch: string[];
+  /** Hand-picked SKU codes; they win over the division's SKUs (FR-FILT-006, as 1.0). */
+  sku: string[];
 }
-export const EMPTY_FILTERS: Filters = { division: [], classification: [], branch: [] };
+export const EMPTY_FILTERS: Filters = { division: [], classification: [], zone: [], region: [], branch: [], sku: [] };
 
 export type ChipKey = 'cls' | 'branch' | 'channel' | 'material';
 export interface Chip { key: ChipKey; value: string }
@@ -47,13 +52,12 @@ const ZONE4_KEY = 'sc2.zone4';
 const PERSONA_KEY = 'sc2.persona';
 const METRIC_MODE_KEY = 'sc2.metricMode';
 
-/** The header's "All metrics / 1.0 only" choice, remembered per user (FR-EXEC-024). Default: all. */
-function readMetricMode(id: string): MetricMode {
-  try {
-    return localStorage.getItem(`${METRIC_MODE_KEY}.${id}`) === 'v1' ? 'v1' : 'all';
-  } catch {
-    return 'all';
-  }
+/**
+ * The "All metrics / 1.0 only" switch is gone (redesign of 18 Nov 2026: every
+ * 1.0 metric is always shown), so a "1.0 only" saved earlier is ignored.
+ */
+function readMetricMode(_id: string): MetricMode {
+  return 'all';
 }
 
 function readPersona(id: string): Persona {

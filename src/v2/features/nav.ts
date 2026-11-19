@@ -1,29 +1,74 @@
-// Navigation between 2.0 tabs (PRD 3.1, 5.4). The tab and the focused KPI live
-// in the URL (?tab=…&focus=…), so the browser Back button returns to the
-// previous tab and React Router restores its scroll position.
+// Navigation between 2.0 tabs (PRD 3.1, 5.4). Since 19 Nov 2026 (user) the address stays
+// /scorecard-dashboard/, as Sales Pulse 2.0's: the open tab and the KPI to scroll to live in
+// app state, the tab kept for this browser tab so a refresh reopens it. An old link with
+// ?tab=…&focus=… still opens there once, and the address is cleaned at once.
 
-import { useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useCallback, useSyncExternalStore } from 'react';
 import { useStore, type Chip } from './store';
 import { TABS, type TabKey } from './tabs';
 
+const KEY = 'sc2-active-tab';
+const isTab = (t: string | null): t is TabKey => !!t && TABS.some((x) => x.key === t);
+
+function initial(): { tab: TabKey; focus: string | null } {
+  let tab: TabKey = 'overview';
+  let focus: string | null = null;
+  try {
+    const kept = sessionStorage.getItem(KEY);
+    if (isTab(kept)) tab = kept;
+  } catch {
+    /* storage blocked */
+  }
+  // An old link: take its tab and focus, then drop them from the address.
+  const sp = new URLSearchParams(window.location.search);
+  if (sp.has('tab') || sp.has('focus')) {
+    const t = sp.get('tab');
+    if (isTab(t)) tab = t;
+    focus = sp.get('focus');
+    window.history.replaceState(window.history.state, '', window.location.pathname + window.location.hash);
+    try {
+      sessionStorage.setItem(KEY, tab);
+    } catch {
+      /* storage blocked */
+    }
+  }
+  return { tab, focus };
+}
+
+let state = initial();
+const listeners = new Set<() => void>();
+const subscribe = (l: () => void) => {
+  listeners.add(l);
+  return () => listeners.delete(l);
+};
+
+function go(tab: TabKey, focus: string | null) {
+  state = { tab, focus };
+  try {
+    sessionStorage.setItem(KEY, tab);
+  } catch {
+    /* storage blocked: the tab lasts this visit */
+  }
+  listeners.forEach((l) => l());
+}
+
 export function useActiveTab(): TabKey {
-  const [sp] = useSearchParams();
-  const t = sp.get('tab') as TabKey | null;
-  return t && TABS.some((x) => x.key === t) ? t : 'overview';
+  return useSyncExternalStore(subscribe, () => state.tab);
+}
+
+/** The KPI a tile or insight asked to scroll to, by its PRD ID (null when none). */
+export function useFocus(): string | null {
+  return useSyncExternalStore(subscribe, () => state.focus);
 }
 
 export function useNav() {
-  const navigate = useNavigate();
   const { setChip } = useStore();
   return useCallback(
     (tab: TabKey, focus?: string, chip?: Chip) => {
       if (chip) setChip(tab, chip);
-      const q = new URLSearchParams({ tab });
-      if (focus) q.set('focus', focus);
-      navigate({ search: `?${q.toString()}` });
+      go(tab, focus ?? null);
     },
-    [navigate, setChip],
+    [setChip],
   );
 }
 

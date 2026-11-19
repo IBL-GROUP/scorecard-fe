@@ -1,114 +1,206 @@
-// User menu (S3 app shell): who is signed in, the "Planner view" switch
-// (Operational Detail expanded by default, decision of 11 Nov 2026), the other
-// dashboards the user may open, and sign out. Demo mode shows the demo user only.
-
-import { Box, Flex, Text } from '@chakra-ui/react';
-import { useEffect, useRef, useState } from 'react';
-import { FiGrid, FiLogOut } from 'react-icons/fi';
-import { colors } from '@/v2/constants/theme';
-import { DEMO_DATA } from '@/v2/config/api';
+import { Avatar, Badge, Box, Menu, Portal, Text, chakra } from '@chakra-ui/react';
+import { useMemo } from 'react';
+import { FiBookOpen, FiGrid, FiLogOut, FiSettings } from 'react-icons/fi';
+import { DashboardIcon } from './DashboardIcons';
 import { useStore } from '@/v2/features/store';
-import { isCurrentDashboard, logout, openDashboard, useUserDashboards } from '@/api/account';
-import { getSessionUser } from '@/utils/session';
+import {
+  USER_MANUAL_URL,
+  isCurrentDashboard,
+  logout,
+  openDashboard,
+  useDisplayName,
+  useUserDashboards,
+} from '@/api/account';
+import { getSessionUser, joinPortalPath } from '@/utils/session';
 
-const initials = (name: string) =>
-  name
-    .split(/[\s._-]+/)
+/** "syed.sharjeel" -> "Syed Sharjeel" — used until the display name loads. */
+function nameFromUserName(userName: string): string {
+  return userName
+    .split(/[.\s_-]+/)
     .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]!.toUpperCase())
-    .join('');
-
-function OtherDashboards() {
-  const q = useUserDashboards();
-  const others = (q.data ?? []).filter((d) => !isCurrentDashboard(d));
-  if (!others.length) return null;
-  return (
-    <Box borderTop="1px solid" borderColor={colors.border} py="6px">
-      <Text px="14px" py="4px" fontSize="11px" color={colors.mutedText} textTransform="uppercase" letterSpacing=".05em">
-        Other dashboards
-      </Text>
-      {others.map((d) => (
-        <Flex key={d.menu_id} as="button" w="100%" align="center" gap="8px" px="14px" py="7px" fontSize="13px" color={colors.bodyText} _hover={{ bg: colors.navbarHover }} onClick={() => void openDashboard(d)}>
-          <FiGrid /> {d.label}
-        </Flex>
-      ))}
-    </Box>
-  );
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
-export function UserMenu() {
-  const st = useStore();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const email = DEMO_DATA ? null : getSessionUser()?.email;
-  const planner = st.user.persona === 'planner';
+const itemProps = {
+  gap: 3,
+  px: 4,
+  py: 2.5,
+  fontSize: 'sm',
+  color: 'gray.700',
+  cursor: 'pointer',
+} as const;
 
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent | KeyboardEvent) => {
-      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', close);
-    document.addEventListener('keydown', close);
-    return () => {
-      document.removeEventListener('mousedown', close);
-      document.removeEventListener('keydown', close);
-    };
-  }, [open]);
+// Sales Pulse 2.0's user menu (dsr-fe components/user-menu/UserMenu), for
+// Supply Chain Pulse 2.0. The "Planner view" switch is gone with it: it only
+// expanded the old Operational Detail tables, which no tab has any more.
+
+/**
+ * The signed-in user's avatar, in the header's top-right corner. Clicking it opens a menu with
+ * the user's full name and email, Home (the portal), every dashboard they may open,
+ * then the user manual, Settings and Log out.
+ *
+ * Built on Chakra's Avatar and Menu, so keyboard navigation, focus handling,
+ * positioning and the open/close animation come with them.
+ */
+export function UserMenu() {
+  const session = useMemo(() => getSessionUser(), []);
+  const displayName = useDisplayName();
+  const dashboards = useUserDashboards();
+  const { user } = useStore();
+
+  const name =
+    displayName.data ?? (session ? nameFromUserName(session.userName) : user.name);
+
+  const handleSelect = ({ value }: { value: string }) => {
+    if (value === 'portalHome') {
+      // The portal's own dashboard page — every dashboard, in one place.
+      window.location.href = joinPortalPath('dashboard');
+      return;
+    }
+    if (value === 'userManual') {
+      // A new tab, so the dashboard behind it keeps its filters and its loaded
+      // data — the manual is read alongside the screen it describes.
+      window.open(USER_MANUAL_URL, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (value === 'settings') {
+      // Straight to the portal's Settings section, not its dashboard list.
+      window.location.href = joinPortalPath('dashboard?view=settings');
+      return;
+    }
+    if (value === 'logout') {
+      logout();
+      return;
+    }
+    const dashboard = dashboards.data?.find((d) => d.menu_id === value);
+    if (dashboard && !isCurrentDashboard(dashboard)) void openDashboard(dashboard);
+  };
 
   return (
-    <Box position="relative" ref={ref} flexShrink={0}>
-      <Flex
-        as="button"
-        aria-label="User menu"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        align="center"
-        justify="center"
-        w="30px"
-        h="30px"
-        borderRadius="50%"
-        bg={colors.brandSoft}
-        color={colors.brand}
-        fontSize="12px"
-        fontWeight={700}
-        title={st.user.name}
-      >
-        {initials(st.user.name) || '?'}
-      </Flex>
-      {open && (
-        <Box role="menu" position="absolute" right={0} top="38px" w="260px" bg={colors.cardBg} border="1px solid" borderColor={colors.border} borderRadius="4px" boxShadow={`0 6px 24px ${colors.shadow}`} zIndex={60} overflow="hidden">
-          <Box px="14px" py="10px">
-            <Text fontSize="14px" fontWeight={700} color={colors.darkText} truncate>
-              {st.user.name}
-            </Text>
-            {email && (
-              <Text fontSize="12px" color={colors.mutedText} truncate>
-                {email}
+    <Menu.Root positioning={{ placement: 'bottom-end', gutter: 8 }} onSelect={handleSelect}>
+      <Menu.Trigger asChild>
+        <chakra.button
+          type="button"
+          aria-label="User menu"
+          flexShrink={0}
+          borderRadius="full"
+          cursor="pointer"
+          transition="box-shadow 0.2s ease"
+          // Only the ring moves; the circle stays still. Hovering sends a
+          // ripple out from the edge (keyframes in theme/theme.ts); while the
+          // menu is open the ring holds steady instead.
+          _hover={{ animation: 'avatarRing 1.4s ease-out infinite' }}
+          css={{
+            '&[aria-expanded=true], &[aria-expanded=true]:hover': {
+              animation: 'none',
+              boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.3)',
+            },
+          }}
+          focusVisibleRing="outside"
+        >
+          <Avatar.Root size="md" colorPalette="blue" variant="subtle">
+            <Avatar.Fallback name={name} />
+          </Avatar.Root>
+        </chakra.button>
+      </Menu.Trigger>
+
+      <Portal>
+        <Menu.Positioner>
+          <Menu.Content minW="270px" py={3}>
+            <Box px={4} pt={1} pb={3}>
+              <Text fontWeight="bold" fontSize="sm" color="gray.900">
+                {name}
               </Text>
-            )}
-          </Box>
-          <Flex as="label" borderTop="1px solid" borderColor={colors.border} align="flex-start" gap="10px" px="14px" py="10px" cursor="pointer" _hover={{ bg: colors.navbarHover }}>
-            <input type="checkbox" checked={planner} onChange={(e) => st.setPersona(e.target.checked ? 'planner' : 'executive')} aria-describedby="planner-view-help" style={{ marginTop: 3 }} />
-            <Box>
-              <Text fontSize="13px" fontWeight={600} color={colors.bodyText}>
-                Planner view
-              </Text>
-              <Text id="planner-view-help" fontSize="12px" color={colors.mutedText}>
-                Open the Operational Detail tables expanded on every tab.
-              </Text>
+              {session?.email && (
+                <Text fontSize="xs" color="gray.500" wordBreak="break-all">
+                  {session.email}
+                </Text>
+              )}
             </Box>
-          </Flex>
-          {!DEMO_DATA && <OtherDashboards />}
-          {!DEMO_DATA && (
-            <Flex as="button" w="100%" borderTop="1px solid" borderColor={colors.border} align="center" gap="8px" px="14px" py="10px" fontSize="13px" color={colors.bodyText} _hover={{ bg: colors.navbarHover }} onClick={logout}>
-              <FiLogOut /> Sign out
-            </Flex>
-          )}
-        </Box>
-      )}
-    </Box>
+
+            <Menu.Separator />
+
+            {/* Back to the One Thunder portal's dashboard page. Fixed, not from
+                the user's dashboards — it is where every dashboard is listed. */}
+            <Menu.Item value="portalHome" {...itemProps}>
+              <FiGrid size={16} />
+              <Box flex="1">Home</Box>
+            </Menu.Item>
+
+            <Menu.Separator />
+
+            <Menu.ItemGroup>
+              <Menu.ItemGroupLabel px={4} fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="wider">
+                Dashboards
+              </Menu.ItemGroupLabel>
+
+              {dashboards.isPending && (
+                <Text px={4} py={2} fontSize="sm" color="gray.500">
+                  Loading…
+                </Text>
+              )}
+              {dashboards.isError && (
+                <Text px={4} py={2} fontSize="sm" color="gray.500">
+                  Couldn't load dashboards
+                </Text>
+              )}
+
+              {dashboards.data?.map((dashboard) => {
+                const current = isCurrentDashboard(dashboard);
+                return (
+                  <Menu.Item
+                    key={dashboard.menu_id}
+                    value={dashboard.menu_id}
+                    disabled={current}
+                    gap={3}
+                    px={4}
+                    py={2.5}
+                    fontSize="sm"
+                    color={current ? 'blue.700' : 'gray.700'}
+                    fontWeight={current ? 'semibold' : 'normal'}
+                    cursor={current ? 'default' : 'pointer'}
+                    _disabled={{ opacity: 1 }}
+                  >
+                    <DashboardIcon resourceCode={dashboard.resource_code} size={16} />
+                    <Box flex="1">{dashboard.label}</Box>
+                    {current && (
+                      <Badge size="xs" colorPalette="blue" variant="subtle">
+                        Current
+                      </Badge>
+                    )}
+                  </Menu.Item>
+                );
+              })}
+            </Menu.ItemGroup>
+
+            <Menu.Separator />
+
+            {/* Opens this app's own /usermanual route in a new tab. */}
+            <Menu.Item value="userManual" {...itemProps}>
+              <FiBookOpen size={16} />
+              <Box flex="1">User Manual</Box>
+            </Menu.Item>
+
+            <Menu.Item value="settings" {...itemProps}>
+              <FiSettings size={16} />
+              Settings
+            </Menu.Item>
+
+            <Menu.Separator />
+
+            <Menu.Item
+              value="logout"
+              {...itemProps}
+              color="red.600"
+              _highlighted={{ bg: 'red.50', color: 'red.700' }}
+            >
+              <FiLogOut size={16} />
+              Log out
+            </Menu.Item>
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
+    </Menu.Root>
   );
 }

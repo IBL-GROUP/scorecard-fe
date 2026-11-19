@@ -515,7 +515,7 @@ export interface RiskInput {
   fmtMoney: (n: number) => string;
 }
 
-export function buildRisks(i: RiskInput): Risk[] {
+export function buildRisks(i: RiskInput, max: number = riskRules.maxItems): Risk[] {
   const out: Risk[] = [];
   // R1 — any KPI tile Red
   for (const k of i.redKpis) out.push({ id: `R1-${k.id}`, tone: 'red', text: `${k.name} is ${k.value}: below the Red line`, tab: k.tab, kpi: k.id, weight: 100 });
@@ -570,6 +570,6 @@ export function buildRisks(i: RiskInput): Risk[] {
   const toneRank: Record<RiskTone, number> = { red: 3, amber: 2, opportunity: 1 };
   const ranked = out.sort((a, b) => toneRank[b.tone] - toneRank[a.tone] || b.weight - a.weight);
   const opps = ranked.filter((r) => r.tone === 'opportunity').slice(0, 2);
-  const problems = ranked.filter((r) => r.tone !== 'opportunity').slice(0, riskRules.maxItems - opps.length);
+  const problems = ranked.filter((r) => r.tone !== 'opportunity').slice(0, max - opps.length);
   return [...problems, ...opps];
 }

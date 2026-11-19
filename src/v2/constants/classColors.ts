@@ -10,6 +10,9 @@
 const light = { A: '#3B5BDB', B: '#12A594', C: '#E8590C', N: '#8B5CF6', Others: '#6B7280' };
 const dark = light;
 
+/** The class hues as hex, for SVG attributes (axis tick fills) that cannot read a CSS variable. */
+export const CLASS_HEX: Record<string, string> = light;
+
 const css = (p: Record<string, string>) => Object.entries(p).map(([k, v]) => `--sp-cls-${k.toLowerCase()}:${v};`).join('');
 
 export const classColorCss = `:root{${css(light)}}html.dark{${css(dark)}}`;

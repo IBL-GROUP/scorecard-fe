@@ -88,6 +88,14 @@ export function getDaysGone(w: Window, today = todayIso()) {
   return { daysGone, totalDays, pct: Math.round((daysGone / totalDays) * 100) };
 }
 
+/**
+ * The comparison with a previous period or the same period last year. Off for
+ * now (user request, 18 Nov 2026): screens show the selected period only and
+ * the "Compare with" choices are shown disabled. The comparison data and
+ * code stay; set this to true to bring it back everywhere.
+ */
+export const COMPARE_ON = false;
+
 /** True when the window is inside one calendar month. */
 export const isSingleMonth = (w: Window) => w.start.slice(0, 7) === w.end.slice(0, 7);
 

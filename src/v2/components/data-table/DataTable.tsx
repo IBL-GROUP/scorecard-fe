@@ -17,9 +17,9 @@ import {
   FiDownload,
 } from 'react-icons/fi';
 import { colors } from '@/v2/constants/theme';
-import { InfoTip } from '@/v2/components/overlay';
+import { InfoTip } from '@/v2/ui/overlay';
 import { TABLE_HEADER_HELP, type HelpText } from '@/v2/constants/help';
-import { EmptyChart } from '@/v2/components/charts/EmptyChart';
+import { EmptyChart } from '@/v2/ui/charts/EmptyChart';
 import * as XLSX from 'xlsx';
 import { recordExport } from '@/v2/features/usage';
 
@@ -302,7 +302,7 @@ export function DataTable({
           borderColor={colors.border}
         >
           {title && (
-            <Text fontSize="14.5px" fontWeight={600} color={colors.darkText} flexShrink={0}>
+            <Text fontSize="16px" fontWeight={700} color={colors.darkText} flexShrink={0}>
               {title}
             </Text>
           )}

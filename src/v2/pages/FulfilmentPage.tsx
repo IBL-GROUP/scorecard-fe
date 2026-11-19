@@ -1,453 +1,562 @@
-// Tab 4: Fulfilment & Operations (PRD v2 section 4.4, wireframe 5.2).
-// Are we delivering what customers order, is production flowing, and is
-// material usable? OP-01 … OP-16.
+// Tab 4: Dispatch & WIP. Since 19 Nov 2026 (user: follow supply chain 1.0, as Summary and
+// Service Measure do) it keeps 1.0's layout — Dispatch Vs Order (OP-14) · WIP (OP-15) · RMPM
+// (OP-16), side by side and as tall as the screen — in Sales Pulse 2.0's cards, with the
+// highlight cards (2.0) on top. Drawn to be read at a glance: each table puts its problems
+// first and colours them; the 2.0 charts are a second view of the card they belong to
+// (fill rate by channel OP-03, WIP by plant OP-09, RMPM usability by plant OP-12).
+// Every figure here follows the dates only: these sources have no division, class or branch.
 
-import { Box, Flex, Text } from '@chakra-ui/react';
-import { useMemo, useState } from 'react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ComposedChart,
-  Line,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import { ExecTile } from '@/v2/components/exec/ExecTile';
-import { CardGrid, CardState, ChipBar, DATES_ONLY, OperationalDetail, ViewDetails, openDetail } from '@/v2/components/exec/Panels';
-import { AreaLayout } from '@/v2/components/exec/AreaLayout';
-import { AreaRisks } from './OverviewPage';
-import { axis, grid, Legend, ragLegend, tooltipStyle } from '@/v2/components/exec/charts';
-import { RAG_META } from '@/v2/components/exec/Rag';
-import { ChartCard } from '@/v2/components/chart-card';
-import { Segmented } from '@/v2/components/segmented';
+import { Box, Flex, Grid, Text } from '@chakra-ui/react';
+import { useState } from 'react';
+import { ChartCard } from '@/v2/ui/chart-card';
+import { RowBars } from '@/v2/ui/row-bars';
+import { Segmented } from '@/v2/ui/segmented';
+import { HighlightCard, HighlightGrid } from '@/v2/ui/highlights';
+import { MatrixTable } from '@/v2/ui/matrix';
+import { DetailTable, type DetailColumn } from '@/v2/ui/detail-table';
+import { useListFilter } from '@/v2/ui/detail-table/useListFilter';
+import { Overlay } from '@/v2/ui/overlay';
+import { SearchBar } from '@/v2/components/search';
+import { CardState } from '@/v2/components/exec/Panels';
 import { colors } from '@/v2/constants/theme';
 import { n0, type DispatchVsOrderRow, type RpmRow, type WipRow } from '@/v2/api/types';
 import { rowsOf, type DashboardData } from '@/v2/features/data';
-import { fulfilment, production, service, status } from '@/v2/features/derive';
-import { fillByChannel, fillRate, materialsBelow, paretoUnfulfilled, rmpmByPlant, RMPM_STATES, wipByPlant } from '@/v2/features/kpis';
-import { kpiThresholds, rag } from '@/v2/features/kpiThresholds';
-import { change, full, money, pct0, pct1, pkr, units } from '@/v2/features/format';
-import { useStore } from '@/v2/features/store';
-import { compareText, periodTag } from '@/v2/features/period';
-import { HBars } from '@/v2/components/exec/HBars';
-import { GroupedTable } from '@/v2/components/grouped-table/GroupedTable';
+import { fulfilment, production, status } from '@/v2/features/derive';
+import { fillByChannel, materialsBelow, rmpmByPlant, RMPM_STATES, wipByPlant } from '@/v2/features/kpis';
+import { kpiThresholds, rag, riskRules, type Rag } from '@/v2/features/kpiThresholds';
+import { DASH, change, full, money, pct0, pct1, pkr, units } from '@/v2/features/format';
+import { COMPARE_ON, compareText } from '@/v2/features/period';
+import { useDetail } from '@/v2/features/detail';
+import { useFitScreen } from '@/v2/features/fit';
 
+const INK: Record<Rag, string> = { green: colors.good, amber: colors.warn, red: colors.bad };
+const ink = (r: Rag | null | undefined) => (r ? INK[r] : colors.bodyText);
 const TYPE_COLORS = [colors.sales, colors.target, colors.prior, colors.accent, colors.borderStrong];
+/** RMPM stock states: usable in calm hues, held stock in warning hues. */
 const STATE_COLORS: Record<string, string> = {
-  Unrestricted: colors.sunkBg,
-  'In transit': colors.prior,
+  Unrestricted: colors.prior,
+  'In transit': colors.sales,
   'Quality inspection': colors.warn,
   Blocked: colors.bad,
-  Restricted: colors.warnSoft,
-  Returns: colors.badSoft,
+  Restricted: colors.target,
+  Returns: colors.borderStrong,
 };
-
-/** A filter for the re-created 1.0 dialog filters (design-system Select). */
-function Picker({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
-  return (
-    <Box minW="180px">
-      <Select label={label} value={value} onChange={onChange} options={['All', ...options].map((o) => ({ value: o, label: o }))} aria-label={label} />
-    </Box>
-  );
-}
-
-import { useDetail } from '@/v2/features/detail';
-import { Select } from '@/v2/components/select';
 
 export function FulfilmentPage({ data }: { data: DashboardData }) {
   const d = data.tabs.fulfilment;
-  const st = useStore();
   const detail = useDetail();
-  const chip = st.chips.fulfilment;
+  const fit = useFitScreen();
   const cmpLabel = compareText(data.cmpWindow);
 
   const f = fulfilment(d);
   const p = production(d);
-  const svc = service(d, st.filters.classification);
   const below = materialsBelow(f.rows);
-  const pareto = paretoUnfulfilled(f.rows);
-  const byPlant = wipByPlant(p.wip);
-  const rmpmPlants = rmpmByPlant(p.rpm);
+  const dispatched = new Set(f.rows.map((r) => r.material_name));
 
   const sDispatch = status(d, 'dispatch');
-  const sDispatchCmp = status(d, 'dispatch', 'dispatchCmp');
   const sWip = status(d, 'wip');
   const sRpm = status(d, 'rpm');
 
-  // OP-14 rows honour the channel / material chips (rule F4).
-  const dispatchRows = f.rows.filter(
-    (r) => !chip || (chip.key === 'channel' ? r.channel_type === chip.value : chip.key === 'material' ? r.material_name === chip.value : true),
+  // Up or down against the comparison period, only while comparison is on (as Summary).
+  const vs = (v: number | null, unit: '%' | 'pts' = '%') => (COMPARE_ON && v != null ? ` · ${v >= 0 ? '▲' : '▼'} ${unit === 'pts' ? `${Math.abs(v).toFixed(1)} pts` : pct1(Math.abs(v))} ${cmpLabel}` : '');
+
+  const highlights = (
+    <HighlightGrid isLoading={sDispatch.isLoading && sWip.isLoading && sRpm.isLoading}>
+      <Box data-kpi="OP-01" minW={0}>
+        <HighlightCard
+          label="Order fill rate"
+          tone={rag(f.pct, 'fillRate') === 'green' ? 'good' : 'bad'}
+          name={`Target ${kpiThresholds.fillRate.green}% · by quantity`}
+          value={pct1(f.pct)}
+          caption={`${full(f.delivered)} of ${full(f.ordered)} delivered${vs(f.pct != null && f.cmpPct != null ? f.pct - f.cmpPct : null, 'pts')}`}
+        />
+      </Box>
+      <Box data-kpi="OP-02 OP-04" minW={0}>
+        <HighlightCard
+          label="Unfulfilled"
+          tone="bad"
+          name={`${below.below} of ${below.total} materials below ${riskRules.materialFillBelow}%`}
+          value={units(f.unfulfilled)}
+          caption={`Ordered but not delivered${vs(change(f.unfulfilled, f.cmpUnfulfilled))}`}
+        />
+      </Box>
+      <Box data-kpi="OP-07 OP-08" minW={0}>
+        <HighlightCard
+          label="Production completion"
+          tone={rag(p.w.completion, 'productionCompletion') === 'green' ? 'good' : 'bad'}
+          name={`${full(p.w.openOrders)} open production orders`}
+          value={pct1(p.w.completion)}
+          caption={`Received ÷ item quantity · target ${kpiThresholds.productionCompletion.green}%`}
+        />
+      </Box>
+      <Box data-kpi="OP-06" minW={0}>
+        <HighlightCard label="WIP value" tone="sales" name="Work in progress, at cost" value={pkr(p.w.value)} caption={`Across ${full(new Set(p.wip.map((r) => r.plnt_desc)).size)} plants${vs(change(p.w.value, p.wCmp.value))}`} />
+      </Box>
+      <Box data-kpi="OP-10 OP-11" minW={0}>
+        <HighlightCard
+          label="Material on hold"
+          tone={rag(p.r.onHoldPct, 'onHoldPct') === 'green' ? 'good' : 'bad'}
+          name={`RMPM ${pkr(p.r.total)} at cost`}
+          value={pct1(p.r.onHoldPct)}
+          caption={`${pkr(p.r.held)} blocked, in QI, restricted or returned`}
+        />
+      </Box>
+    </HighlightGrid>
   );
 
-  // 1.0 dialog filters, re-created above the tables.
-  const [wipPlant, setWipPlant] = useState('All');
-  const [wipType, setWipType] = useState('All');
-  const [rmPlant, setRmPlant] = useState('All');
-  const wipPlants = useMemo(() => [...new Set(p.wip.map((r) => r.plnt_desc))].sort(), [p.wip]);
-  const wipTypes = useMemo(() => [...new Set(p.wip.map((r) => r.material_type_description))].sort(), [p.wip]);
-  const rmPlants = useMemo(() => [...new Set(p.rpm.map((r) => r.plantname))].sort(), [p.rpm]);
-  const wipRows = p.wip.filter((r) => (wipPlant === 'All' || r.plnt_desc === wipPlant) && (wipType === 'All' || r.material_type_description === wipType));
-  const rmRows = p.rpm.filter((r) => rmPlant === 'All' || r.plantname === rmPlant);
+  return (
+    <Flex direction="column" gap={3} h={fit ? '100%' : undefined} minH={0}>
+      {highlights}
+      {/* 1.0's three tables side by side, in its proportions (10 · 8 · 9 of 27). */}
+      <Grid templateColumns={{ base: '1fr', lg: 'minmax(0, 10fr) minmax(0, 8fr) minmax(0, 9fr)' }} gap={3} flex={1} minH={fit ? 0 : '560px'}>
+        <DispatchCard data={data} state={sDispatch} onMaterial={(m) => detail.open({ kind: 'material', material: m })} onChannel={(c) => detail.open({ kind: 'channel', channel: c })} />
+        <WipCard rows={p.wip} state={sWip} hasDispatch={(m) => dispatched.has(m)} onMaterial={(m) => detail.open({ kind: 'material', material: m })} onPlant={(pl) => detail.open({ kind: 'wipPlant', plant: pl })} />
+        <RmpmCard rows={p.rpm} state={sRpm} onMaterial={(m, plant) => detail.open({ kind: 'rmpm', material: m, plant })} onPlant={(pl) => detail.open({ kind: 'rmpmPlant', plant: pl })} />
+      </Grid>
+    </Flex>
+  );
+}
 
-  // B period fill rate per channel, for the lighter bar (FR-EXEC-045).
+type State = ReturnType<typeof status>;
+
+/**
+ * OP-14, 1.0's Dispatch Vs Order: per material, ordered, delivered, what is still short and
+ * the fill rate (delivered ÷ ordered, 0% when nothing went out). Most short first, so the
+ * materials holding customers up lead; 1.0's channel filter is the switch in the header.
+ * Its second view is the fill rate by channel (OP-03).
+ */
+function DispatchCard({ data, state, onMaterial, onChannel }: { data: DashboardData; state: State; onMaterial: (m: string) => void; onChannel: (c: string) => void }) {
+  const d = data.tabs.fulfilment;
+  const all = rowsOf<DispatchVsOrderRow>(d.dispatch);
+  const [view, setView] = useState<'table' | 'channel'>('table');
+  const [channel, setChannel] = useState('All');
+  const channels = [...new Set(all.map((r) => r.channel_type).filter(Boolean))].sort();
+  const rows = channel === 'All' ? all : all.filter((r) => r.channel_type === channel);
+
+  const byMaterial = new Map<string, { ordered: number; delivered: number; channels: number }>();
+  for (const r of rows) {
+    const m = byMaterial.get(r.material_name) ?? { ordered: 0, delivered: 0, channels: 0 };
+    m.ordered += n0(r.total_order_qty);
+    m.delivered += n0(r.total_delivery_qty);
+    m.channels += 1;
+    byMaterial.set(r.material_name, m);
+  }
+  const fill = (o: number, dlv: number) => (o > 0 ? Math.max(0, (dlv / o) * 100) : null);
+  const list = [...byMaterial.entries()]
+    .map(([name, m]) => ({ name, ...m, short: Math.max(0, m.ordered - m.delivered), pct: fill(m.ordered, m.delivered) }))
+    .sort((a, b) => b.short - a.short || (a.pct ?? 0) - (b.pct ?? 0));
+  const tot = list.reduce((t, r) => ({ ordered: t.ordered + r.ordered, delivered: t.delivered + r.delivered, short: t.short + r.short }), { ordered: 0, delivered: 0, short: 0 });
+  const totPct = fill(tot.ordered, tot.delivered);
+
   const cmpFill = new Map(fillByChannel(rowsOf<DispatchVsOrderRow>(d.dispatchCmp)).map((c) => [c.channel, c.pct]));
-  const channelData = f.channels.map((c) => ({ channel: c.channel, pct: c.pct == null ? 0 : Math.round(c.pct * 10) / 10, rag: rag(c.pct, 'fillRate') }));
-  const fillRag = rag(f.pct, 'fillRate');
-  const holdRag = rag(p.r.onHoldPct, 'onHoldPct');
+  // Worst fill first (fillByChannel's order).
+  const channelData = fillByChannel(all).map((c) => ({ channel: c.channel, pct: c.pct ?? 0, ordered: c.ordered, delivered: c.delivered, prior: cmpFill.get(c.channel) ?? 0 }));
 
   return (
-    <AreaLayout
-      top={<ChipBar tab="fulfilment" />}
-      topics={[
+    <ChartCard
+      dataKpi="OP-14 OP-03 OP-05"
+      title="Dispatch vs order"
+      colSpan={1}
+      isLoading={state.isLoading}
+      headerRight={
+        <Flex gap={2} align="center" flexShrink={0}>
+          {view === 'table' && channels.length > 1 && (
+            <Segmented size="xs" ariaLabel="Channel" value={channel} onChange={setChannel} options={['All', ...channels].map((c) => ({ value: c, label: c }))} />
+          )}
+          <Segmented
+            size="xs"
+            ariaLabel="Dispatch view"
+            value={view}
+            onChange={setView}
+            options={[
+              { value: 'table' as const, label: 'Table' },
+              { value: 'channel' as const, label: 'By channel' },
+            ]}
+          />
+        </Flex>
+      }
+    >
+      {CardState({ ...state, empty: !all.length }) ??
+        (view === 'table' ? (
+          <MatrixTable
+            nameHeader="Material"
+            cols={[
+              { key: 'o', label: 'Ordered' },
+              { key: 'd', label: 'Delivered' },
+              { key: 's', label: 'Short' },
+              { key: 'p', label: 'Fill' },
+            ]}
+            total={[full(tot.ordered), full(tot.delivered), full(tot.short), totPct == null ? DASH : pct0(totPct)]}
+            rows={list.map((r) => ({
+              name: r.name,
+              // A material opens its channel split only when it has one: in a single channel (or one-channel material) the row already says it all.
+              opens: r.channels > 1,
+              cells: [
+                { text: full(r.ordered) },
+                { text: full(r.delivered) },
+                { text: r.short ? full(r.short) : '0', color: r.short ? colors.bad : undefined },
+                { text: r.pct == null ? DASH : pct0(r.pct), color: ink(rag(r.pct, 'fillRate')) },
+              ],
+            }))}
+            onRow={onMaterial}
+          />
+        ) : (
+          // One row per channel, worst first: its fill rate as a bar on a 0–100% scale, coloured by status, the target as a tick.
+          <RowBars
+            fmt={full}
+            targetLabel="ordered"
+            status={(pct) => ink(rag(pct, 'fillRate'))}
+            legend={[
+              { label: 'Delivered', color: colors.sales },
+              { label: 'Ordered', color: colors.target, shape: 'tick' },
+            ]}
+            rows={channelData.map((c) => ({
+              key: c.channel,
+              name: c.channel,
+              parts: [{ value: c.delivered, color: colors.sales, label: 'Delivered' }],
+              target: c.ordered,
+            }))}
+            onPick={onChannel}
+          />
+        ))}
+    </ChartCard>
+  );
+}
+
+/**
+ * OP-15, 1.0's WIP: one row per production order — by default the orders with nothing received
+ * yet (1.0's "Pending GR"), or every order — with its WIP quantity and value, largest value
+ * first. ⤢ opens 1.0's WIP Details: every column and its filters. The second view is WIP value
+ * by plant and material type (OP-09).
+ */
+function WipCard({ rows, state, hasDispatch, onMaterial, onPlant }: { rows: WipRow[]; state: State; hasDispatch: (m: string) => boolean; onMaterial: (m: string) => void; onPlant: (p: string) => void }) {
+  const [view, setView] = useState<'table' | 'plant'>('table');
+  const [scope, setScope] = useState<'pending' | 'all'>('pending');
+  const [details, setDetails] = useState(false);
+  const shown = (scope === 'pending' ? rows.filter((r) => n0(r.good_received_qty) === 0) : rows).slice().sort((a, b) => n0(b['WIP Value']) - n0(a['WIP Value']));
+  const tot = shown.reduce((t, r) => ({ qty: t.qty + n0(r.Quantity), value: t.value + n0(r['WIP Value']) }), { qty: 0, value: 0 });
+  const byPlant = wipByPlant(rows);
+  const keyOf = (r: WipRow, i: number) => `${r.order_number}|${i}`;
+
+  return (
+    <ChartCard
+      dataKpi="OP-15 OP-09"
+      title="WIP"
+      colSpan={1}
+      isLoading={state.isLoading}
+      onExpand={() => setDetails(true)}
+      headerRight={
+        <Flex gap={2} align="center" flexShrink={0}>
+          {view === 'table' && (
+            <Segmented
+              size="xs"
+              ariaLabel="Orders"
+              value={scope}
+              onChange={setScope}
+              options={[
+                { value: 'pending' as const, label: 'Pending GR' },
+                { value: 'all' as const, label: 'All orders' },
+              ]}
+            />
+          )}
+          <Segmented
+            size="xs"
+            ariaLabel="WIP view"
+            value={view}
+            onChange={setView}
+            options={[
+              { value: 'table' as const, label: 'Table' },
+              { value: 'plant' as const, label: 'By plant' },
+            ]}
+          />
+        </Flex>
+      }
+    >
+      {CardState({ ...state, empty: !rows.length || (view === 'table' && !shown.length), emptyText: scope === 'pending' && rows.length ? 'No order is waiting for its first goods receipt. See All orders.' : undefined }) ??
+        (view === 'table' ? (
+          <MatrixTable
+            nameHeader="Material · order"
+            cols={[
+              { key: 'q', label: 'WIP qty' },
+              { key: 'v', label: 'Value' },
+            ]}
+            total={[full(tot.qty), money(tot.value)]}
+            rows={shown.map((r, i) => ({
+              name: keyOf(r, i),
+              label: <TwoLine top={r['Material Name']} sub={`Order ${r.order_number} · ${r.plnt_desc}`} />,
+              cells: [{ text: full(n0(r.Quantity)) }, { text: money(n0(r['WIP Value'])), color: colors.darkText }],
+              // Its material's sheet is its dispatch by channel: nothing to open without dispatch orders.
+              opens: hasDispatch(r['Material Name']),
+            }))}
+            onRow={(k) => {
+              const r = shown.find((x, i) => keyOf(x, i) === k);
+              if (r) onMaterial(r['Material Name']);
+            }}
+          />
+        ) : (
+          // One row per plant, largest WIP first: a 100% bar split by material type (as RMPM's by stock state); its value beside the name.
+          <RowBars
+            fmt={money}
+            legend={byPlant.types.map((t, i) => ({ label: t, color: TYPE_COLORS[i % TYPE_COLORS.length] }))}
+            rows={[...byPlant.rows]
+              .map((r) => ({ r, total: byPlant.types.reduce((t, ty) => t + Number(r[ty] ?? 0), 0) }))
+              .sort((a, b) => b.total - a.total)
+              .map(({ r, total }) => ({
+                key: String(r.plant),
+                name: String(r.plant),
+                note: `${money(total)} · ${full(rows.filter((x) => x.plnt_desc === r.plant).length)} orders`,
+                parts: byPlant.types.map((t, i) => ({ value: Number(r[t] ?? 0), color: TYPE_COLORS[i % TYPE_COLORS.length], label: t })),
+              }))}
+            onPick={onPlant}
+          />
+        ))}
+      {details && <WipDetails rows={rows} hasDispatch={hasDispatch} onClose={() => setDetails(false)} onMaterial={onMaterial} />}
+    </ChartCard>
+  );
+}
+
+/** A table name with a muted second line (an order and plant, a plant and storage location). */
+function TwoLine({ top, sub }: { top: string; sub: string }) {
+  return (
+    <Flex as="span" direction="column" minW={0} lineHeight="1.25">
+      <Text as="span" truncate title={top}>
+        {top}
+      </Text>
+      <Text as="span" fontSize="11.5px" color={colors.mutedText} truncate title={sub}>
+        {sub}
+      </Text>
+    </Flex>
+  );
+}
+
+/** 1.0's WIP Details material types, always offered (1.0 lists them even when none is in WIP); any other type the data has follows. */
+const WIP_TYPES = ['TSCL -  Toll-In Bulk', 'HOTC - Mfg Finished Goods', 'TSCL - Semi Finished', 'TSCL - Mfg Finished Goods', 'TSCL - Export FG'];
+
+/** 1.0's WIP Details: every production order; its filters (material type, plant, storage location, WIP) in the search bar. */
+function WipDetails({ rows, hasDispatch, onClose, onMaterial }: { rows: WipRow[]; hasDispatch: (m: string) => boolean; onClose: () => void; onMaterial: (m: string) => void }) {
+  const { shown, values, setValues, searchFields } = useListFilter<WipRow>(rows, [
+    { key: 'status', label: 'WIP', of: (r) => (n0(r.good_received_qty) === 0 ? 'pending' : 'received'), fixed: [{ value: 'pending', label: 'Pending GR' }, { value: 'received', label: 'Goods received' }] },
+    { key: 'type', label: 'Material type', of: (r) => r.material_type_description, fixed: WIP_TYPES.map((t) => ({ value: t, label: t.replace(/\s+/g, ' ') })) },
+    { key: 'plant', label: 'Plant', of: (r) => r.plnt_desc },
+    { key: 'storage', label: 'Storage location', of: (r) => r.storage_loc_desc },
+    { key: 'material', label: 'Material', of: (r) => r['Material Name'] },
+    { key: 'order', label: 'Order number', of: (r) => String(r.order_number ?? '') },
+  ]);
+  const columns: DetailColumn<WipRow>[] = [
+    { key: 'm', header: 'Material', kind: 'text', value: (r) => r['Material Name'] },
+    { key: 't', header: 'Material type', kind: 'text', value: (r) => r.material_type_description },
+    { key: 'o', header: 'Order number', kind: 'text', value: (r) => String(r.order_number ?? '') },
+    { key: 'p', header: 'Plant', kind: 'text', value: (r) => r.plnt_desc },
+    { key: 's', header: 'Storage location', kind: 'text', value: (r) => r.storage_loc_desc },
+    { key: 'i', header: 'Process item qty', kind: 'number', value: (r) => n0(r.item_qty) },
+    { key: 'g', header: 'Good received qty', kind: 'number', value: (r) => n0(r.good_received_qty), color: (v) => (v === 0 ? colors.bad : undefined) },
+    { key: 'q', header: 'Variance qty', kind: 'number', value: (r) => n0(r.Quantity) },
+    { key: 'v', header: 'WIP value', kind: 'number', value: (r) => n0(r['WIP Value']) },
+  ];
+  return (
+    <Overlay title="WIP details" subtitle="Every production order in WIP · 0 received = pending goods receipt" onClose={onClose} width="min(1700px, 96vw)">
+      <Box h="min(76vh, 820px)">
+        <DetailTable
+          rows={shown}
+          total={rows.length}
+          columns={columns}
+          exportName="WIP Details"
+          onRow={(r) => {
+            onClose();
+            onMaterial(r['Material Name']);
+          }}
+          rowOpens={(r) => hasDispatch(r['Material Name'])}
+          toolbar={
+            <Box flex="1 1 520px" maxW="760px" minW={0}>
+              <SearchBar fields={searchFields} values={values} onChange={setValues} quickFilterKeys={['status', 'type']} placeholder="Search material, order, type, plant, storage location…" />
+            </Box>
+          }
+        />
+      </Box>
+    </Overlay>
+  );
+}
+
+/**
+ * OP-16, 1.0's RMPM: one row per material at each plant and storage location, with its total
+ * quantity and cost and how much is on hold (blocked, in QI, restricted or returned); 1.0's
+ * All / PM / RM switch in the header; largest cost first. ⤢ opens 1.0's RMPM Details. The
+ * second view is the stock state by plant (OP-12).
+ */
+function RmpmCard({ rows, state, onMaterial, onPlant }: { rows: RpmRow[]; state: State; onMaterial: (m: string, plant: string) => void; onPlant: (p: string) => void }) {
+  const [view, setView] = useState<'table' | 'plant'>('table');
+  const [type, setType] = useState<'All' | 'TPKG' | 'TRAW'>('All');
+  const [details, setDetails] = useState(false);
+  const held = (r: RpmRow) => n0(r.blocked_val) + n0(r.quality_inspection_val) + n0(r.restricted_val) + n0(r.returns_val);
+  const shown = (type === 'All' ? rows : rows.filter((r) => r.producttype === type)).slice().sort((a, b) => n0(b.total_val) - n0(a.total_val));
+  const tot = shown.reduce((t, r) => ({ qty: t.qty + n0(r.total_qty), value: t.value + n0(r.total_val), held: t.held + held(r) }), { qty: 0, value: 0, held: 0 });
+  const holdPct = (h: number, v: number) => (v > 0 ? (h / v) * 100 : null);
+  const plants = rmpmByPlant(rows);
+  const keyOf = (r: RpmRow, i: number) => `${r.materialname}|${r.plant}|${r.storagelocation}|${i}`;
+
+  return (
+    <ChartCard
+      dataKpi="OP-16 OP-12"
+      title="RMPM"
+      colSpan={1}
+      isLoading={state.isLoading}
+      onExpand={() => setDetails(true)}
+      headerRight={
+        <Flex gap={2} align="center" flexShrink={0}>
+          {view === 'table' && (
+            <Segmented
+              size="xs"
+              ariaLabel="Material type"
+              value={type}
+              onChange={setType}
+              options={[
+                { value: 'All' as const, label: 'All' },
+                { value: 'TPKG' as const, label: 'PM' },
+                { value: 'TRAW' as const, label: 'RM' },
+              ]}
+            />
+          )}
+          <Segmented
+            size="xs"
+            ariaLabel="RMPM view"
+            value={view}
+            onChange={setView}
+            options={[
+              { value: 'table' as const, label: 'Table' },
+              { value: 'plant' as const, label: 'By plant' },
+            ]}
+          />
+        </Flex>
+      }
+    >
+      {CardState({ ...state, empty: !rows.length }) ??
+        (view === 'table' ? (
+          <MatrixTable
+            nameHeader="Material"
+            cols={[
+              { key: 'q', label: 'Total qty' },
+              { key: 'v', label: 'Total cost' },
+              { key: 'h', label: 'On hold' },
+            ]}
+            total={[full(tot.qty), money(tot.value), pct1(holdPct(tot.held, tot.value))]}
+            rows={shown.map((r, i) => {
+              const h = holdPct(held(r), n0(r.total_val));
+              return {
+                name: keyOf(r, i),
+                label: <TwoLine top={r.materialname} sub={`${r.plantname} · ${r.storagelocationname}`} />,
+                cells: [{ text: full(n0(r.total_qty)) }, { text: money(n0(r.total_val)), color: colors.darkText }, { text: h ? pct0(h) : '0%', color: h ? ink(rag(h, 'onHoldPct')) : undefined }],
+              };
+            })}
+            onRow={(k) => {
+              const r = shown.find((x, i) => keyOf(x, i) === k);
+              if (r) onMaterial(r.materialname, r.plantname);
+            }}
+          />
+        ) : (
+          // One row per plant, largest stock first: its stock as a 100% bar split by state; the value and share on hold beside its name.
+          <RowBars
+            fmt={money}
+            legend={RMPM_STATES.map((st) => ({ label: st.label, color: STATE_COLORS[st.label] }))}
+            rows={[...plants]
+              .sort((a, b) => Number(b.total ?? 0) - Number(a.total ?? 0))
+              .map((r) => {
+                const total = Number(r.total ?? 0);
+                const hold = RMPM_STATES.filter((st) => st.held).reduce((t, st) => t + Number(r[st.label] ?? 0), 0);
+                return {
+                  key: String(r.plant),
+                  name: String(r.plant),
+                  note: (
+                    <>
+                      {money(total)} ·{' '}
+                      <Box as="span" color={ink(rag(hold, 'onHoldPct'))} fontWeight={700}>
+                        {pct0(hold)} on hold
+                      </Box>
+                    </>
+                  ),
+                  // rmpmByPlant gives each state as a share of the plant's value: back to value.
+                  parts: RMPM_STATES.map((st) => ({ value: (Number(r[st.label] ?? 0) / 100) * total, color: STATE_COLORS[st.label], label: st.label })),
+                };
+              })}
+            onPick={onPlant}
+          />
+        ))}
+      {details && <RmpmDetails rows={rows} onClose={() => setDetails(false)} />}
+    </ChartCard>
+  );
+}
+
+/** 1.0's RMPM Details columns: each stock state in units (when it has a quantity) and in value. */
+const RMPM_COLS: { label: string; qty: keyof RpmRow | null; val: keyof RpmRow | null }[] = [
+  { label: 'Unrestricted', qty: 'unrestricted_qty', val: 'unrestricted_val' },
+  { label: 'Restricted', qty: 'restricted_qty', val: 'restricted_val' },
+  { label: 'Quality inspection', qty: 'qualityinspection_qty', val: 'quality_inspection_val' },
+  { label: 'Blocked', qty: 'blocked_qty', val: 'blocked_val' },
+  { label: 'GR blocked', qty: null, val: 'gr_blocked_val' },
+  { label: 'Returns', qty: 'return_qty', val: 'returns_val' },
+  { label: 'Stock in transit', qty: 'stockintransit_qty', val: 'stock_in_transit_val' },
+  { label: 'Stock transfer plant', qty: 'stocktransferplant_qty', val: 'stock_transfer_plant_val' },
+  { label: 'Stock transfer stor. loc.', qty: 'stocktransferstoragelocation_qty', val: null },
+  { label: 'Storage location', qty: null, val: 'storage_location_val' },
+  { label: 'Tied empties', qty: 'tiedempties_qty', val: 'tied_empties_val' },
+  { label: 'Total', qty: 'total_qty', val: 'total_val' },
+];
+const HELD_LABELS = ['Restricted', 'Quality inspection', 'Blocked', 'GR blocked', 'Returns'];
+
+/** 1.0's RMPM Details: Unit / Value as a switch; type (PM / RM), plant and storage location in the search bar. */
+function RmpmDetails({ rows, onClose }: { rows: RpmRow[]; onClose: () => void }) {
+  const [mode, setMode] = useState<'unit' | 'value'>('unit');
+  const { shown, values, setValues, searchFields } = useListFilter<RpmRow>(rows, [
+    { key: 'type', label: 'Type', of: (r) => r.producttype, fixed: [{ value: 'TPKG', label: 'PM' }, { value: 'TRAW', label: 'RM' }] },
+    { key: 'plant', label: 'Plant', of: (r) => r.plantname },
+    { key: 'storage', label: 'Storage location', of: (r) => r.storagelocationname },
+    { key: 'material', label: 'Material', of: (r) => r.materialname },
+  ]);
+  const columns: DetailColumn<RpmRow>[] = [
+    { key: 'm', header: 'Material', kind: 'text', value: (r) => r.materialname },
+    { key: 'p', header: 'Plant', kind: 'text', value: (r) => r.plantname },
+    { key: 's', header: 'Storage location', kind: 'text', value: (r) => r.storagelocationname },
+    ...RMPM_COLS.flatMap((c): DetailColumn<RpmRow>[] => {
+      const field = mode === 'unit' ? c.qty : c.val;
+      if (!field) return [];
+      return [
         {
-          key: 'orders',
-          title: 'Orders',
-          tiles: [
-            <ExecTile key="OP-01"
-              id="OP-01"
-              label="Order Fill Rate"
-              value={pct1(f.pct)}
-              rag={fillRag}
-              band="fillRate"
-              more="Target ≥ 95% · by quantity"
-              delta={{ value: f.pct != null && f.cmpPct != null ? f.pct - f.cmpPct : null, unit: 'pts', label: cmpLabel }}
-              {...sDispatchCmp}
-            />,
-            <ExecTile key="OP-02"
-              id="OP-02"
-              label="Unfulfilled Quantity"
-              value={units(f.unfulfilled)}
-              more={`${full(f.ordered)} ordered · ${full(f.delivered)} delivered`}
-              delta={{ value: change(f.unfulfilled, f.cmpUnfulfilled), label: cmpLabel, upIsGood: false }}
-              {...sDispatchCmp}
-            />,
-            <ExecTile key="OP-04"
-              id="OP-04"
-              label="Materials Below Fill Target"
-              value={`${below.below} of ${below.total}`}
-              valueSuffix="materials"
-              more="Delivery below 90%"
-              {...sDispatch}
-            />,
-          ],
-          lead: (
-            <ChartCard
-              dataKpi="OP-03"
-              title="Fill Rate by Channel"
-              subtitle="Delivered ÷ ordered quantity"
-              colSpan={{ base: 1, lg: 5 }}
-              height="300px"
-              isLoading={sDispatch.isLoading}
-              headerRight={<ViewDetails detailId="dispatch" />}
-            >
-              {CardState({ ...sDispatch, empty: !channelData.length }) ?? (
-                <HBars
-                  rows={channelData.map((c) => ({
-                    key: c.channel,
-                    label: c.channel,
-                    value: c.pct,
-                    prior: cmpFill.get(c.channel) ?? null,
-                    target: kpiThresholds.fillRate.green,
-                    color: c.rag ? RAG_META[c.rag].color : colors.sales,
-                    valueText: `${c.pct}%`,
-                    priorText: cmpFill.get(c.channel) == null ? '—' : `${Math.round((cmpFill.get(c.channel) as number) * 10) / 10}%`,
-                    onClick: () => detail.open({ kind: 'channel', channel: c.channel }),
-                  }))}
-                  fmt={(n) => `${n}%`}
-                  max={100}
-                  legend={[...ragLegend('fillRate', { shape: 'bar', what: 'fill rate' }), { label: `B · ${periodTag(data.cmpWindow)}`, color: colors.prior }, { label: `Target ${kpiThresholds.fillRate.green}%`, color: colors.target, shape: 'tick' }]}
-                />
-              )}
-            </ChartCard>
-          ),
-          details: (
-            <>
-              <CardGrid mb={3}>
-                <ChartCard
-                  dataKpi="OP-05"
-                  title="Top 10 Unfulfilled Materials"
-                  subtitle="Unfulfilled quantity and cumulative share"
-                  colSpan={12}
-                  height="300px"
-                  isLoading={sDispatch.isLoading}
-                  headerRight={<ViewDetails detailId="dispatch" />}
-                >
-                  {CardState({ ...sDispatch, empty: !pareto.length }) ?? (
-                    <Flex direction="column" h="100%">
-                    <Box flex={1} minH={0}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={pareto} margin={{ left: 4, right: 8, top: 8, bottom: 4 }}>
-                        <CartesianGrid {...grid} vertical={false} />
-                        <XAxis dataKey="material" {...axis} interval={0} tick={{ fontSize: 10 }} tickFormatter={(v: string) => (v.length > 12 ? `${v.slice(0, 11)}…` : v)} />
-                        <YAxis yAxisId="q" {...axis} tickFormatter={(v: number) => money(v)} />
-                        <YAxis yAxisId="c" orientation="right" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} allowDataOverflow {...axis} tickFormatter={(v: number) => `${v}%`} />
-                        <Tooltip
-                          {...tooltipStyle}
-                          formatter={(v, name) => (name === 'cumPct' ? [pct0(Number(v)), 'Cumulative share'] : [full(Number(v)), 'Unfulfilled units'])}
-                        />
-                        <Bar
-                          yAxisId="q"
-                          dataKey="qty"
-                          fill={colors.sales}
-                          radius={[3, 3, 0, 0]}
-                          cursor="pointer"
-                          onClick={(e: unknown) => {
-                            const m = (e as { payload?: { material?: string } }).payload?.material;
-                            if (!m) return;
-                            // TC-S4-12: filter the Dispatch Vs Order table to this material and open it.
-                            st.setChip('fulfilment', { key: 'material', value: m });
-                            openDetail('dispatch', st.setZone4);
-                          }}
-                        />
-                        <Line yAxisId="c" dataKey="cumPct" stroke={colors.target} strokeWidth={2} dot={{ r: 2.5 }} />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                    </Box>
-                    <Legend items={[{ label: 'Unfulfilled units (left axis)', color: colors.sales }, { label: 'Cumulative share of unfulfilled (right axis)', color: colors.target, shape: 'line' }]} />
-                    </Flex>
-                  )}
-                </ChartCard>
-              </CardGrid>
-              <OperationalDetail id="dispatch" kpi="OP-14" title="Dispatch Vs Order" subtitle="1.0 table · by material and channel">
-                {CardState({ ...sDispatch, empty: !sDispatch.isLoading && !dispatchRows.length }) ?? (
-                  <GroupedTable<DispatchVsOrderRow>
-                    rows={dispatchRows}
-                    isLoading={sDispatch.isLoading}
-                    levels={[
-                      { key: 'channel', label: 'Channel', of: (r) => r.channel_type },
-                      { key: 'material', label: 'Material', of: (r) => r.material_name },
-                    ]}
-                    presets={[
-                      { value: 'channel', label: 'Channel › Material', levels: ['channel'] },
-                      { value: 'material', label: 'Material › Channel', levels: ['material'], leaf: { label: 'Channel', name: (r) => r.channel_type } },
-                    ]}
-                    leaf={{ label: 'Material', key: (r) => `${r.material_name}|${r.channel_type}`, name: (r) => r.material_name }}
-                    figures={[
-                      { header: 'Ordered Qty', value: (r) => n0(r.total_order_qty), fmt: full },
-                      { header: 'Delivered Qty', value: (r) => n0(r.total_delivery_qty), fmt: full },
-                      {
-                        header: 'Delivery %',
-                        value: (r) => n0(r.delivery_pct),
-                        fmt: pct1,
-                        // A group's delivery % is its fill rate: Σ delivered ÷ Σ ordered (the OP-01 rule).
-                        group: (list) => fillRate(list).pct,
-                        color: (r) => { const g = rag(n0(r.delivery_pct), 'fillRate'); return g ? RAG_META[g].color : undefined; },
-                        groupColor: (v) => { const g = rag(v, 'fillRate'); return g ? RAG_META[g].color : undefined; },
-                      },
-                    ]}
-                    onLeaf={(r) => detail.open({ kind: 'material', material: r.material_name })}
-                  />
-                )}
-              </OperationalDetail>
-            </>
-          ),
+          key: c.label,
+          header: c.label,
+          kind: 'number',
+          value: (r) => n0(r[field] as never),
+          // Stock that cannot be used shows in amber when there is any.
+          color: (v) => (HELD_LABELS.includes(c.label) && v > 0 ? colors.warn : c.label === 'Total' ? colors.darkText : undefined),
         },
-        {
-          key: 'production',
-          title: 'Production',
-          // Every figure here ignores the filters: said once for the panel (FR-EXEC-055).
-          note: DATES_ONLY,
-          tiles: [
-            <ExecTile key="OP-07"
-              id="OP-07"
-              label="Production Completion"
-              value={pct1(p.w.completion)}
-              rag={rag(p.w.completion, 'productionCompletion')}
-              band="productionCompletion"
-              more="Target ≥ 90%"
-              delta={{ value: p.w.completion != null && p.wCmp.completion != null ? p.w.completion - p.wCmp.completion : null, unit: 'pts', label: cmpLabel }}
-              {...sWip}
-            />,
-            <ExecTile key="OP-06"
-              id="OP-06"
-              label="WIP Value"
-              value={pkr(p.w.value)}
-              delta={{ value: change(p.w.value, p.wCmp.value), label: cmpLabel, upIsGood: false }}
-              {...status(d, 'wip', 'wipCmp')}
-            />,
-            <ExecTile key="OP-08" id="OP-08" label="Open Production Orders" value={full(p.w.openOrders)} more="Received below item quantity" {...sWip} />,
-          ],
-          lead: (
-            <ChartCard
-              dataKpi="OP-09"
-              title="WIP Value by Plant and Material Type"
-              colSpan={{ base: 1, lg: 6 }}
-              height="300px"
-              isLoading={sWip.isLoading}
-              headerRight={<ViewDetails detailId="wip" />}
-            >
-              {CardState({ ...sWip, empty: !byPlant.rows.length }) ?? (
-                <Flex direction="column" h="100%">
-                  <Box flex={1} minH={0}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={byPlant.rows} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
-                        <CartesianGrid {...grid} horizontal={false} />
-                        <XAxis type="number" {...axis} tickFormatter={(v: number) => money(v)} />
-                        <YAxis type="category" dataKey="plant" width={100} {...axis} />
-                        <Tooltip {...tooltipStyle} formatter={(v, name) => [pkr(Number(v)), String(name)]} />
-                        {byPlant.types.map((t, i) => (
-                          <Bar key={t} dataKey={t} stackId="w" fill={TYPE_COLORS[i % TYPE_COLORS.length]} />
-                        ))}
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </Box>
-                  <Legend items={byPlant.types.map((t, i) => ({ label: t, color: TYPE_COLORS[i % TYPE_COLORS.length] }))} />
-                </Flex>
-              )}
-            </ChartCard>
-          ),
-          details: (
-            <>
-              <OperationalDetail id="wip" kpi="OP-15" title="Work in Progress" subtitle="1.0 table">
-                {CardState({ ...sWip }) ?? (
-                  <>
-                    <Flex gap={4} wrap="wrap" px={2} py={2} align="center">
-                      <Picker label="Plant" value={wipPlant} options={wipPlants} onChange={setWipPlant} />
-                      <Text fontSize="12px" color={colors.mutedText}>
-                        Material type
-                      </Text>
-                      <Segmented size="xs" value={wipType} onChange={setWipType} options={['All', ...wipTypes].map((t) => ({ value: t, label: t }))} ariaLabel="Material type" />
-                    </Flex>
-                    <GroupedTable<WipRow>
-                      rows={wipRows}
-                      isLoading={sWip.isLoading}
-                      levels={[
-                        { key: 'plant', label: 'Plant', of: (r) => r.plnt_desc },
-                        { key: 'type', label: 'Material type', of: (r) => r.material_type_description },
-                      ]}
-                      presets={[
-                        { value: 'plant', label: 'Plant › Material type', levels: ['plant', 'type'] },
-                        { value: 'type', label: 'Material type › Plant', levels: ['type', 'plant'] },
-                      ]}
-                      leaf={{ label: 'Order', key: (r) => String(r.order_number), name: (r) => String(r.order_number) }}
-                      texts={[
-                        { header: 'Material', value: (r) => r['Material Name'] },
-                        { header: 'Storage location', value: (r) => r.storage_loc_desc },
-                      ]}
-                      figures={[
-                        { header: 'Item Qty', value: (r) => n0(r.item_qty), fmt: full },
-                        { header: 'Good Received Qty', value: (r) => n0(r.good_received_qty), fmt: full },
-                        { header: 'Quantity', value: (r) => n0(r.Quantity), fmt: full },
-                        { header: 'WIP Value', value: (r) => n0(r['WIP Value']), fmt: full },
-                      ]}
-                      onLeaf={(r) => detail.open({ kind: 'order', order: r.order_number })}
-                    />
-                  </>
-                )}
-              </OperationalDetail>
-            </>
-          ),
-        },
-        {
-          key: 'materials',
-          title: 'Materials & service',
-          tiles: [
-            <ExecTile key="OP-10"
-              id="OP-10"
-              label="RMPM Value (at cost)"
-              value={pkr(p.r.total)}
-              delta={{ value: change(p.r.total, p.rCmp.total), label: cmpLabel, upIsGood: false }}
-              scopeNote={DATES_ONLY}
-              {...status(d, 'rpm', 'rpmCmp')}
-            />,
-            <ExecTile key="OP-11"
-              id="OP-11"
-              label="Material on Hold"
-              value={pct1(p.r.onHoldPct)}
-              rag={holdRag}
-              band="onHoldPct"
-              more={`${pkr(p.r.held)} blocked, in QI, restricted or returned`}
-              delta={{ value: p.r.onHoldPct != null && p.rCmp.onHoldPct != null ? p.r.onHoldPct - p.rCmp.onHoldPct : null, unit: 'pts', label: cmpLabel, upIsGood: false }}
-              scopeNote={DATES_ONLY}
-              {...sRpm}
-            />,
-            <ExecTile key="OP-13"
-              id="OP-13"
-              label="Service Level (network)"
-              value={pct1(svc.level)}
-              rag={rag(svc.level, 'serviceLevel')}
-              band="serviceLevel"
-              more={`${full(svc.above)} of ${full(svc.above + svc.below)} SKUs above threshold`}
-              goTo={{ tab: 'inventory', focus: 'IN-10' }}
-              {...status(d, 'aboveBelow')}
-            />,
-          ],
-          lead: (
-            <ChartCard
-              dataKpi="OP-12"
-              title="RMPM Usability by Plant"
-              subtitle={`Share of value by stock state · ${DATES_ONLY}`}
-              colSpan={{ base: 1, lg: 6 }}
-              height="300px"
-              isLoading={sRpm.isLoading}
-              headerRight={<ViewDetails detailId="rmpm" />}
-            >
-              {CardState({ ...sRpm, empty: !rmpmPlants.length }) ?? (
-                <Flex direction="column" h="100%">
-                  <Box flex={1} minH={0}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={rmpmPlants} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
-                        <CartesianGrid {...grid} horizontal={false} />
-                        <XAxis type="number" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} allowDataOverflow {...axis} tickFormatter={(v: number) => `${v}%`} />
-                        <YAxis type="category" dataKey="plant" width={100} {...axis} />
-                        <Tooltip {...tooltipStyle} formatter={(v, name) => [pct1(Number(v)), String(name)]} />
-                        {RMPM_STATES.map((s) => (
-                          <Bar key={s.label} dataKey={s.label} stackId="r" fill={STATE_COLORS[s.label]} stroke={s.label === 'Unrestricted' ? colors.border : undefined} />
-                        ))}
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </Box>
-                  <Legend items={RMPM_STATES.map((s) => ({ label: `${s.label}${s.held ? ' (on hold)' : ''}`, color: STATE_COLORS[s.label] }))} />
-                </Flex>
-              )}
-            </ChartCard>
-          ),
-          details: (
-            <>
-              <OperationalDetail id="rmpm" kpi="OP-16" title="Raw and Packing Material (RMPM)" subtitle={`1.0 table · ${DATES_ONLY}`}>
-                {CardState({ ...sRpm }) ?? (
-                  <>
-                    <Flex gap={4} px={2} py={2}>
-                      <Picker label="Plant" value={rmPlant} options={rmPlants} onChange={setRmPlant} />
-                    </Flex>
-                    <GroupedTable<RpmRow>
-                      rows={rmRows}
-                      isLoading={sRpm.isLoading}
-                      levels={[
-                        { key: 'plant', label: 'Plant', of: (r) => r.plantname },
-                        { key: 'type', label: 'Type', of: (r) => r.producttype },
-                      ]}
-                      presets={[
-                        { value: 'plant', label: 'Plant › Type', levels: ['plant', 'type'] },
-                        { value: 'type', label: 'Type › Plant', levels: ['type', 'plant'] },
-                      ]}
-                      leaf={{ label: 'Material', key: (r) => `${r.materialname}|${r.plantname}|${r.storagelocationname}`, name: (r) => r.materialname }}
-                      texts={[{ header: 'Storage location', value: (r) => r.storagelocationname }]}
-                      figures={[
-                        { header: 'Unrestricted', value: (r) => n0(r.unrestricted_val), fmt: full },
-                        { header: 'Quality inspection', value: (r) => n0(r.quality_inspection_val), fmt: full, color: (r) => (n0(r.quality_inspection_val) > 0 ? colors.warn : undefined) },
-                        { header: 'Blocked', value: (r) => n0(r.blocked_val), fmt: full, color: (r) => (n0(r.blocked_val) > 0 ? colors.warn : undefined) },
-                        { header: 'Restricted', value: (r) => n0(r.restricted_val), fmt: full, color: (r) => (n0(r.restricted_val) > 0 ? colors.warn : undefined) },
-                        { header: 'Returns', value: (r) => n0(r.returns_val), fmt: full, color: (r) => (n0(r.returns_val) > 0 ? colors.warn : undefined) },
-                        { header: 'In transit', value: (r) => n0(r.stock_in_transit_val), fmt: full },
-                        { header: 'Total value', value: (r) => n0(r.total_val), fmt: full },
-                        { header: 'Unrestricted qty', value: (r) => n0(r.unrestricted_qty), fmt: full },
-                        { header: 'Total qty', value: (r) => n0(r.total_qty), fmt: full },
-                      ]}
-                      onLeaf={(r) => detail.open({ kind: 'rmpm', material: r.materialname, plant: r.plantname })}
-                    />
-                  </>
-                )}
-              </OperationalDetail>
-            </>
-          ),
-        },
-      ]}
-      aside={<AreaRisks data={data} tab="fulfilment" area="Dispatch & WIP" />}
-      asideKpi="EX-10"
-    />
+      ];
+    }),
+  ];
+  return (
+    <Overlay title="RMPM details" subtitle={`Raw and packing material by stock state · in ${mode === 'unit' ? 'units' : 'value at cost'}`} onClose={onClose} width="min(1800px, 97vw)">
+      <Box h="min(76vh, 820px)">
+        <DetailTable
+          rows={shown}
+          total={rows.length}
+          columns={columns}
+          exportName="RMPM Details"
+          toolbar={
+            <Flex flex="1 1 620px" maxW="860px" minW={0} gap={3} align="center">
+              <Segmented
+                size="xs"
+                ariaLabel="Units or value"
+                value={mode}
+                onChange={setMode}
+                options={[
+                  { value: 'unit' as const, label: 'Unit' },
+                  { value: 'value' as const, label: 'Value' },
+                ]}
+              />
+              <Box flex={1} minW={0}>
+                <SearchBar fields={searchFields} values={values} onChange={setValues} quickFilterKeys={['type']} placeholder="Search material, type, plant, storage location…" />
+              </Box>
+            </Flex>
+          }
+        />
+      </Box>
+    </Overlay>
   );
 }

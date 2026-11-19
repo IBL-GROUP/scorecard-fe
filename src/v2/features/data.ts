@@ -161,6 +161,8 @@ function buildSpecs(w: Window, cmp: Window, base: Record<string, unknown>, branc
       { name: 'totalSku', path: '/total-sku' },
       // Stock level topic (FR-EXEC-031).
       ...stockCore.filter((s) => ['cover', 'coverTotal', 'bench'].includes(s.name)),
+      // The 1.0 Cover Days card: cover days as of the stock closing date.
+      { name: 'closing', path: '/cover-days/closing-inv' },
     ],
     inventory: [
       ...stockCore,
@@ -202,19 +204,34 @@ export function useDashboardData(active: TabKey) {
 
   // FR-FILT-006: divisions expand to their SKU codes; Division itself is never sent.
   const sku = useMemo(
-    () => (filters.division.length ? options.items.filter((i) => i.division && filters.division.includes(i.division)).map((i) => i.item_code) : []),
-    [filters.division, options.items],
+    () =>
+      filters.sku.length
+        ? filters.sku
+        : filters.division.length
+          ? options.items.filter((i) => i.division && filters.division.includes(i.division)).map((i) => i.item_code)
+          : [],
+    [filters.sku, filters.division, options.items],
   );
+  // Branches: hand-picked ones win; otherwise the branches of the chosen zones and regions
+  // (the API filters by branch; a zone or region is the set of its branches).
+  const branch = useMemo(() => {
+    if (filters.branch.length) return filters.branch;
+    if (!filters.zone.length && !filters.region.length) return [];
+    const codes = options.branches
+      .filter((b) => (!filters.zone.length || filters.zone.includes(b.zone ?? 'Others')) && (!filters.region.length || filters.region.includes(b.region ?? 'Others')))
+      .map((b) => String(b.hub_branch_code));
+    return [...new Set(codes)];
+  }, [filters.branch, filters.zone, filters.region, options.branches]);
   const base = useMemo(() => {
     const b: Record<string, unknown> = {};
     if (filters.classification.length) b.classification = filters.classification;
     if (sku.length) b.sku = sku;
-    if (filters.branch.length) b.branch = filters.branch;
+    if (branch.length) b.branch = branch;
     return b;
-  }, [filters.classification, filters.branch, sku]);
+  }, [filters.classification, branch, sku]);
 
   const cmp = useMemo(() => comparisonWindow(w, compare), [w, compare]);
-  const specs = useMemo(() => withCoverDays(buildSpecs(w, cmp, base, filters.branch.length > 0), st.coverDays), [w, cmp, base, filters.branch.length, st.coverDays]);
+  const specs = useMemo(() => withCoverDays(buildSpecs(w, cmp, base, branch.length > 0), st.coverDays), [w, cmp, base, branch.length, st.coverDays]);
 
   // ── Load queue ──
   const restartKey = JSON.stringify([w, cmp, base, st.user.sections]);

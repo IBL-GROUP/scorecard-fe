@@ -7,7 +7,7 @@ import { Box, Flex, Text } from '@chakra-ui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, type ReactNode } from 'react';
 import { FiX } from 'react-icons/fi';
-import { Segmented } from '@/v2/components/segmented';
+import { Segmented } from '@/v2/ui/segmented';
 import { notify } from '@/v2/components/notify';
 import { colors } from '@/v2/constants/theme';
 import { readScenario, writeScenario, type DemoScenario } from '@/v2/demo/scenario';
