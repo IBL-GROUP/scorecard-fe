@@ -136,8 +136,9 @@ export const buttonRecipe = defineRecipe({
                     },
                 },
                 _dark: {
-                    color: "primary.400",
-                    borderColor: "primary.400",
+                    // primary.400 is 4.2:1 on the dark page; 300 meets WCAG AA (S5).
+                    color: "primary.300",
+                    borderColor: "primary.300",
                 },
             },
 

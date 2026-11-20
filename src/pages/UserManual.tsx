@@ -144,7 +144,7 @@ export default function UserManual() {
   }, []);
 
   useEffect(() => {
-    document.title = `${MANUAL_TITLE} — User Manual`;
+    document.title = 'One Thunder - Supply Chain Pulse · User Manual';
   }, []);
 
   /**

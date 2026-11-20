@@ -1,56 +1,32 @@
 {
-  "name": "react-chakra-redux",
+  "name": "scorecard-fe",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview",
-    "specs:validate": "node scripts/validate-specs.mjs",
-    "specs:matrix": "node scripts/validate-specs.mjs --write-matrix",
-    "specs:test": "node --test scripts/validate-specs.test.mjs",
-    "dev:v2": "vite --mode v2demo",
-    "build:v2demo": "tsc && vite build --mode v2demo",
-    "test": "vitest run",
-    "dev:v2live": "vite --mode v2live",
-    "build:v2live": "tsc && vite build --mode v2live",
-    "test:e2e": "playwright test",
-    "test:e2e:report": "playwright show-report e2e-report",
-    "security:bundle": "node scripts/check-bundle-secrets.mjs"
+    "build": "tsc && vite build"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.31.0",
     "@emotion/react": "^11.13.5",
-    "@reduxjs/toolkit": "^2.11.2",
     "@tanstack/react-query": "^5.62.12",
     "axios": "^1.7.9",
     "react": "^18.3.1",
     "react-datepicker": "^9.1.0",
     "react-dom": "^18.3.1",
     "react-icons": "^5.4.0",
-    "react-redux": "^9.2.0",
     "react-router-dom": "^7.1.3",
     "react-select": "^5.10.2",
     "recharts": "^3.7.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.10.1",
-    "@playwright/test": "1.64.1",
-    "@tanstack/react-query-devtools": "^5.62.12",
     "@types/node": "^22.10.5",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
-    "@typescript-eslint/eslint-plugin": "^8.21.0",
-    "@typescript-eslint/parser": "^8.21.0",
     "@vitejs/plugin-react": "^4.3.4",
-    "eslint": "^9.18.0",
-    "eslint-plugin-react-hooks": "^5.1.0",
-    "eslint-plugin-react-refresh": "^0.4.18",
     "typescript": "^5.7.3",
-    "vite": "^6.0.7",
-    "vitest": "3.2.4"
+    "vite": "^6.0.7"
   }
 }

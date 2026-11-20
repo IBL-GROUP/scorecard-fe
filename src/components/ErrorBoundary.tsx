@@ -29,14 +29,14 @@ export class ErrorBoundary extends Component<Props, State> {
     render() {
         if (this.state.hasError) {
             return (
-                <Box minH="100vh" bg="gray.50" display="flex" alignItems="center" justifyContent="center">
+                <Box minH="100vh" bg="var(--sp-sunk-bg)" display="flex" alignItems="center" justifyContent="center">
                     <Container maxW="container.md" textAlign="center">
                         <VStack gap={8}>
                             <Box fontSize="8xl" color="red.500">
                                 <FaExclamationTriangle />
                             </Box>
                             <Heading size="2xl">Something Went Wrong</Heading>
-                            <Text fontSize="lg" color="gray.500" maxW="md">
+                            <Text fontSize="lg" color="var(--sp-muted-text)" maxW="md">
                                 An unexpected error has occurred. Please try refreshing the page.
                             </Text>
                             {this.state.error && (
@@ -57,7 +57,7 @@ export class ErrorBoundary extends Component<Props, State> {
                             <Button
                                 colorPalette="brand"
                                 size="lg"
-                                onClick={() => { window.location.href = import.meta.env.BASE_URL }}
+                                onClick={() => window.location.href = '/'}
                             >
                                 Go Back Home
                             </Button>
