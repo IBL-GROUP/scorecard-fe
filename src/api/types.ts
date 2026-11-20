@@ -35,6 +35,8 @@ export interface AccuracyRow { amount: Num; target_value: Num; pct: Num }
 export interface BudgetAccuracyRow extends AccuracyRow { target_to_date: Num }
 export interface DaysGoneRow { target_value: Num }
 export interface CategoryAccuracyRow { classification: string; month: string; amount: Num; target_value: Num; pct: Num }
+/** /forecast-accuracy-daily: one billing day, sales at TP (IBL card) and at EFP (TSCL card). */
+export interface DailyAccuracyRow { day: string; amount_tp: Num; amount_efp: Num }
 export interface IblVsTsclRow { classification: string; ibl_target: Num; tscl_target: Num; ibl_vs_tscl_pct: Num }
 export type InventoryDaysRow = { classification: string; item_desc: string; total: Num } & Record<string, Num | string>;
 export interface ThresholdRow { classification: string; 'No Of SKUs > Threshold': Num; 'No Of SKUs < Threshold': Num }

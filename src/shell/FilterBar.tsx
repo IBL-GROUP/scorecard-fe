@@ -1,6 +1,6 @@
-// The control panel under the menu, as in Sales Pulse 2.0: one Odoo-style
-// search for Division, Class and Branch on the left (chips, saved favourites)
-// and the period button on the right. Every choice applies at once.
+// The control panel under the menu, as in Sales Pulse 2.0: Analyze, then one
+// Odoo-style search for Division, Class and Branch (chips, saved favourites;
+// the Custom filter panel applies on Apply) and the period button on the right.
 
 import { Box, Flex, Input } from '@chakra-ui/react';
 import { useEffect, useMemo, useState } from 'react';
@@ -9,11 +9,14 @@ import { SearchBar, type SearchField } from '@/components/search';
 import { colors } from '@/constants/theme';
 import { useStore, type Filters } from '@/features/store';
 import type { DashboardData } from '@/features/data';
-import type { TabKey } from '@/features/tabs';
+import { TABS, type TabKey } from '@/features/tabs';
+import { rangeLabel } from '@/features/period';
+import { supplyChainAnalysis } from '@/pages/PulsePage';
 import { PeriodControl } from './PeriodControl';
+import { AnalyzeOverlay } from '@/ui/analyze';
 import { ClassLegend } from '@/ui/class-badge';
 import { Segmented } from '@/ui/segmented';
-import { FiBarChart2, FiList } from 'react-icons/fi';
+import { FiBarChart2, FiList, FiZap } from 'react-icons/fi';
 import { VIEW_TABS, setTabView, useTabView, type TabView } from '@/features/views';
 
 const CLASSES = ['A', 'B', 'C', 'N', 'Others'];
@@ -70,6 +73,7 @@ const split = (v: string | undefined) => (v ? v.split(',').filter(Boolean) : [])
 
 export function FilterBar({ data, tab }: { data: DashboardData; tab: TabKey }) {
   const st = useStore();
+  const [analyzeOpen, setAnalyzeOpen] = useState(false);
   // The same bar on every tab, as Sales Pulse 2.0. Dispatch & WIP and RD Data Status read
   // sources with no division, class or branch: there the bar says the filters wait for the other tabs.
   const datesOnly = tab === 'fulfilment' || tab === 'distribution';
@@ -125,8 +129,41 @@ export function FilterBar({ data, tab }: { data: DashboardData; tab: TabKey }) {
     st.applyFilters(f);
   };
 
+  const analysis = analyzeOpen ? supplyChainAnalysis(data) : null;
+
   return (
     <Flex align="center" gap={4} wrap="wrap" px={4} py="10px" bg={colors.barBg} borderBottom="1px solid" borderColor={colors.border} data-control-panel>
+      {/* Sales Pulse 2.0's Analyze: the supply chain in a few plain points. */}
+      <Box
+        as="button"
+        display="inline-flex"
+        alignItems="center"
+        gap="6px"
+        h="34px"
+        px="12px"
+        flexShrink={0}
+        borderRadius="4px"
+        bg={colors.brand}
+        color={colors.onBrand}
+        fontSize="13px"
+        fontWeight={600}
+        cursor="pointer"
+        _hover={{ bg: colors.brandHover }}
+        onClick={() => setAnalyzeOpen(true)}
+        title="The supply chain in a few plain points"
+      >
+        <FiZap size={14} /> Analyze
+      </Box>
+      {analysis && (
+        <AnalyzeOverlay
+          tabTitle={TABS.find((t) => t.key === tab)?.mid ?? 'Pulse'}
+          period={rangeLabel(st.window)}
+          headline={analysis.headline}
+          points={analysis.points}
+          loading={analysis.loading}
+          onClose={() => setAnalyzeOpen(false)}
+        />
+      )}
       <Flex flex="1 1 460px" minW={0} maxW="1400px">
         <Flex w="100%" gap={3} align="center">
             {/* At most the search bar's own 760px, so Cover days and the legend follow it whether the legend shows or not. */}

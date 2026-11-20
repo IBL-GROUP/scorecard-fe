@@ -209,11 +209,14 @@ function RdCharts({ rd, t, states }: { rd: ReturnType<typeof distribution>; t: R
   return (
     <Grid templateColumns={{ base: '1fr', lg: 'repeat(12, minmax(0, 1fr))' }} templateRows={{ lg: 'repeat(2, minmax(0, 1fr))' }} gap={3} h={{ lg: '100%' }} minH={0}>
       {/* DH-04 */}
-      <ChartCard dataKpi="DH-04" title="RD reporting age" colSpan={{ base: 12, lg: 4 }} isLoading={states.rd.isLoading}>
+      <ChartCard dataKpi="DH-04" title="RD reporting age" colSpan={{ base: 12, lg: 4 }} isLoading={states.rd.isLoading} variant="rows">
         {CardState({ ...states.rd, empty }) ?? (
           <BarChart
             data={ages.map((a) => ({ bucket: a.bucket, count: a.count, min: a.min }))}
             xKey="bucket"
+            // One bar per age, top to bottom from today to oldest.
+            orientation="horizontal"
+            keepOrder
             bars={[{ key: 'count', label: 'Distributors', color: colors.sales, cellColor: (e) => AGE_COLOR(Number(e.min)) }]}
             labelFormatter={(v) => full(v)}
             showLabels

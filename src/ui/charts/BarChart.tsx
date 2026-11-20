@@ -57,6 +57,8 @@ export interface BarChartProps {
   topN?: number;
   /** Horizontal mode only: rank lowest first (a service ranking shows its worst branches first). */
   rankAscending?: boolean;
+  /** Horizontal mode only: keep the data's own order (buckets, ages) instead of ranking by value. */
+  keepOrder?: boolean;
   /** Which series get value labels. Defaults to the last (current-period) series. */
   labelKeys?: string[];
   /** Draws a dashed Midnight benchmark line at this value (e.g. 100% of target). */
@@ -260,6 +262,7 @@ export function BarChart({
   orientation = 'auto',
   topN = 10,
   rankAscending = false,
+  keepOrder = false,
   xLabelColors,
   labelKeys,
   referenceValue,
@@ -394,9 +397,10 @@ export function BarChart({
     const sortKey = labelKeys?.[0] ?? bars[bars.length - 1].key;
     // Others is never ranked or cut: it always draws, last.
     const isOthers = (r: Record<string, unknown>) => /^others?\b/i.test(String(r[xKey] ?? '').trim());
-    const ranked = filteredData
-      .filter((r) => !isOthers(r))
-      .sort((a, b) => ((Number(b[sortKey]) || 0) - (Number(a[sortKey]) || 0)) * (rankAscending ? -1 : 1));
+    const kept = filteredData.filter((r) => !isOthers(r));
+    const ranked = keepOrder
+      ? kept
+      : kept.sort((a, b) => ((Number(b[sortKey]) || 0) - (Number(a[sortKey]) || 0)) * (rankAscending ? -1 : 1));
     const others = filteredData.filter(isOthers);
     const thickness = bars.length > 1 ? 9 : 14;
     const rowH = thickness * bars.length + (bars.length > 1 ? 14 : 12);

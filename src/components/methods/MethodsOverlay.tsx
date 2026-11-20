@@ -152,7 +152,7 @@ const SHARED: { title: string; text: string }[] = [
     text: `Green = on target, amber = watch, red = below. Service level: green ≥ ${T.serviceLevel.green}%, red < ${T.serviceLevel.amber}%. Fill rate: green ≥ ${T.fillRate.green}%, red < ${T.fillRate.amber}%. Coverage: green ${T.coverage.greenLo}–${T.coverage.greenHi}% of benchmark. Colours always come with a number or label.`,
   },
   { title: 'Number formats', text: 'B with 2 decimals, M with 1 and K with 0; every % has 1 decimal; cover in whole days.' },
-  { title: 'Our own calculations', text: 'Key insights, the status chip and “Analyze the supply chain” are worked out by fixed rules from the data on screen. No AI is used and nothing is sent anywhere. They show where to look, not proof of cause.' },
+  { title: 'Our own calculations', text: 'Key insights, the status chip, Analyze and “Analyze the supply chain” are worked out by fixed rules from the data on screen. No AI is used and nothing is sent anywhere. They show where to look, not proof of cause.' },
 ];
 
 export function MethodsOverlay({ tabs, onClose }: { tabs: TabKey[]; onClose: () => void }) {

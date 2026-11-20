@@ -25,6 +25,7 @@ import { RowBars } from '@/ui/row-bars';
 import { InfoTip, Overlay } from '@/ui/overlay';
 import { AnimatedValue } from '@/ui/motion';
 import { ReviewSheet } from '@/ui/pulse/ReviewSheet';
+import type { AnalyzePoint } from '@/ui/analyze';
 
 const INK: Record<Rag, string> = { green: colors.good, amber: colors.warn, red: colors.bad };
 const RAG_WORD: Record<Rag, string> = { green: 'On target', amber: 'Watch', red: 'Below' };
@@ -129,6 +130,69 @@ function pulseModel(data: DashboardData) {
 
 export type PulseModel = ReturnType<typeof pulseModel>;
 type Model = PulseModel;
+
+/**
+ * "Analyze" (the filter bar's button, every tab): the supply chain in 3–6 plain
+ * points from the same model and rules as this tab — where it stands, the most
+ * severe exceptions, the stock that could be released, working capital and the
+ * data to doubt. Stock, service, dispatch, production and distributors; never sales.
+ */
+export function supplyChainAnalysis(data: DashboardData): { loading: boolean; headline: string; points: AnalyzePoint[] } {
+  const m = pulseModel(data);
+  const { s, sv, f, pr, rd, wc, working } = m;
+  const below = m.health.filter((h) => h.rag === 'red');
+  const watch = m.health.filter((h) => h.rag === 'amber');
+  const names = (hs: typeof below) => hs.map((h) => h.name.charAt(0).toLowerCase() + h.name.slice(1)).join(', ');
+  const headline = below.length
+    ? `${below.length === 1 ? 'One headline KPI is' : `${below.length} headline KPIs are`} below target: ${names(below)}.`
+    : watch.length
+      ? `Nothing below target; ${names(watch)} ${watch.length === 1 ? 'needs' : 'need'} watching.`
+      : 'Every headline supply chain KPI is on target.';
+
+  const points: AnalyzePoint[] = [];
+  // 1. Where we stand: the band's figures in a sentence each.
+  points.push({
+    tone: below.length ? 'bad' : watch.length ? 'neutral' : 'good',
+    title: 'Where the supply chain stands',
+    body: [
+      `Service level is ${pct1(sv.level)} (target ${kpiThresholds.serviceLevel.green}%), with ${full(sv.below)} of ${full(sv.above + sv.below)} SKUs below their threshold.`,
+      `Order fill rate is ${pct1(f.pct)}: ${full(f.unfulfilled)} units ordered were not dispatched.`,
+      `Stock covers ${dayText(s.totalCd)} of sales against a ${dayText(s.wBm)} benchmark (coverage ${pct1(s.coverage)}).`,
+      pr.w.completion != null ? `Production completion is ${pct1(pr.w.completion)} and ${pct1(pr.r.onHoldPct)} of RMPM is on hold.` : '',
+      rd.compliance != null ? `${pct1(rd.compliance)} of distributors reported their stock.` : '',
+    ]
+      .filter(Boolean)
+      .join(' '),
+  });
+  // 2. The most severe exceptions, three at most.
+  const bad = m.risks.filter((r) => r.tone !== 'opportunity').sort((a, b) => b.weight - a.weight).slice(0, 3);
+  for (const r of bad)
+    points.push({
+      tone: 'bad',
+      title: r.text,
+      body: [WHY[r.id.split('-')[0]], `See it on ${tabLabel(r.tab as TabKey)}.`].filter(Boolean).join(' '),
+    });
+  // 3. Stock that could be released.
+  if (s.excess.value > 0)
+    points.push({
+      tone: 'good',
+      title: `${money(s.excess.value)} of stock sits above benchmark`,
+      body: `That is ${pct1(s.excess.pct)} of finished goods (target under ${kpiThresholds.excessPct.green}%). Releasing it, or slowing replenishment of those SKUs, frees working capital without risking cover.`,
+    });
+  // 4. Working capital, where the money is.
+  if (working > 0) {
+    const share = (n: number) => pct1((n / working) * 100);
+    points.push({
+      tone: 'neutral',
+      title: `Working capital is ${money(working)}`,
+      body: `Finished goods ${money(wc.fg)} (${share(wc.fg)}), work in progress ${money(wc.wip)} (${share(wc.wip)}) and raw and packing material ${money(wc.rmpm)} (${share(wc.rmpm)}), all at cost.`,
+    });
+  }
+  // 5. What makes the figures less certain.
+  const check = m.dataChecks[0];
+  if (check) points.push({ tone: 'neutral', title: check.title, body: `${check.detail} See it on ${tabLabel(check.tab)}.` });
+  return { loading: m.loading, headline, points: points.slice(0, 6) };
+}
 
 function useInsights(m: Model): Insight[] {
   const nav = useNav();

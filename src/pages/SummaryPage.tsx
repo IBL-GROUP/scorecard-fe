@@ -7,11 +7,12 @@
 // Budget), plus what the same data supports: sales mix, range activation,
 // run-rate required, coverage, excess and shortfall.
 
-import { Box, Flex, Grid, Text } from '@chakra-ui/react';
+import { Box, Flex, Grid, Skeleton, Text } from '@chakra-ui/react';
 import { useState } from 'react';
 import { KpiTile, type KpiTileProps } from '@/ui/kpi-card';
 import { ChartCard } from '@/ui/chart-card';
 import { BarChart } from '@/ui/charts';
+import { Overlay } from '@/ui/overlay';
 import { BreakdownBars, BreakdownTable } from '@/ui/breakdown';
 import { SharePie } from '@/ui/breakdown/SharePie';
 import { ClassBadge } from '@/ui/class-badge';
@@ -19,11 +20,11 @@ import { Segmented } from '@/ui/segmented';
 import { colors, fmt1, formatCompact } from '@/constants/theme';
 import { clsColor } from '@/constants/classColors';
 import { SUMMARY_HELP, helpFor, type HelpText } from '@/constants/help';
-import { num, type CategoryAccuracyRow, type IblVsTsclRow, type SalesSummaryRow, type SalesTypeRow, type TotalSkuRow } from '@/api/types';
+import { num, type CategoryAccuracyRow, type DailyAccuracyRow, type IblVsTsclRow, type SalesSummaryRow, type SalesTypeRow, type TotalSkuRow } from '@/api/types';
 import { rowsOf, type DashboardData } from '@/features/data';
 import { plan, status, stock, trust } from '@/features/derive';
 import { categoryCells, classHistory, projectedMonthEnd, salesSummary, salesTypeSplit } from '@/features/kpis';
-import { COMPARE_ON, monthLabel, periodTag } from '@/features/period';
+import { COMPARE_ON, addDays, monthLabel, periodTag, todayIso } from '@/features/period';
 import { useDetail } from '@/features/detail';
 import { useFitScreen } from '@/features/fit';
 import { rag } from '@/features/kpiThresholds';
@@ -94,31 +95,7 @@ function PaceRing({ achPct, daysPct, size = 104 }: { achPct: number | null; days
   );
 }
 
-/**
- * Budget Accuracy TSCL / Forecast Accuracy IBL, the 1.0 cards: days gone and
- * the plan to date on top, the ring with the month plan and what was
- * achieved, then the 1.0 class chart (achievement per class, three months).
- */
-function AccuracyCard({
-  title,
-  help,
-  noun,
-  monthPlan,
-  planToDate,
-  achieved,
-  monthPct,
-  toDatePct,
-  projectedPct,
-  required,
-  current,
-  daysPct,
-  daysText,
-  history,
-  loading,
-  onPick,
-}: {
-  title: string;
-  help: HelpText | undefined;
+interface AccuracyFigures {
   noun: 'target' | 'budget';
   monthPlan: number | null;
   planToDate: number | null;
@@ -133,74 +110,187 @@ function AccuracyCard({
   current: number | null;
   daysPct: number;
   daysText: string;
-  history: ReturnType<typeof classHistory>;
-  loading: boolean;
-  onPick: (cls: string) => void;
-}) {
-  const [m0, m1, m2] = history.months;
-  const data = history.rows.map((r) => ({ name: clsName(String(r.cls)), [m0]: r[m0] ?? 0, [m1]: r[m1] ?? 0, [m2]: r[m2] ?? 0 }));
+}
+
+/** The card's left column: days gone and plan to date, the pace ring, the month plan and what was achieved, then where it is heading. */
+function AccuracySummary({ noun, monthPlan, planToDate, achieved, monthPct, toDatePct, projectedPct, required, current, daysPct, daysText }: AccuracyFigures) {
   const gap = monthPct == null ? null : monthPct - 100;
   const Noun = noun === 'budget' ? 'Budget' : 'Target';
   return (
-    <ChartCard title={title} help={help} isLoading={loading} colSpan={1}>
-      <Grid templateColumns={{ base: '1fr', md: '236px minmax(0, 1fr)' }} gap={4} h="100%" minH={0}>
-        <Flex direction="column" align="center" justify="space-evenly" gap="4px" minW={0} minH={0} overflow="hidden">
-          <Grid templateColumns="1fr 1fr" gap={2} w="100%" flexShrink={0} bg={colors.pageBg} borderRadius="4px" px={2} py="4px">
-            <Figure label="Days gone" value={`${daysPct}%`} small />
-            <Figure label={`${Noun} to date`} value={planToDate == null ? '—' : fmt(planToDate)} small />
-          </Grid>
-          {/* Never squeezed by a short card. The tick marks the pace: where the days gone say it should be. */}
-          <Flex flex="1 1 0" minH="100px" maxH="150px" w="100%" justify="center" title={`${daysText}: the tick marks where the month should be by now`}>
-            <PaceRing achPct={monthPct} daysPct={daysPct} />
-          </Flex>
-          <Grid templateColumns="1fr 1px 1fr" gap={2} w="100%" flexShrink={0} alignItems="center">
-            <Figure label={`Month ${noun}`} value={monthPlan == null ? '—' : fmt(monthPlan)} small />
-            <Box bg={colors.border} h="28px" />
-            <Figure label="Achieved" value={achieved == null ? '—' : fmt(achieved)} ink={colors.sales} small />
-          </Grid>
-          {gap != null && (
-            <Text fontSize="12px" fontWeight={700} color={gap >= 0 ? colors.good : colors.bad} fontVariantNumeric="tabular-nums">
-              {gap >= 0 ? '▲' : '▼'} {fmt1(Math.abs(gap))}% {gap >= 0 ? 'above' : 'below'} {noun}
-            </Text>
-          )}
-          {/* Where the month stands and where it is heading: achievement so far, the
-              month-end estimate at today's daily rate, and the daily sales still needed. */}
-          <Grid templateColumns="repeat(3, minmax(0, 1fr))" gap={1} w="100%" flexShrink={0} borderTop="1px solid" borderColor={colors.sunkBg} pt="6px">
-            <Figure label="To date" value={pct(toDatePct)} ink={paceInk(toDatePct, 100)} small />
-            <Figure
-              label="Month end"
-              value={pct(projectedPct)}
-              ink={projectedPct == null ? undefined : projectedPct >= 100 ? colors.good : projectedPct >= 90 ? colors.warn : colors.bad}
-              small
-            />
-            <Box title={current == null ? undefined : `Running ${fmt(current)} a day`}>
-              <Figure label="Need / day" value={required == null ? '—' : fmt(required)} ink={required != null && current != null && required > current ? colors.bad : colors.good} small />
-            </Box>
-          </Grid>
-        </Flex>
-        <Box minH={{ base: '240px', lg: 0 }} minW={0}>
-          <BarChart
-            data={data}
-            xKey="name"
-            bars={[
-              { key: m0, label: monthLabel(m0, 'long'), color: colors.borderStrong },
-              { key: m1, label: monthLabel(m1, 'long'), color: colors.prior },
-              { key: m2, label: monthLabel(m2, 'long'), color: colors.current },
-            ]}
-            labelKeys={[m2]}
-            compact
-            showLabels
-            orientation="vertical"
-            labelFormatter={(v) => `${fmt1(v)}%`}
-            yTickFormatter={(v) => `${v}%`}
-            referenceValue={100}
-            referenceLabel="100%"
-            onBarClick={(n) => onPick(clsOf(n))}
-            height="100%"
-          />
+    <Flex direction="column" align="center" justify="space-evenly" gap="4px" minW={0} minH={0} h="100%" overflow="hidden">
+      <Grid templateColumns="1fr 1fr" gap={2} w="100%" flexShrink={0} bg={colors.pageBg} borderRadius="4px" px={2} py="4px">
+        <Figure label="Days gone" value={`${daysPct}%`} small />
+        <Figure label={`${Noun} to date`} value={planToDate == null ? '—' : fmt(planToDate)} small />
+      </Grid>
+      {/* Never squeezed by a short card. The tick marks the pace: where the days gone say it should be. */}
+      <Flex flex="1 1 0" minH="100px" maxH="150px" w="100%" justify="center" title={`${daysText}: the tick marks where the month should be by now`}>
+        <PaceRing achPct={monthPct} daysPct={daysPct} />
+      </Flex>
+      <Grid templateColumns="1fr 1px 1fr" gap={2} w="100%" flexShrink={0} alignItems="center">
+        <Figure label={`Month ${noun}`} value={monthPlan == null ? '—' : fmt(monthPlan)} small />
+        <Box bg={colors.border} h="28px" />
+        <Figure label="Achieved" value={achieved == null ? '—' : fmt(achieved)} ink={colors.sales} small />
+      </Grid>
+      {gap != null && (
+        <Text fontSize="12px" fontWeight={700} color={gap >= 0 ? colors.good : colors.bad} fontVariantNumeric="tabular-nums">
+          {gap >= 0 ? '▲' : '▼'} {fmt1(Math.abs(gap))}% {gap >= 0 ? 'above' : 'below'} {noun}
+        </Text>
+      )}
+      {/* Where the month stands and where it is heading: achievement so far, the
+          month-end estimate at today's daily rate, and the daily sales still needed. */}
+      <Grid templateColumns="repeat(3, minmax(0, 1fr))" gap={1} w="100%" flexShrink={0} borderTop="1px solid" borderColor={colors.sunkBg} pt="6px">
+        <Figure label="To date" value={pct(toDatePct)} ink={paceInk(toDatePct, 100)} small />
+        <Figure
+          label="Month end"
+          value={pct(projectedPct)}
+          ink={projectedPct == null ? undefined : projectedPct >= 100 ? colors.good : projectedPct >= 90 ? colors.warn : colors.bad}
+          small
+        />
+        <Box title={current == null ? undefined : `Running ${fmt(current)} a day`}>
+          <Figure label="Need / day" value={required == null ? '—' : fmt(required)} ink={required != null && current != null && required > current ? colors.bad : colors.good} small />
         </Box>
       </Grid>
+    </Flex>
+  );
+}
+
+/** One day gone: its sales. */
+interface DayPoint {
+  day: string;
+  sales: number;
+}
+
+/**
+ * Budget Accuracy TSCL / Forecast Accuracy IBL, the 1.0 cards: days gone and
+ * the plan to date on top, the ring with the month plan and what was
+ * achieved, then the 1.0 class chart (achievement per class, three months).
+ * ⤢ opens it full size with the days gone day by day (AccuracyDays).
+ */
+function AccuracyCard({
+  title,
+  help,
+  history,
+  loading,
+  onPick,
+  days,
+  dailyLoading,
+  basis,
+  ...figures
+}: AccuracyFigures & {
+  title: string;
+  help: HelpText | undefined;
+  history: ReturnType<typeof classHistory>;
+  loading: boolean;
+  onPick: (cls: string) => void;
+  /** The days gone, one point each (empty for a window over one month). */
+  days: DayPoint[];
+  dailyLoading: boolean;
+  basis: 'TP' | 'EFP';
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <ChartCard title={title} help={help} isLoading={loading} colSpan={1} onExpand={() => setOpen(true)}>
+      <Grid templateColumns={{ base: '1fr', md: '236px minmax(0, 1fr)' }} gap={4} h="100%" minH={0}>
+        <AccuracySummary {...figures} />
+        <Box minH={{ base: '240px', lg: 0 }} minW={0}>
+          <ClassHistoryChart history={history} onPick={onPick} />
+        </Box>
+      </Grid>
+      {open && (
+        <AccuracyDays title={title} figures={figures} days={days} loading={dailyLoading} basis={basis} history={history} onPick={onPick} onClose={() => setOpen(false)} />
+      )}
     </ChartCard>
+  );
+}
+
+/** The 1.0 class chart: achievement per class over three months. */
+function ClassHistoryChart({ history, onPick }: { history: ReturnType<typeof classHistory>; onPick: (cls: string) => void }) {
+  const [m0, m1, m2] = history.months;
+  const data = history.rows.map((r) => ({ name: clsName(String(r.cls)), [m0]: r[m0] ?? 0, [m1]: r[m1] ?? 0, [m2]: r[m2] ?? 0 }));
+  return (
+    <BarChart
+      data={data}
+      xKey="name"
+      bars={[
+        { key: m0, label: monthLabel(m0, 'long'), color: colors.borderStrong },
+        { key: m1, label: monthLabel(m1, 'long'), color: colors.prior },
+        { key: m2, label: monthLabel(m2, 'long'), color: colors.current },
+      ]}
+      labelKeys={[m2]}
+      compact
+      showLabels
+      orientation="vertical"
+      labelFormatter={(v) => `${fmt1(v)}%`}
+      yTickFormatter={(v) => `${v}%`}
+      referenceValue={100}
+      referenceLabel="100%"
+      onBarClick={(n) => onPick(clsOf(n))}
+      height="100%"
+    />
+  );
+}
+
+/**
+ * The accuracy card full size: the card as it is (summary and class chart),
+ * with each day gone as a column under it.
+ */
+function AccuracyDays({
+  title,
+  figures,
+  days,
+  loading,
+  basis,
+  history,
+  onPick,
+  onClose,
+}: {
+  title: string;
+  figures: AccuracyFigures;
+  days: DayPoint[];
+  loading: boolean;
+  basis: 'TP' | 'EFP';
+  history: ReturnType<typeof classHistory>;
+  onPick: (cls: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Overlay title={title} subtitle={figures.daysText} onClose={onClose}>
+      <Flex direction="column" gap={4} h="min(760px, 82vh)" minH={0}>
+        <Grid templateColumns={{ base: '1fr', md: '236px minmax(0, 1fr)' }} gap={4} flex="1 1 0" minH={0}>
+          <AccuracySummary {...figures} />
+          <Box minH={{ base: '240px', lg: 0 }} minW={0}>
+            <ClassHistoryChart history={history} onPick={onPick} />
+          </Box>
+        </Grid>
+        <Flex direction="column" flex="1 1 0" minH="220px" minW={0}>
+          <Text fontSize="16px" fontWeight={700} color={colors.cardAccent} mb={2}>
+            Day by day ({basis})
+          </Text>
+          <Box flex="1 1 0" minH={0}>
+            {loading ? (
+              <Skeleton h="100%" borderRadius="6px" />
+            ) : days.length ? (
+              <BarChart
+                data={days.map((d) => ({ name: d.day.slice(8, 10), sales: d.sales }))}
+                xKey="name"
+                bars={[{ key: 'sales', label: `Sales ${basis}`, color: colors.current }]}
+                orientation="vertical"
+                showLabels
+                labelFormatter={(v) => fmt(v)}
+                yTickFormatter={(v) => fmt(v)}
+                height="100%"
+              />
+            ) : (
+              <Flex h="100%" align="center" justify="center">
+                <Text fontSize="13px" color={colors.mutedText}>
+                  Day by day covers one month; pick a single month to see it.
+                </Text>
+              </Flex>
+            )}
+          </Box>
+        </Flex>
+      </Flex>
+    </Overlay>
   );
 }
 
@@ -350,6 +440,18 @@ export function SummaryPage({ data }: { data: DashboardData }) {
   const bTag = periodTag(data.cmpWindow);
   const aTag = periodTag(data.window);
   const daysPct = p.days.pct;
+
+  // The accuracy cards' ⤢: every day gone in a single-month window (days without sales count as 0).
+  const dailyRows = rowsOf<DailyAccuracyRow>(d.daily);
+  const daysOf = (key: 'amount_tp' | 'amount_efp') => {
+    if (!p.single) return [];
+    const byDay = new Map(dailyRows.map((r) => [r.day, num(r[key]) ?? 0]));
+    const today = todayIso();
+    const last = data.window.end < today ? data.window.end : today;
+    const out: { day: string; sales: number }[] = [];
+    for (let day = data.window.start; day <= last; day = addDays(day, 1)) out.push({ day, sales: byDay.get(day) ?? 0 });
+    return out;
+  };
 
   const sSales = status(d, 'sales', 'salesCmp');
   const sStock = status(d, 'cover', 'coverTotal', 'bench');
@@ -600,6 +702,9 @@ export function SummaryPage({ data }: { data: DashboardData }) {
           history={histBud}
           loading={status(d, 'fay', 'catY0', 'catY1').isLoading}
           onPick={openClass}
+          days={daysOf('amount_efp')}
+          dailyLoading={status(d, 'daily').isLoading}
+          basis="EFP"
         />
         <AccuracyCard
           title="Forecast Accuracy IBL"
@@ -618,6 +723,9 @@ export function SummaryPage({ data }: { data: DashboardData }) {
           history={histIbl}
           loading={status(d, 'fam', 'cat0', 'cat1').isLoading}
           onPick={openClass}
+          days={daysOf('amount_tp')}
+          dailyLoading={status(d, 'daily').isLoading}
+          basis="TP"
         />
       </Grid>
     </Flex>

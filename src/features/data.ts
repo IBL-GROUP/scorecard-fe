@@ -154,6 +154,8 @@ function buildSpecs(w: Window, cmp: Window, base: Record<string, unknown>, branc
     revenue: [
       ...planCore,
       ...cat6('/forecast-accuracy-category-yearly', 'catY'),
+      // The two accuracy cards' day-by-day view (their ⤢).
+      { name: 'daily', path: '/forecast-accuracy-daily', params: cur },
       { name: 'sales', path: '/sales-summary', params: cur },
       { name: 'salesCmp', path: '/sales-summary', params: prev },
       // RV-01 split by sales type (FR-EXEC-048).

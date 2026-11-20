@@ -30,6 +30,7 @@ export const SECTION_OF: Record<string, Section> = {
   '/forecast-accuracy-monthly': 'SUMMARY',
   '/forecast-accuracy-monthly/daysgone': 'SUMMARY',
   '/forecast-accuracy-yearly': 'SUMMARY',
+  '/forecast-accuracy-daily': 'SUMMARY',
   '/forecast-accuracy-category-monthly': 'SUMMARY',
   '/forecast-accuracy-category-yearly': 'SUMMARY',
   '/ibl-vs-tscl': 'SUMMARY',
