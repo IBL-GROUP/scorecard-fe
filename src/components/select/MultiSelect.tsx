@@ -143,9 +143,9 @@ function OverflowValueContainer(
                 px="6px"
                 py="5px"
                 borderRadius="4px"
-                bg={`${colors.selectActive}18`}
+                bg={colors.brandSoft}
                 border="1px solid"
-                borderColor={`${colors.selectActive}30`}
+                borderColor={colors.brandSoft}
                 cursor="default"
                 flexShrink={0}
                 mx="2px"
@@ -162,8 +162,8 @@ function OverflowValueContainer(
             </Tooltip.Trigger>
             <Tooltip.Positioner>
               <Tooltip.Content
-                bg="gray.100"
-                color="gray.800"
+                bg="var(--sp-sunk-bg)"
+                color="var(--sp-dark-text)"
                 borderRadius="6px"
                 px="10px"
                 py="6px"
@@ -171,7 +171,7 @@ function OverflowValueContainer(
                 fontWeight="500"
                 boxShadow="sm"
                 border="1px solid"
-                borderColor="gray.200"
+                borderColor="var(--sp-border)"
               >
                 {hiddenLabels}
               </Tooltip.Content>
@@ -196,8 +196,12 @@ const multiSelectStyles: StylesConfig<SelectOption, true> = {
     minHeight: '36px',
     boxShadow: 'none',
     flexWrap: 'nowrap',
+    backgroundColor: colors.cardBg,
     '&:hover': { borderColor: colors.controlBorderHover },
   }),
+  // WCAG 2.1 AA (S5): react-select's default placeholder grey is 3.9:1 on white.
+  placeholder: (base) => ({ ...base, color: colors.mutedText }),
+  input: (base) => ({ ...base, color: colors.bodyText }),
   valueContainer: (base) => ({
     ...base,
     flexWrap: 'nowrap',
@@ -207,17 +211,17 @@ const multiSelectStyles: StylesConfig<SelectOption, true> = {
     ...base,
     fontSize: '14px',
     fontWeight: 500,
-    backgroundColor: state.isSelected ? `${colors.selectActive}20` : 'white',
+    backgroundColor: state.isSelected ? colors.brandSoft : colors.cardBg,
     color: state.isSelected ? colors.selectActive : colors.bodyText,
     '&:hover': {
       backgroundColor: state.isSelected
-        ? `${colors.selectActive}30`
+        ? colors.brandSoft
         : colors.selectOptionHover,
     },
   }),
   multiValue: (base) => ({
     ...base,
-    backgroundColor: `${colors.selectActive}18`,
+    backgroundColor: colors.brandSoft,
     borderRadius: '4px',
     flexShrink: 0,
   }),
@@ -231,7 +235,7 @@ const multiSelectStyles: StylesConfig<SelectOption, true> = {
     ...base,
     color: colors.selectActive,
     '&:hover': {
-      backgroundColor: `${colors.selectActive}30`,
+      backgroundColor: colors.brandSoft,
       color: colors.selectActive,
     },
   }),
@@ -240,6 +244,7 @@ const multiSelectStyles: StylesConfig<SelectOption, true> = {
     borderRadius: '6px',
     boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
     zIndex: 10,
+    backgroundColor: colors.cardBg,
   }),
 };
 
@@ -276,7 +281,7 @@ export function MultiSelect({
         <Text
           fontSize="xs"
           fontWeight="bold"
-          color="gray.500"
+          color="var(--sp-muted-text)"
           textTransform="uppercase"
           whiteSpace="nowrap"
         >
@@ -296,6 +301,8 @@ export function MultiSelect({
           isSearchable
           closeMenuOnSelect={false}
           hideSelectedOptions={false}
+          // An accessible name for the search input (WCAG 4.1.2): the label, else the placeholder.
+          aria-label={label || (typeof rest.placeholder === 'string' ? rest.placeholder : undefined)}
           {...rest}
         />
       </Box>

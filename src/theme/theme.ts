@@ -11,23 +11,14 @@ const customConfig = {
       colors,
       fonts: {
         heading: {
-          value: `'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`,
+          value: `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif`,
         },
         body: {
-          value: `'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`,
+          value: `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif`,
         },
         mono: {
-          value: `'Roboto Mono', 'Fira Code', 'Consolas', 'Monaco', monospace`,
+          value: `SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace`,
         },
-      },
-    },
-    keyframes: {
-      // The user avatar's hover ring: a ripple that spreads out from the edge
-      // and fades. Only the shadow moves, so the circle itself stays still.
-      avatarRing: {
-        '0%': { boxShadow: '0 0 0 0 rgba(59, 130, 246, 0.45)' },
-        '70%': { boxShadow: '0 0 0 8px rgba(59, 130, 246, 0)' },
-        '100%': { boxShadow: '0 0 0 0 rgba(59, 130, 246, 0)' },
       },
     },
     recipes: {

@@ -23,9 +23,7 @@ export const tableSlotRecipe = defineSlotRecipe({
       textAlign: 'start',
       alignItems: 'center',
       whiteSpace: 'nowrap',
-      '&:first-of-type': {
-        fontWeight: 'bold',
-      },
+
     },
     columnHeader: {
       fontWeight: 'medium',
@@ -95,52 +93,33 @@ export const tableSlotRecipe = defineSlotRecipe({
     variant: {
       primary: {
         header: {
-          bg: 'primary.600',
-          _dark: {
-            bg: 'primary.700',
-          },
+          bg: 'var(--sp-card-bg)',
         },
         columnHeader: {
-          bg: 'primary.600',
-          _dark: {
-            bg: 'primary.700',
-          },
-          color: 'white',
-          fontWeight: 'bold',
-          borderBottomWidth: '0',
+          bg: 'var(--sp-card-bg)',
+          color: 'var(--sp-dark-text)',
+          fontSize: '13px',
+          fontWeight: '700',
+          borderBottomWidth: '1px',
+          borderColor: 'var(--sp-border)',
         },
         cell: {
-          color: 'gray.700',
-          _dark: {
-            borderColor: 'gray.700',
-            color: 'gray.200',
-          },
+          color: 'var(--sp-body-text)',
+          borderColor: 'var(--sp-sunk-bg)',
         },
         row: {
           borderBottomWidth: '1px',
-          borderColor: 'gray.200',
-          _last: {
-            borderBottomWidth: 0,
-          },
+          borderColor: 'var(--sp-sunk-bg)',
           _odd: {
-            bg: 'white',
-            _dark: {
-              bg: 'gray.800',
-            },
+            bg: 'var(--sp-card-bg)',
           },
           _even: {
-            bg: '#f8fafc',
-            _dark: {
-              bg: 'gray.750',
-            },
+            bg: 'var(--sp-card-bg)',
           },
           _hover: {
-            bg: '#dbeafe',
-            _dark: {
-              bg: 'primary.900/20',
-            },
+            bg: 'var(--sp-hover-bg)',
           },
-          // transition: 'background 0.15s ease',
+          transition: 'background 0.15s ease',
         },
       },
     },
@@ -151,12 +130,12 @@ export const tableSlotRecipe = defineSlotRecipe({
           textStyle: 'sm',
         },
         columnHeader: {
-          px: '2',
+          px: '2.5',
           py: '2',
         },
         cell: {
-          px: '2',
-          py: '2',
+          px: '2.5',
+          py: '1.5',
         },
       },
 

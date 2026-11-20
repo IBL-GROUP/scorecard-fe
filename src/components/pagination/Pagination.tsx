@@ -1,3 +1,4 @@
+import { colors } from '@/constants/theme';
 import { HStack, Pagination, Button } from '@chakra-ui/react';
 import {
   FiChevronLeft,
@@ -35,7 +36,7 @@ export function TablePagination({
         <Button
           size="xs"
           variant="outline"
-          bg="white"
+          bg={colors.cardBg}
           onClick={() => onPageChange(1)}
           disabled={page === 1}
         >
@@ -43,7 +44,7 @@ export function TablePagination({
         </Button>
 
         <Pagination.PrevTrigger asChild>
-          <Button size="xs" variant="outline" bg="white">
+          <Button size="xs" variant="outline" bg={colors.cardBg}>
             <FiChevronLeft />
           </Button>
         </Pagination.PrevTrigger>
@@ -53,8 +54,8 @@ export function TablePagination({
             <Button
               size="xs"
               variant={pg.value === page ? 'solid' : 'outline'}
-              colorPalette={pg.value === page ? 'blue' : undefined}
-              bg={pg.value === page ? undefined : 'white'}
+              colorPalette={pg.value === page ? 'primary' : undefined}
+              bg={pg.value === page ? undefined : 'var(--sp-card-bg)'}
             >
               {pg.value}
             </Button>
@@ -62,7 +63,7 @@ export function TablePagination({
         />
 
         <Pagination.NextTrigger asChild>
-          <Button size="xs" variant="outline" bg="white">
+          <Button size="xs" variant="outline" bg={colors.cardBg}>
             <FiChevronRight />
           </Button>
         </Pagination.NextTrigger>
@@ -70,7 +71,7 @@ export function TablePagination({
         <Button
           size="xs"
           variant="outline"
-          bg="white"
+          bg={colors.cardBg}
           onClick={() => onPageChange(totalPages)}
           disabled={page === totalPages}
         >
