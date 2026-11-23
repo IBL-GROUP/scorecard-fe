@@ -87,7 +87,7 @@ export function ClassLegend() {
         aria-pressed={shown}
       >
         {shown ? <FiEyeOff size={14} /> : <FiEye size={14} />}
-        {!shown && 'Class legend'}
+        {!shown && 'Class Legend'}
       </Box>
     </Flex>
   );

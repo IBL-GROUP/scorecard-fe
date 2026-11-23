@@ -206,9 +206,9 @@ export default function UserManual() {
               <span>OneThunder</span>
             </div>
             <div className="manual-actions">
-              <a href={import.meta.env.BASE_URL}>Back to dashboard</a>
+              <a href={import.meta.env.BASE_URL}>Back To Dashboard</a>
               <button type="button" onClick={() => window.print()}>
-                Print / Save as PDF
+                Print / Save As PDF
               </button>
             </div>
           </div>
@@ -226,11 +226,11 @@ export default function UserManual() {
               <dd>{MANUAL_TITLE}</dd>
             </div>
             <div className="manual-fact">
-              <dt>Tabs covered</dt>
+              <dt>Tabs Covered</dt>
               <dd>All {tabCount}</dd>
             </div>
             <div className="manual-fact">
-              <dt>Fields explained</dt>
+              <dt>Fields Explained</dt>
               <dd>{fieldCount}</dd>
             </div>
           </dl>
@@ -240,7 +240,7 @@ export default function UserManual() {
       <div className="manual-shell">
         <nav className="manual-rail" aria-label="Contents">
           <div className="manual-search">
-            <label htmlFor="manual-q">Find a field</label>
+            <label htmlFor="manual-q">Find A Field</label>
             <input
               id="manual-q"
               type="search"
@@ -253,8 +253,8 @@ export default function UserManual() {
               {hits === null
                 ? ''
                 : hits === 0
-                  ? 'No matching entries'
-                  : `${hits} matching ${hits === 1 ? 'entry' : 'entries'}`}
+                  ? 'No Matching Entries'
+                  : `${hits} Matching ${hits === 1 ? 'Entry' : 'Entries'}`}
             </p>
           </div>
           <p className="manual-rail-title">Contents</p>

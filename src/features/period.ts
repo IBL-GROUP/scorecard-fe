@@ -69,7 +69,7 @@ export function presetWindow(key: Exclude<PresetKey, 'custom'>, today = todayIso
 
 export const PRESETS: { key: PresetKey; label: string }[] = [
   { key: 'mtd', label: 'MTD' },
-  { key: 'lastMonth', label: 'Last month' },
+  { key: 'lastMonth', label: 'Last Month' },
   { key: 'qtd', label: 'QTD' },
   { key: 'ytd', label: 'YTD' },
   { key: 'custom', label: 'Custom' },

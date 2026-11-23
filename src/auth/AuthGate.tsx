@@ -108,7 +108,7 @@ export function NoAccess({ title = 'You don’t have access', body }: { title?: 
         </Box>
         {portal && (
           <Link href={portal} bg="#1a3d8f" color="white" px={6} py={3} borderRadius="lg" fontSize="14px" fontWeight="700" _hover={{ bg: '#1e4aa0', textDecoration: 'none' }}>
-            Back to dashboards
+            Back To Dashboards
           </Link>
         )}
       </VStack>

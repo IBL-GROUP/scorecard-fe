@@ -246,7 +246,7 @@ export function UserMenu() {
               <IconTile accent={colors.bad}>
                 <FiLogOut size={15} />
               </IconTile>
-              Log out
+              Log Out
             </Menu.Item>
           </Menu.Content>
         </Menu.Positioner>

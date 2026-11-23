@@ -24,11 +24,12 @@ import { ChartCard } from '@/ui/chart-card';
 import { RowBars } from '@/ui/row-bars';
 import { InfoTip, Overlay } from '@/ui/overlay';
 import { AnimatedValue } from '@/ui/motion';
+import { titleCase } from '@/utils/titleCase';
 import { ReviewSheet } from '@/ui/pulse/ReviewSheet';
 import type { AnalyzePoint } from '@/ui/analyze';
 
 const INK: Record<Rag, string> = { green: colors.good, amber: colors.warn, red: colors.bad };
-const RAG_WORD: Record<Rag, string> = { green: 'On target', amber: 'Watch', red: 'Below' };
+const RAG_WORD: Record<Rag, string> = { green: 'On Target', amber: 'Watch', red: 'Below' };
 const tabLabel = (k: TabKey) => TABS.find((t) => t.key === k)?.mid ?? k;
 const dayText = (n: number | null | undefined) => (n == null ? DASH : `${Math.round(n)} d`);
 
@@ -254,7 +255,7 @@ function Band({ data, m, onReview }: { data: DashboardData; m: Model; onReview?:
   const red = m.health.filter((h) => h.rag === 'red').length;
   const amber = m.health.filter((h) => h.rag === 'amber').length;
   const overall: Rag = red ? 'red' : amber ? 'amber' : 'green';
-  const statusText = red ? `${red} below target` : amber ? `${amber} to watch` : 'All on target';
+  const statusText = red ? `${red} Below Target` : amber ? `${amber} To Watch` : 'All On Target';
   const ink = (r: Rag | null) => (r ? BAND_INK[r] : colors.bandInk);
   // Working capital bar: finished goods (its excess hatched at the end), WIP, RMPM.
   const share = (n: number) => (working > 0 ? (n / working) * 100 : 0);
@@ -293,16 +294,16 @@ function Band({ data, m, onReview }: { data: DashboardData; m: Model; onReview?:
             cursor="pointer"
             _hover={{ bg: 'rgba(255,255,255,.18)' }}
           >
-            Analyze the supply chain <FiArrowRight size={13} />
+            Analyze The Supply Chain <FiArrowRight size={13} />
           </Box>
         )}
       </Flex>
       <Grid templateColumns={{ base: 'repeat(2, minmax(0, 1fr))', md: 'repeat(5, minmax(0, 1fr))' }} gap={4} className="sp-stagger">
-        <BandNum label="Service level" value={pct1(sv.level)} valueColor={ink(rag(sv.level, 'serviceLevel'))} sub={`${full(sv.below)} of ${full(sv.above + sv.below)} SKUs below threshold`} help={tip(helpFor('EX-05'))} />
-        <BandNum label="Order fill rate" value={pct1(f.pct)} valueColor={ink(rag(f.pct, 'fillRate'))} sub={`${full(f.unfulfilled)} units not dispatched`} help={tip(helpFor('EX-06'))} />
-        <BandNum label="Days of cover" value={dayText(s.totalCd)} valueColor={ink(rag(s.coverage, 'coverage'))} sub={`benchmark ${dayText(s.wBm)} · ${pct1(s.coverage)}`} help={tip(helpFor('EX-04'))} />
-        <BandNum label="Excess stock" value={pkr(s.excess.value)} valueColor={ink(rag(s.excess.pct, 'excessPct'))} sub={`${pct1(s.excess.pct)} of finished goods`} help={tip(helpFor('EX-08'))} />
-        <BandNum label="Working capital" value={pkr(working)} valueColor={colors.bandTarget} sub="Finished goods + WIP + RMPM, at cost" help={tip(helpFor('EX-07'))} />
+        <BandNum label="Service Level" value={pct1(sv.level)} valueColor={ink(rag(sv.level, 'serviceLevel'))} sub={`${full(sv.below)} Of ${full(sv.above + sv.below)} SKUs Below Threshold`} help={tip(helpFor('EX-05'))} />
+        <BandNum label="Order Fill Rate" value={pct1(f.pct)} valueColor={ink(rag(f.pct, 'fillRate'))} sub={`${full(f.unfulfilled)} Units Not Dispatched`} help={tip(helpFor('EX-06'))} />
+        <BandNum label="Days Of Cover" value={dayText(s.totalCd)} valueColor={ink(rag(s.coverage, 'coverage'))} sub={`Benchmark ${dayText(s.wBm)} · ${pct1(s.coverage)}`} help={tip(helpFor('EX-04'))} />
+        <BandNum label="Excess Stock" value={pkr(s.excess.value)} valueColor={ink(rag(s.excess.pct, 'excessPct'))} sub={`${pct1(s.excess.pct)} Of Finished Goods`} help={tip(helpFor('EX-08'))} />
+        <BandNum label="Working Capital" value={pkr(working)} valueColor={colors.bandTarget} sub="Finished Goods + WIP + RMPM, At Cost" help={tip(helpFor('EX-07'))} />
       </Grid>
       <Box mt={4}>
         <Flex h="8px" borderRadius="4px" bg={colors.bandLine} overflow="hidden">
@@ -319,7 +320,7 @@ function Band({ data, m, onReview }: { data: DashboardData; m: Model; onReview?:
           <HStack gap={3}>
             {(
               [
-                [colors.bandSales, 'Finished goods', wc.fg],
+                [colors.bandSales, 'Finished Goods', wc.fg],
                 [colors.bandTarget, 'WIP', wc.wip],
                 [colors.bandMuted, 'RMPM', wc.rmpm],
               ] as const
@@ -339,7 +340,7 @@ function Band({ data, m, onReview }: { data: DashboardData; m: Model; onReview?:
             <Text as="span" color={colors.bandInk} fontWeight={600}>
               {money(excess)}
             </Text>{' '}
-            excess could be released
+            Excess Could Be Released
           </Text>
         </Flex>
       </Box>
@@ -375,12 +376,12 @@ function Health({ m }: { m: Model }) {
       <RowBars
         rows={m.health.map((h) => ({
           key: h.key,
-          name: h.name,
-          parts: [{ value: h.value ?? 0, color: h.rag ? INK[h.rag] : colors.prior, label: h.name }],
+          name: titleCase(h.name),
+          parts: [{ value: h.value ?? 0, color: h.rag ? INK[h.rag] : colors.prior, label: titleCase(h.name) }],
           target: h.target,
           note: (
             <>
-              {h.note}
+              {titleCase(h.note)}
               {h.rag && (
                 <>
                   {' · '}
@@ -393,7 +394,7 @@ function Health({ m }: { m: Model }) {
           ),
         }))}
         legend={[
-          { label: 'On target', color: colors.good },
+          { label: 'On Target', color: colors.good },
           { label: 'Watch', color: colors.warn },
           { label: 'Below', color: colors.bad },
           { label: 'Target', color: colors.target, shape: 'line' },
@@ -420,7 +421,7 @@ function ServiceGrid({ m }: { m: Model }) {
     <Flex direction="column" className="sp-card sp-tint" border="1px solid" borderColor={colors.border} borderRadius="4px" px={4} py={3} minH={{ base: '320px', lg: 0 }} minW={0} data-kpi="IN-10">
       <Flex align="baseline" gap={2} mb={2}>
         <Text fontSize="16px" fontWeight={700} color={colors.cardAccent} whiteSpace="nowrap">
-          Service grid
+          Service Grid
         </Text>
         <Text fontSize="12px" color={colors.mutedText} truncate>
           lowest branches · click a cell to open it
@@ -468,7 +469,7 @@ function ServiceGrid({ m }: { m: Model }) {
                     _hover={opens ? { outline: `2px solid ${colors.brand}`, outlineOffset: '1px' } : undefined}
                   >
                     <Text fontSize="13px" fontWeight={700} fontVariantNumeric="tabular-nums" whiteSpace="nowrap">
-                      {v == null ? '—' : `${Math.round(v)}%`}
+                      {v == null ? '—' : `${v.toFixed(1).replace(/[.]0$/, '')}%`}
                     </Text>
                   </Box>
                 );
@@ -489,7 +490,7 @@ function ServiceGrid({ m }: { m: Model }) {
           </HStack>
         ))}
         <Text ml="auto">
-          Lowest {rows.length} of {m.sv.matrix.length} branches
+          Lowest {rows.length} Of {m.sv.matrix.length} Branches
         </Text>
       </Flex>
     </Flex>
@@ -497,9 +498,9 @@ function ServiceGrid({ m }: { m: Model }) {
 }
 
 const TONE: Record<Tone, { label: string; color: string; mark: string }> = {
-  bad: { label: 'Needs attention', color: colors.bad, mark: '▼' },
-  good: { label: 'Going well', color: colors.good, mark: '▲' },
-  data: { label: 'Data check', color: colors.brand, mark: '◆' },
+  bad: { label: 'Needs Attention', color: colors.bad, mark: '▼' },
+  good: { label: 'Going Well', color: colors.good, mark: '▲' },
+  data: { label: 'Data Check', color: colors.brand, mark: '◆' },
 };
 const TONE_ORDER: Tone[] = ['bad', 'good', 'data'];
 
@@ -575,7 +576,7 @@ function SignalsRail({ insights, loading, periodLabel }: { insights: Insight[]; 
     <Flex direction="column" className="sp-card sp-tint" border="1px solid" borderColor={colors.border} borderRadius="4px" minH={{ base: '360px', lg: 0 }} minW={0} data-kpi="EX-10">
       <Flex align="center" gap={2} px={4} pt={3} pb={2}>
         <Text fontSize="16px" fontWeight={700} color={colors.cardAccent}>
-          Key insights
+          Key Insights
         </Text>
         <Text fontSize="12px" color={colors.mutedText}>
           {insights.length}
@@ -607,7 +608,7 @@ function SignalsRail({ insights, loading, periodLabel }: { insights: Insight[]; 
         )}
       </Box>
       {expanded && (
-        <Overlay title="Key insights" subtitle={`${insights.length} found for ${periodLabel} · click a link to open it on the right`} onClose={() => setExpanded(false)}>
+        <Overlay title="Key Insights" subtitle={`${insights.length} found for ${periodLabel} · click a link to open it on the right`} onClose={() => setExpanded(false)}>
           <Grid templateColumns={{ base: '1fr', md: 'repeat(3, minmax(0, 1fr))' }} gap={3} alignItems="start">
             {TONE_ORDER.map((tone) => {
               const items = sorted.filter((i) => i.tone === tone);

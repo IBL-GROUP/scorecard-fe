@@ -29,7 +29,7 @@ import { rowsOf, type DashboardData } from '@/features/data';
 import { service, status, stock, workingCapitalTrend } from '@/features/derive';
 import { inventoryClassRows } from '@/features/kpis';
 import { kpiThresholds, rag, type Rag } from '@/features/kpiThresholds';
-import { DASH, change, days, full, pct0, pct1, pkr } from '@/features/format';
+import { DASH, change, days, full, pct1, pkr } from '@/features/format';
 import { useStore } from '@/features/store';
 import { ACTIVE_ROW, useDetail, useOpenedRow } from '@/features/detail';
 import { useFitScreen } from '@/features/fit';
@@ -88,30 +88,30 @@ export function InventoryPage({ data }: { data: DashboardData }) {
   const highlights = (
     <HighlightGrid isLoading={sSvc.isLoading && sMatrix.isLoading}>
       <Box data-kpi="IN-10" minW={0}>
-        <HighlightCard label="Service level" tone="sales" name="Network, all branches" value={pct1(sv.level)} caption={`${full(sv.above)} of ${full(sv.above + sv.below)} SKUs above threshold`} />
+        <HighlightCard label="Service Level" tone="sales" name="Network, All Branches" value={pct1(sv.level)} caption={`${full(sv.above)} Of ${full(sv.above + sv.below)} SKUs Above Threshold`} />
       </Box>
       <Box data-kpi="IN-06" minW={0}>
         <HighlightCard
-          label="Stock-out risk"
+          label="Stock-Out Risk"
           tone="bad"
-          name={`${full(sv.below)} SKUs below threshold`}
+          name={`${full(sv.below)} SKUs Below Threshold`}
           value={pct1(sv.risk)}
-          caption={belowByClass[0] ? `Most in ${clsName(belowByClass[0].cls)}: ${full(belowByClass[0].below)} SKUs` : 'No SKU below its threshold'}
+          caption={belowByClass[0] ? `Most In ${clsName(belowByClass[0].cls)}: ${full(belowByClass[0].below)} SKUs` : 'No SKU Below Its Threshold'}
         />
       </Box>
       <Box data-kpi="IN-11" minW={0}>
-        <HighlightCard label="Lowest service" tone="bad" name={lowest?.branch ?? DASH} value={pct1(lowest?.avg ?? null)} caption={`Average of its classes · target ${kpiThresholds.serviceLevel.green}%`} />
+        <HighlightCard label="Lowest Service" tone="bad" name={lowest?.branch ?? DASH} value={pct1(lowest?.avg ?? null)} caption={`Average Of Its Classes · Target ${kpiThresholds.serviceLevel.green}%`} />
       </Box>
       <Box data-kpi="IN-12" minW={0}>
-        <HighlightCard label="Lowest cover" tone="target" name={lowCover ? clsName(lowCover.cls) : DASH} value={lowCover ? days(lowCover.cd) : DASH} caption={lowCover ? `${pct0(lowCover.cov)} of its ${days(lowCover.bm)} benchmark` : 'No class benchmark'} />
+        <HighlightCard label="Lowest Cover" tone="target" name={lowCover ? clsName(lowCover.cls) : DASH} value={lowCover ? days(lowCover.cd) : DASH} caption={lowCover ? `${pct1(lowCover.cov)} Of Its ${days(lowCover.bm)} Benchmark` : 'No Class Benchmark'} />
       </Box>
       <Box data-kpi="IN-01 IN-02" minW={0}>
         <HighlightCard
-          label="Working capital"
+          label="Working Capital"
           tone="sales"
-          name="FG + WIP + RMPM, at cost"
+          name="FG + WIP + RMPM, At Cost"
           value={pkr(cur?.total ?? null)}
-          caption={`FG ${pkr(s.fgCost)}${wcChange != null ? ` · ${wcChange >= 0 ? '▲' : '▼'} ${pct1(Math.abs(wcChange))} vs previous month-end` : ''}`}
+          caption={`FG ${pkr(s.fgCost)}${wcChange != null ? ` · ${wcChange >= 0 ? '▲' : '▼'} ${pct1(Math.abs(wcChange))} vs Previous Month-End` : ''}`}
         />
       </Box>
     </HighlightGrid>
@@ -123,8 +123,8 @@ export function InventoryPage({ data }: { data: DashboardData }) {
   const heatRows = worstFirst.map((m) => ({
     name: m.branch,
     cells: [
-      ...m.cells.map((v) => ({ text: v == null ? DASH : pct0(v), color: ink(rag(v, 'serviceLevel')), bg: soft(rag(v, 'serviceLevel')) })),
-      { text: m.avg == null ? DASH : pct0(m.avg), color: ink(rag(m.avg, 'serviceLevel')) },
+      ...m.cells.map((v) => ({ text: v == null ? DASH : pct1(v), color: ink(rag(v, 'serviceLevel')), bg: soft(rag(v, 'serviceLevel')) })),
+      { text: m.avg == null ? DASH : pct1(m.avg), color: ink(rag(m.avg, 'serviceLevel')) },
     ],
   }));
   // Cover days by branch and class (IN-12), against each class's benchmark.
@@ -173,7 +173,7 @@ export function InventoryPage({ data }: { data: DashboardData }) {
                 { value: 'heat' as const, label: 'Heatmap' },
                 { value: 'line' as const, label: 'Line' },
                 { value: 'rank' as const, label: 'Ranking' },
-                { value: 'cover' as const, label: 'Cover days' },
+                { value: 'cover' as const, label: 'Cover Days' },
               ]}
             />
           }
@@ -195,7 +195,7 @@ export function InventoryPage({ data }: { data: DashboardData }) {
                 data={byName.map((m) => ({ branch: m.branch, ...Object.fromEntries(RATED_CLASSES.map((c, i) => [c, m.cells[i] ?? 0])) }))}
                 xKey="branch"
                 lines={RATED_CLASSES.filter(showCls).map((c) => ({ key: c, label: `SKU-${c}%`, color: CLASS_HEX[c] }))}
-                labelFormatter={(v) => `${Math.round(v)}%`}
+                labelFormatter={(v) => `${v.toFixed(1).replace(/[.]0$/, '')}%`}
                 height="100%"
               />
             ) : svcView === 'rank' ? (
@@ -209,7 +209,7 @@ export function InventoryPage({ data }: { data: DashboardData }) {
                 bars={[{ key: 'avg', label: 'Average of its classes', color: colors.borderStrong, cellColor: (e) => (e.worst ? colors.bad : colors.borderStrong) }]}
                 referenceValue={kpiThresholds.serviceLevel.green}
                 referenceLabel={`Target ${kpiThresholds.serviceLevel.green}%`}
-                labelFormatter={(v) => pct0(v)}
+                labelFormatter={(v) => pct1(v)}
                 showLabels
                 onBarClick={openBranch}
                 height="100%"
@@ -284,7 +284,7 @@ function SkuSplit({ rows, onPick }: { rows: { cls: string; above: number; below:
           note: (
             <>
               <Box as="span" color={ink(rag(share, 'stockoutRisk'))} fontWeight={700}>
-                {pct0(share)} below
+                {pct1(share)} Below
               </Box>{' '}
               · {full(total)} SKUs
             </>
@@ -372,7 +372,7 @@ function InventoryDaysCard({
       headerRight={
         <Flex align="center" gap={2} flexShrink={0}>
           <Text fontSize="13px" color={colors.mutedText} whiteSpace="nowrap">
-            Expand to
+            Expand To
           </Text>
           <Segmented
             size="xs"

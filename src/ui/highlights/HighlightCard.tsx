@@ -15,6 +15,19 @@ const toneColor: Record<Tone, string> = {
   bad: colors.bad,
 };
 
+export interface Tag {
+  text: string;
+  color: string;
+}
+
+function TagWord({ tag }: { tag: Tag }) {
+  return (
+    <Box as="span" fontSize="12px" fontWeight={600} color={tag.color} mr="6px" verticalAlign="middle">
+      {tag.text}
+    </Box>
+  );
+}
+
 export function HighlightCard({
   label,
   tone,
@@ -22,8 +35,13 @@ export function HighlightCard({
   value,
   caption,
   help,
+  nameTag,
+  valueTag,
 }: {
   help?: HelpText;
+  /** A small coloured word before the name / value, saying what the figure is (e.g. Units, Value). */
+  nameTag?: Tag;
+  valueTag?: Tag;
   label: string;
   tone: Tone;
   name: string;
@@ -48,6 +66,7 @@ export function HighlightCard({
         {help && <InfoTip help={help} size={14} />}
       </Box>
       <Text fontSize="16px" fontWeight={700} color={colors.darkText} truncate title={name} mt="2px">
+        {nameTag && <TagWord tag={nameTag} />}
         {name}
       </Text>
       <Text
@@ -66,6 +85,7 @@ export function HighlightCard({
         truncate
         title={typeof value === 'string' ? value : undefined}
       >
+        {valueTag && <TagWord tag={valueTag} />}
         <AnimatedValue value={value} />
       </Text>
       <Text fontSize="12px" color={colors.mutedText} truncate mt="2px">

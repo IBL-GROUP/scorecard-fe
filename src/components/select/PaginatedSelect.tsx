@@ -186,7 +186,7 @@ export function PaginatedSelect({
           aria-label={label || placeholder}
           styles={selectStyles}
           loadingMessage={() => 'Loading…'}
-          noOptionsMessage={() => (isLoading ? 'Loading…' : 'No matches')}
+          noOptionsMessage={() => (isLoading ? 'Loading…' : 'No Matches')}
         />
       </Box>
     </Flex>

@@ -84,7 +84,7 @@ const ITEMS = 'vw_items_class';
 /** The monthly SKU targets cover days are struck against. */
 const TARGETS = 'mv_tscl_spl_targets';
 
-export const MANUAL_TITLE = 'Supply Chain Pulse 1.0';
+export const MANUAL_TITLE = 'Supply Chain Pulse';
 export const MANUAL_UPDATED = '18 September 2026';
 
 export const SECTIONS: Section[] = [
@@ -97,7 +97,7 @@ export const SECTIONS: Section[] = [
     blocks: [
       {
         kind: 'prose',
-        html: `<p class="lede"><b>Supply Chain Pulse 1.0</b> answers one question: <b>can we supply what we are
+        html: `<p class="lede"><b>Supply Chain Pulse</b> answers one question: <b>can we supply what we are
         selling?</b> How much stock is on hand, how many days that will last, whether the plan was accurate,
         whether orders were dispatched, and whether distributors are telling us what they hold.</p>
         <p>Where Sales Pulse reports what was sold and Distribution Pulse reports how widely it reached, this
@@ -229,7 +229,7 @@ export const SECTIONS: Section[] = [
         title: 'What is on the header, left to right',
         items: [
           ['Searle logo', 'brand', 'Top-left corner.'],
-          ['“Supply Chain Pulse 1.0”', 'label', 'Under the logo — the dashboard name and version.'],
+          ['“Supply Chain Pulse”', 'label', 'Under the logo — the dashboard name and version.'],
           ['Tab bar', 'navigation', 'Centre-left. Summary, Service Measure, Dispatch & WIP, RD Data Status — as many as your account has been granted.'],
           ['Your avatar', 'navigation', 'Top-right. Your name, the other dashboards you can open, this manual, Settings and Log out.'],
           ['Filter bar', 'filter', 'Full width, under the header. Its fields change with the tab — see below.'],

@@ -7,6 +7,7 @@ import { SheetStack } from '@/ui/drill/SheetStack';
 import { colors } from '@/constants/theme';
 import { nodeKey, type FigureColumn, type GroupKpi, type GroupNode, type Sums } from './GroupedTable';
 import { AnimatedValue } from '@/ui/motion';
+import { useRowWindow } from '@/features/rowWindow';
 
 /**
  * The grouped tables' deeper levels, in the same stacked right-hand sheets as
@@ -88,6 +89,7 @@ function GroupSheet({
   const shown = q
     ? node.children.filter((c) => `${c.name} ${c.code ?? ''}`.toLowerCase().includes(q))
     : node.children;
+  const win = useRowWindow(shown, `${node.id}|${q}`);
   // The sheet is narrower than the page: the name column gives way first.
   // The columns that mean something for this sheet's rows (see FigureColumn.levels).
   const childLevel = node.children[0]?.level;
@@ -204,7 +206,7 @@ function GroupSheet({
           <Flex direction="column" flex={1} minH={0} border="1px solid" borderColor={colors.border} borderRadius="4px">
             <Flex align="center" gap={2} px={3} py={2} borderBottom="1px solid" borderColor={colors.border} flexShrink={0}>
               <Text fontSize="13px" fontWeight={600} color={colors.cardAccent}>
-                {plural(childLabel)} in {node.name}
+                {plural(childLabel)} In {node.name}
               </Text>
               {node.children.length > 8 && (
                 <Input
@@ -277,11 +279,11 @@ function GroupSheet({
                     Nothing matches “{query}”.
                   </Text>
                 ) : (
-                  shown.map((c) => {
+                  win.rows.map((c) => {
                     const deeper = c.children.length > 0;
                     // A last-level row opens nothing unless the caller has more below it.
                     const open = deeper ? () => onPush(c) : openLeaf?.(c);
-                    const unmapped = c.name === 'Other / unmapped';
+                    const unmapped = c.name === 'Other / Unmapped';
                     // The row whose sheet is open on top of this one, or whose daily chart shows below.
                     const active = path[depth + 1]?.id === c.id || (!!activeKey && nodeKey(c) === activeKey);
                     return (
@@ -332,6 +334,7 @@ function GroupSheet({
                     );
                   })
                 )}
+                {win.marker}
               </Box>
             </Box>
           </Flex>

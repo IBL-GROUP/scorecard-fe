@@ -133,7 +133,7 @@ function AccuracySummary({ noun, monthPlan, planToDate, achieved, monthPct, toDa
       </Grid>
       {gap != null && (
         <Text fontSize="12px" fontWeight={700} color={gap >= 0 ? colors.good : colors.bad} fontVariantNumeric="tabular-nums">
-          {gap >= 0 ? '▲' : '▼'} {fmt1(Math.abs(gap))}% {gap >= 0 ? 'above' : 'below'} {noun}
+          {gap >= 0 ? '▲' : '▼'} {fmt1(Math.abs(gap))}% {gap >= 0 ? 'Above' : 'Below'} {Noun}
         </Text>
       )}
       {/* Where the month stands and where it is heading: achievement so far, the
@@ -264,7 +264,7 @@ function AccuracyDays({
         </Grid>
         <Flex direction="column" flex="1 1 0" minH="220px" minW={0}>
           <Text fontSize="16px" fontWeight={700} color={colors.cardAccent} mb={2}>
-            Day by day ({basis})
+            Day By Day ({basis})
           </Text>
           <Box flex="1 1 0" minH={0}>
             {loading ? (
@@ -482,11 +482,11 @@ export function SummaryPage({ data }: { data: DashboardData }) {
       isLoading: sStock.isLoading,
       caption: (
         <>
-          {(num(st.total?.quantity ?? null) ?? 0).toLocaleString('en-US')} units · at cost{' '}
+          {(num(st.total?.quantity ?? null) ?? 0).toLocaleString('en-US')} Units · At Cost{' '}
           <Text as="span" fontWeight={600} color={colors.darkText}>
             {st.fgCost == null ? '—' : fmt(st.fgCost)}
           </Text>
-          {closing && <Text as="span" display="block">as of {closingLabel(closing)}</Text>}
+          {closing && <Text as="span" display="block">As Of {closingLabel(closing)}</Text>}
         </>
       ),
     },
@@ -501,9 +501,9 @@ export function SummaryPage({ data }: { data: DashboardData }) {
         ) : (
           <>
             <Text as="span" fontWeight={600} color={coverInk}>
-              {invTp >= invTarget ? `${fmt(invTp - invTarget)} over` : `${fmt(invTarget - invTp)} under`}
+              {invTp >= invTarget ? `${fmt(invTp - invTarget)} Over` : `${fmt(invTarget - invTp)} Under`}
             </Text>{' '}
-            · inventory is {pct(st.coverage)} of it
+            · Inventory Is {pct(st.coverage)} Of It
           </>
         ),
     },
@@ -515,9 +515,9 @@ export function SummaryPage({ data }: { data: DashboardData }) {
       isLoading: sStock.isLoading,
       caption: (
         <>
-          benchmark {st.wBm == null ? '—' : `${fmt1(st.wBm)} days`} ·{' '}
+          Benchmark {st.wBm == null ? '—' : `${fmt1(st.wBm)} Days`} ·{' '}
           <Text as="span" fontWeight={600} color={coverInk}>
-            {pct(st.coverage)} of benchmark
+            {pct(st.coverage)} Of Benchmark
           </Text>
         </>
       ),
@@ -530,7 +530,7 @@ export function SummaryPage({ data }: { data: DashboardData }) {
       caption: (
         <>
           <Text as="span" fontWeight={600} color={rag(st.excess.pct, 'excessPct') === 'green' ? colors.good : colors.warn}>
-            {pct(st.excess.pct)} of finished goods
+            {pct(st.excess.pct)} Of Finished Goods
           </Text>
           {longClasses.length > 0 && <> · {longClasses.join(', ')}</>}
         </>
@@ -543,11 +543,11 @@ export function SummaryPage({ data }: { data: DashboardData }) {
       isLoading: sStock.isLoading,
       caption: st.shortfall.length ? (
         <Text as="span" fontWeight={600} color={colors.bad}>
-          {st.shortfall.map((c) => clsName(c.cls)).join(', ')} below threshold
+          {st.shortfall.map((c) => clsName(c.cls)).join(', ')} Below Threshold
         </Text>
       ) : (
         <Text as="span" fontWeight={600} color={colors.good}>
-          No class below its threshold
+          No Class Below Its Threshold
         </Text>
       ),
     },
@@ -580,7 +580,7 @@ export function SummaryPage({ data }: { data: DashboardData }) {
     .map((r) => ({ cls: r.classification === 'Total' ? 'Total' : r.classification || 'Others', value: num(r.ibl_vs_tscl_pct) ?? 0, ibl: num(r.ibl_target) ?? 0, tscl: num(r.tscl_target) ?? 0 }))
     .sort((a, b) => (a.cls === 'Total' ? -1 : b.cls === 'Total' ? 1 : byClass(a.cls, b.cls)))
     .map((r) => ({ ...r, name: r.cls === 'Total' ? 'All classes' : clsName(r.cls) }));
-  const daysText = `${p.days.daysGone} of ${p.days.totalDays} days`;
+  const daysText = `${p.days.daysGone} Of ${p.days.totalDays} Days`;
   // Forecast vs budget as Sales Pulse rows: the IBL target as the "sales", the TSCL budget as its target.
   const fvbRows = fvb.filter((r) => r.cls !== 'Total').map((r) => ({ name: r.name, sale: r.ibl, prior: 0, target: r.tscl }));
 
@@ -676,9 +676,9 @@ export function SummaryPage({ data }: { data: DashboardData }) {
           headerRight={viewSwitch(fvbView, setFvbView, [['bars', 'Bars'], ['table', 'Table']])}
         >
           {fvbView === 'table' ? (
-            <BreakdownTable rows={fvbRows} timeGonePct={100} showTarget showGrowth={false} fmt={fmt} saleLabel="IBL target" targetLabel="Budget" showShare={false} nameMark={(n) => <ClassBadge cls={clsOf(n)} />} onPick={(n) => detail.open({ kind: 'alignClass', cls: clsOf(n) })} maxHeight="100%" />
+            <BreakdownTable rows={fvbRows} timeGonePct={100} showTarget showGrowth={false} fmt={fmt} saleLabel="IBL Target" targetLabel="Budget" showShare={false} nameMark={(n) => <ClassBadge cls={clsOf(n)} />} onPick={(n) => detail.open({ kind: 'alignClass', cls: clsOf(n) })} maxHeight="100%" />
           ) : (
-            <BreakdownBars rows={fvbRows} fmt={fmt} showTarget showPrior={false} targetLabel="Budget" periods={{ a: 'IBL target', b: '' }} onPick={(n) => detail.open({ kind: 'alignClass', cls: clsOf(n) })} />
+            <BreakdownBars rows={fvbRows} fmt={fmt} showTarget showPrior={false} targetLabel="Budget" periods={{ a: 'IBL Target', b: '' }} onPick={(n) => detail.open({ kind: 'alignClass', cls: clsOf(n) })} />
           )}
         </ChartCard>
       </Grid>

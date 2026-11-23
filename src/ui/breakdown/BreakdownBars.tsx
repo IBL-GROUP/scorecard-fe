@@ -57,7 +57,7 @@ export function BreakdownBars({
     return (
       <Flex h="100%" align="center" justify="center">
         <Text fontSize="13px" color={colors.mutedText}>
-          No sales for this selection
+          No Sales For This Selection
         </Text>
       </Flex>
     );
@@ -68,7 +68,7 @@ export function BreakdownBars({
       <Box flex={1} minH={0} overflowY="auto" pr={1} className="sp-stagger">
         {list.map((r) => {
           const junk = isJunk(r.name);
-          const name = junk ? 'Other / unmapped' : r.name;
+          const name = junk ? 'Other / Unmapped' : r.name;
           const pct = showTarget && r.target > 0 ? (r.sale / r.target) * 100 : null;
           return (
             <Box
@@ -93,12 +93,12 @@ export function BreakdownBars({
                 </Text>
                 {showTarget && (
                   <Text color={colors.mutedText} whiteSpace="nowrap" fontVariantNumeric="tabular-nums">
-                    {r.target > 0 ? `${fmt(r.target)} ${targetLabel.toLowerCase()}` : `no ${targetLabel.toLowerCase()}`}
+                    {r.target > 0 ? `${fmt(r.target)} ${targetLabel}` : `No ${targetLabel}`}
                     {pct != null && (
                       <>
                         {' · '}
                         <Box as="span" color={statusInk(pct)} fontWeight={700}>
-                          {pct > 999 ? '>999%' : `${fmt1(pct)}%`}
+                          {`${fmt1(pct)}%`}
                         </Box>
                       </>
                     )}

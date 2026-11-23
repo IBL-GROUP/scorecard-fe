@@ -612,8 +612,8 @@ export function SearchBar({
                   </Text>
                   <Text as="span" ml="auto" fontSize="12px" color={colors.mutedText}>
                     {row.matches.length === MAX_MATCHES
-                      ? `${MAX_MATCHES}+ matches`
-                      : `${row.matches.length} match${row.matches.length === 1 ? '' : 'es'}`}
+                      ? `${MAX_MATCHES}+ Matches`
+                      : `${row.matches.length} Match${row.matches.length === 1 ? '' : 'es'}`}
                   </Text>
                 </Flex>
               );
@@ -657,7 +657,7 @@ export function SearchBar({
             <Box p={4}>
               <Flex justify="space-between" align="center" mb={3}>
                 <Text fontWeight={700} fontSize="14px" color={colors.darkText}>
-                  Custom filter
+                  Custom Filter
                 </Text>
                 <Box
                   as="button"
@@ -715,7 +715,7 @@ export function SearchBar({
                   _hover={draftCount ? { bg: colors.hoverBg } : undefined}
                   onClick={() => draftCount && setDraft((d) => ({ ...d, ...Object.fromEntries(fields.filter((f) => !f.loadOptions).map((f) => [f.key, ''])) }))}
                 >
-                  Clear all
+                  Clear All
                 </Box>
                 <Box
                   as="button"
@@ -768,7 +768,7 @@ export function SearchBar({
                   <Divider />
                   <MenuItem onClick={() => setCustomOpen(true)}>
                     <HStack as="span" gap={2} display="inline-flex">
-                      <FiSliders size={13} /> <span>Add custom filter</span>
+                      <FiSliders size={13} /> <span>Add Custom Filter</span>
                     </HStack>
                   </MenuItem>
                 </MenuColumn>
@@ -791,7 +791,7 @@ export function SearchBar({
                     {rangeDraft ? (
                       <Flex direction="column" gap={2} px={4} py={1}>
                         <Text fontSize="13px" color={colors.mutedText}>
-                          Days within {monthLabel(period.month)}
+                          Days Within {monthLabel(period.month)}
                         </Text>
                         <HStack gap={0}>
                           <Box flex={1}>
@@ -854,7 +854,7 @@ export function SearchBar({
                         active={!period.isDefaultRange}
                         onClick={() => setRangeDraft({ start: period.start, end: period.end })}
                       >
-                        {period.isDefaultRange ? 'Custom range…' : `Custom: ${periodText}`}
+                        {period.isDefaultRange ? 'Custom Range…' : `Custom: ${periodText}`}
                       </MenuItem>
                     )}
                   </MenuColumn>
@@ -887,7 +887,7 @@ export function SearchBar({
                     ))}
                     <Divider />
                     {savingName === null ? (
-                      <MenuItem onClick={() => setSavingName('')}>Save current search</MenuItem>
+                      <MenuItem onClick={() => setSavingName('')}>Save Current Search</MenuItem>
                     ) : (
                       <Flex direction="column" gap={2} px={4} py={1}>
                         <Input

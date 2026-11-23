@@ -28,6 +28,6 @@ export function CardState({ locked, error, empty, emptyText }: { locked?: Sectio
         <FiAlertCircle /> Couldn’t load this chart. Other figures are unaffected.
       </Flex>
     );
-  if (empty) return <EmptyChart height={180} title="No data for this selection" subtitle={emptyText ?? 'Try another period or fewer filters'} />;
+  if (empty) return <EmptyChart height={180} title="No Data For This Selection" subtitle={emptyText ?? 'Try another period or fewer filters'} />;
   return null;
 }

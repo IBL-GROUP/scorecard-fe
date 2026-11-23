@@ -142,7 +142,7 @@ function Body({ onClose, periodLabel, m }: { onClose: () => void; periodLabel: s
       <Flex align="center" gap={3} px={5} py={3} bg={colors.cardBg} borderBottom="1px solid" borderColor={colors.border} flexShrink={0}>
         <Box minW={0}>
           <Text fontSize="16px" fontWeight={700} color={colors.darkText}>
-            Supply chain review
+            Supply Chain Review
           </Text>
           <Text fontSize="12px" color={colors.mutedText}>
             {periodLabel}
@@ -160,14 +160,14 @@ function Body({ onClose, periodLabel, m }: { onClose: () => void; periodLabel: s
         <Flex direction="column" gap={4} className="sp-stagger">
           {/* A. Where we stand */}
           <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }} gap={3} className="sp-stagger">
-            <Stat label="Service level" value={pct1(sv.level)} valueInk={ink(rag(sv.level, 'serviceLevel'))} sub={`${full(sv.below)} of ${full(sv.above + sv.below)} SKUs below threshold`} help={REVIEW_HELP.service} tone="sales" />
-            <Stat label="Order fill rate" value={pct1(f.pct)} valueInk={ink(rag(f.pct, 'fillRate'))} sub={`${full(f.unfulfilled)} of ${full(f.ordered)} units not dispatched`} help={REVIEW_HELP.fill} tone="sales" />
-            <Stat label="Days of cover" value={dayText(s.totalCd)} valueInk={ink(rag(s.coverage, 'coverage'))} sub={`benchmark ${dayText(s.wBm)} · ${pct1(s.coverage)}`} help={REVIEW_HELP.cover} tone="target" />
-            <Stat label="Working capital" value={money(working)} sub={`FG ${money(wc.fg)} · WIP ${money(wc.wip)} · RMPM ${money(wc.rmpm)}`} help={REVIEW_HELP.wc} tone="target" />
+            <Stat label="Service Level" value={pct1(sv.level)} valueInk={ink(rag(sv.level, 'serviceLevel'))} sub={`${full(sv.below)} Of ${full(sv.above + sv.below)} SKUs Below Threshold`} help={REVIEW_HELP.service} tone="sales" />
+            <Stat label="Order Fill Rate" value={pct1(f.pct)} valueInk={ink(rag(f.pct, 'fillRate'))} sub={`${full(f.unfulfilled)} Of ${full(f.ordered)} Units Not Dispatched`} help={REVIEW_HELP.fill} tone="sales" />
+            <Stat label="Days Of Cover" value={dayText(s.totalCd)} valueInk={ink(rag(s.coverage, 'coverage'))} sub={`Benchmark ${dayText(s.wBm)} · ${pct1(s.coverage)}`} help={REVIEW_HELP.cover} tone="target" />
+            <Stat label="Working Capital" value={money(working)} sub={`FG ${money(wc.fg)} · WIP ${money(wc.wip)} · RMPM ${money(wc.rmpm)}`} help={REVIEW_HELP.wc} tone="target" />
           </Grid>
 
           {/* B. Stock against benchmark */}
-          <Card title="Finished goods against benchmark" help={REVIEW_HELP.stock}>
+          <Card title="Finished Goods Against Benchmark" help={REVIEW_HELP.stock}>
             <Box px={4} py={3}>
               <Flex align="baseline" gap={3} wrap="wrap" fontVariantNumeric="tabular-nums">
                 <Text fontSize="24px" fontWeight={700} color={colors.darkText}>
@@ -177,10 +177,10 @@ function Body({ onClose, periodLabel, m }: { onClose: () => void; periodLabel: s
                   {pct1(rightSized > 0 ? (fg / rightSized) * 100 : null)}
                 </Text>
                 <Text fontSize="13px" fontWeight={600} color={over}>
-                  {fg >= rightSized ? `+${money(fg - rightSized)} over right-sized` : `−${money(rightSized - fg)} under right-sized`}
+                  {fg >= rightSized ? `+${money(fg - rightSized)} Over Right-Sized` : `−${money(rightSized - fg)} Under Right-Sized`}
                 </Text>
                 <Text fontSize="12px" color={colors.mutedText} ml="auto">
-                  at cost
+                  At Cost
                 </Text>
               </Flex>
               <ResultBar value={fg} target={rightSized} />
@@ -188,19 +188,19 @@ function Body({ onClose, periodLabel, m }: { onClose: () => void; periodLabel: s
           </Card>
 
           {/* C. Short and long */}
-          <Card title="Short and long on cover" help={REVIEW_HELP.shortLong}>
+          <Card title="Short And Long On Cover" help={REVIEW_HELP.shortLong}>
             <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }}>
-              <SideList title="Below threshold" ink={colors.bad} list={short} sum={build} refLabel="threshold" onOpen={openClass} />
-              <SideList title="Above benchmark" ink={colors.warn} list={long} sum={release} refLabel="benchmark" onOpen={openClass} divider />
+              <SideList title="Below Threshold" ink={colors.bad} list={short} sum={build} refLabel="threshold" onOpen={openClass} />
+              <SideList title="Above Benchmark" ink={colors.warn} list={long} sum={release} refLabel="benchmark" onOpen={openClass} divider />
             </Grid>
           </Card>
 
           {/* D. What would fix it */}
-          <Card title="What would fix it" help={REVIEW_HELP.fix}>
+          <Card title="What Would Fix It" help={REVIEW_HELP.fix}>
             <Grid templateColumns={{ base: '1fr', md: 'repeat(3, 1fr)' }} gap={3} px={4} py={3}>
-              <Figure label="Release the excess" value={`−${money(release)}`} sub={long.length ? long.slice(0, 3).map((c) => c.name).join(', ') : 'No class above benchmark'} ink={colors.good} />
-              <Figure label="Build to threshold" value={`+${money(build)}`} sub={short.length ? short.slice(0, 3).map((c) => c.name).join(', ') : 'No class below threshold'} ink={short.length ? colors.bad : undefined} />
-              <Figure label="Working capital after" value={money(wcAfter)} sub={`${wcAfter <= working ? '−' : '+'}${money(Math.abs(working - wcAfter))} vs now`} ink={wcAfter <= working ? colors.good : colors.bad} />
+              <Figure label="Release The Excess" value={`−${money(release)}`} sub={long.length ? long.slice(0, 3).map((c) => c.name).join(', ') : 'No Class Above Benchmark'} ink={colors.good} />
+              <Figure label="Build To Threshold" value={`+${money(build)}`} sub={short.length ? short.slice(0, 3).map((c) => c.name).join(', ') : 'No Class Below Threshold'} ink={short.length ? colors.bad : undefined} />
+              <Figure label="Working Capital After" value={money(wcAfter)} sub={`${wcAfter <= working ? '−' : '+'}${money(Math.abs(working - wcAfter))} vs Now`} ink={wcAfter <= working ? colors.good : colors.bad} />
             </Grid>
             <Box px={4} py={3} borderTop="1px solid" borderColor={colors.sunkBg}>
               <Flex align="center" gap={3} wrap="wrap">
@@ -229,14 +229,14 @@ function Body({ onClose, periodLabel, m }: { onClose: () => void; periodLabel: s
                   Finished goods at <b>{money(atShare)}</b> · working capital {money(working - fg + atShare)}
                 </Text>
                 <Text color={share == null ? colors.mutedText : atShare <= fg ? colors.good : colors.bad} fontWeight={600}>
-                  {share == null ? 'as today' : atShare <= fg ? `−${money(fg - atShare)} cash freed` : `+${money(atShare - fg)} cash needed`}
+                  {share == null ? 'As Today' : atShare <= fg ? `−${money(fg - atShare)} Cash Freed` : `+${money(atShare - fg)} Cash Needed`}
                 </Text>
               </Flex>
             </Box>
           </Card>
 
           {/* E. Missing and risks */}
-          <Card title="Missing and risks" help={REVIEW_HELP.checks}>
+          <Card title="Missing And Risks" help={REVIEW_HELP.checks}>
             {risks.length === 0 ? (
               <Text px={4} py={3} fontSize="13px" color={colors.mutedText}>
                 Nothing missing or at risk that the data can see.
@@ -260,7 +260,7 @@ function Body({ onClose, periodLabel, m }: { onClose: () => void; periodLabel: s
           </Card>
 
           {/* F. Where service is lost */}
-          <Card title="Where service is lost" help={REVIEW_HELP.owners}>
+          <Card title="Where Service Is Lost" help={REVIEW_HELP.owners}>
             <LostTable rows={lost} totalGap={totalGap} target={target} onOpen={openBranch} />
           </Card>
         </Flex>
@@ -336,14 +336,14 @@ function LostTable({ rows, totalGap, target, onOpen }: { rows: { branch: string;
       <Grid {...row} className="sp-th" py="7px" fontSize="13px" fontWeight={700} whiteSpace="nowrap" borderBottom="1px solid" borderColor={colors.border}>
         <Text>Branch</Text>
         <Text textAlign="right">Service</Text>
-        <Text>Classes below</Text>
+        <Text>Classes Below</Text>
         <Text textAlign="right">Gap</Text>
-        <Text>Share of the gap</Text>
+        <Text>Share Of The Gap</Text>
         <span />
       </Grid>
       <Grid {...row} py="7px" fontSize="13px" fontWeight={700} bg={colors.pageBg} borderBottom="1px solid" borderColor={colors.border}>
         <Text color={colors.darkText} truncate>
-          Total · {rows.length} branches
+          Total · {rows.length} Branches
         </Text>
         <Text textAlign="right" color={ink(rag(avg, 'serviceLevel'))}>
           {pct1(avg)}

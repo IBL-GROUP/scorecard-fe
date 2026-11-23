@@ -111,33 +111,33 @@ interface Preset {
 }
 
 const PRESETS: Preset[] = [
-  { label: 'Month to date', range: () => ({ start: monthOf(todayIso()), end: todayIso() }) },
+  { label: 'Month To Date', range: () => ({ start: monthOf(todayIso()), end: todayIso() }) },
   { label: 'Today', range: () => ({ start: todayIso(), end: todayIso() }) },
   { label: 'Yesterday', range: () => ({ start: addDays(todayIso(), -1), end: addDays(todayIso(), -1) }) },
   {
-    label: 'This week',
+    label: 'This Week',
     range: () => {
       const t = parse(todayIso());
       const monday = addDays(todayIso(), -((t.getDay() + 6) % 7));
       return { start: monday, end: todayIso() };
     },
   },
-  { label: 'Last 7 days', range: () => ({ start: addDays(todayIso(), -6), end: todayIso() }) },
+  { label: 'Last 7 Days', range: () => ({ start: addDays(todayIso(), -6), end: todayIso() }) },
   {
-    label: 'Last month',
+    label: 'Last Month',
     range: () => {
       const m = shiftMonth(monthOf(todayIso()), -1);
       return { start: m, end: monthEnd(m) };
     },
   },
   {
-    label: 'Quarter to date',
+    label: 'Quarter To Date',
     range: () => {
       const t = parse(todayIso());
       return { start: iso(new Date(t.getFullYear(), Math.floor(t.getMonth() / 3) * 3, 1)), end: todayIso() };
     },
   },
-  { label: 'Year to date', range: () => ({ start: `${todayIso().slice(0, 4)}-01-01`, end: todayIso() }) },
+  { label: 'Year To Date', range: () => ({ start: `${todayIso().slice(0, 4)}-01-01`, end: todayIso() }) },
 ];
 
 /** The calendar quarter of a day: its first day and its last day. */
@@ -291,7 +291,7 @@ export function PeriodPicker({ value, onApply, compareEnabled = true, dataDays, 
   // "Month to date" stops at the last day with sales, so A and B stay like for like.
   const rangeOf = (p: Preset) => {
     const r = p.range();
-    if (p.label === 'Month to date' && dataAsOf && dataAsOf.slice(0, 7) === r.start.slice(0, 7) && dataAsOf < r.end) {
+    if (p.label === 'Month To Date' && dataAsOf && dataAsOf.slice(0, 7) === r.start.slice(0, 7) && dataAsOf < r.end) {
       return { start: r.start, end: dataAsOf };
     }
     return r;
@@ -317,7 +317,7 @@ export function PeriodPicker({ value, onApply, compareEnabled = true, dataDays, 
       compareLy && (isFullMonthToDate ? fmtMonth(monthOf(appliedLy.start)) : rangeLabel(appliedLy.start, appliedLy.end)),
     ]
       .filter(Boolean)
-      .join(' & ') || 'no comparison';
+      .join(' & ') || 'No Comparison';
 
   const recent = useMemo(() => {
     const out: string[] = [];
@@ -420,7 +420,7 @@ export function PeriodPicker({ value, onApply, compareEnabled = true, dataDays, 
                 </HStack>
                 <HStack gap={2}>
                   <Text fontSize="13px" color={colors.mutedText}>
-                    Pick by
+                    Pick By
                   </Text>
                   <Segmented
                     size="xs"
@@ -629,13 +629,13 @@ export function PeriodPicker({ value, onApply, compareEnabled = true, dataDays, 
               <HStack gap={2} mb={1}>
                 <Badge letter="B" tone="b" />
                 <Text fontWeight={700} fontSize="15px" color={colors.darkText}>
-                  Compare with
+                  Compare With
                 </Text>
               </HStack>
               {/* Previous month and last year are each on or off — both can show at once. */}
               <CompareOption
                 kind="check"
-                label="Previous month"
+                label="Previous Month"
                 hint={rangeLabel(b.start, b.end)}
                 active={compare === 'previous'}
                 disabled={!compareEnabled}
@@ -643,15 +643,15 @@ export function PeriodPicker({ value, onApply, compareEnabled = true, dataDays, 
               />
               <CompareOption
                 kind="check"
-                label="Same period last year"
-                hint={`${rangeLabel(lyR.start, lyR.end)}${lyR.start < DATA_START ? ` · no sales before ${DATA_START_LABEL}` : ''}`}
+                label="Same Period Last Year"
+                hint={`${rangeLabel(lyR.start, lyR.end)}${lyR.start < DATA_START ? ` · No Sales Before ${DATA_START_LABEL}` : ''}`}
                 active={ly}
                 disabled={!compareEnabled}
                 onClick={() => setLy(!ly)}
               />
               <CompareOption
-                label="No comparison"
-                hint={compareEnabled ? 'Show this period only' : 'Comparisons are not available yet'}
+                label="No Comparison"
+                hint={compareEnabled ? 'Show This Period Only' : 'Comparisons are not available yet'}
                 active={compare === 'off' && !ly}
                 onClick={() => {
                   setCompare('off');

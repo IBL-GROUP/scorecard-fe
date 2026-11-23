@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { InfoTip } from '@/ui/overlay';
 import { AnimatedValue } from '@/ui/motion';
 import type { HelpText } from '@/ui/help';
+import { titleCase, titleCaseNode } from '@/utils/titleCase';
 import { colors, fmt1 } from '@/constants/theme';
 
 export interface KpiDelta {
@@ -71,7 +72,7 @@ function SplitLine({ parts }: { parts: KpiSplitPart[] }) {
         {parts.map((p) => (
           <Flex key={p.label} align="center" gap="5px" whiteSpace="nowrap">
             <Box w="8px" h="8px" borderRadius="2px" bg={p.color} flexShrink={0} />
-            {p.label}
+            {titleCase(p.label)}
             <Text as="span" color={colors.darkText} fontWeight={600} fontVariantNumeric="tabular-nums">
               {p.text}
             </Text>
@@ -86,7 +87,7 @@ function DeltaText({ delta }: { delta: KpiDelta }) {
   if (delta.pct == null || Number.isNaN(delta.pct)) {
     return (
       <Text as="span" color={colors.mutedText} fontStyle="italic">
-        No comparison
+        No Comparison
       </Text>
     );
   }
@@ -107,7 +108,7 @@ function DeltaText({ delta }: { delta: KpiDelta }) {
         {flat ? '■' : up ? '▲' : '▼'} {fmt1(Math.abs(delta.pct))}{delta.unit === 'pts' ? ' pts' : '%'}
       </Box>
       <Text as="span" color={colors.mutedText}>
-        {delta.label}
+        {titleCase(delta.label)}
       </Text>
     </Flex>
   );
@@ -223,7 +224,7 @@ function CompareControl({ compare, delta }: { compare: KpiCompare; delta?: KpiDe
                       <path d="M2 6.5 5 9.5 10 3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   )}
-                  {o.label}
+                  {titleCaseNode(o.label)}
                 </Text>
                 {o.disabled && (
                   <Text fontSize="11px" color={colors.mutedText}>
@@ -273,7 +274,7 @@ export function KpiTile({
           </Box>
         )}
         <Text fontSize="14px" fontWeight={600} truncate>
-          {label}
+          {titleCaseNode(label)}
         </Text>
         {help && (
           <Box ml="auto" display="flex">
@@ -300,7 +301,7 @@ export function KpiTile({
             </Text>
             {valueSuffix && (
               <Text fontSize="13px" color={colors.mutedText} fontWeight={500}>
-                {valueSuffix}
+                {titleCase(valueSuffix)}
               </Text>
             )}
           </Flex>
@@ -322,7 +323,7 @@ export function KpiTile({
               {caption && (
                 <Text color={colors.mutedText} truncate minW={0} flex={1} title={typeof caption === 'string' ? caption : undefined}>
                   {compare || delta ? '· ' : ''}
-                  {caption}
+                  {titleCaseNode(caption)}
                 </Text>
               )}
             </Flex>

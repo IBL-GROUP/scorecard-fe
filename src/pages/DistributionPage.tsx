@@ -18,8 +18,7 @@ import type { DashboardData } from '@/features/data';
 import { distribution, status, trust } from '@/features/derive';
 import { chronicNonReporters, rdAgeBuckets, rdComplianceByBranch, uploaded } from '@/features/kpis';
 import { kpiThresholds, rag, riskRules, type Rag } from '@/features/kpiThresholds';
-import { DASH, full, pct0, pct1, pkr, units } from '@/features/format';
-import { COMPARE_ON } from '@/features/period';
+import { DASH, full, pct1, pkr } from '@/features/format';
 import { useFitScreen } from '@/features/fit';
 import { useTabView } from '@/features/views';
 import { geoOf, type Geo } from '@/features/geo';
@@ -38,37 +37,64 @@ export function DistributionPage({ data }: { data: DashboardData }) {
   const t = trust(d);
   const sRd = status(d, 'rd');
   const sTrust = status(d, 'closing', 'fam', 'fay', 'bench', 'sales');
-  const complianceDelta = rd.compliance != null && rd.cmp.compliance != null ? rd.compliance - rd.cmp.compliance : null;
 
-  // Short and to the point (user, 19 Nov 2026): a label, what it counts, the figure, one line of context.
-  const silent = rd.count - rd.reporting;
+  // 1.0's figures (user, 23 Nov 2026) in Sales Pulse 2.0's cards: current, previous and total
+  // stock in hand, each as units, value, share of the units and the RDs behind it, then
+  // today's reporting and how fresh the warehouse stock is.
+  const UNITS = { text: 'Units', color: colors.target };
+  const VALUE = { text: 'Value', color: colors.accent };
+  const plural = (n: number, one: string) => `${full(n)} ${one}${n === 1 ? '' : 's'}`;
   const highlights = (
     <HighlightGrid isLoading={sRd.isLoading}>
-      <Box data-kpi="DH-01" minW={0}>
+      <Box data-kpi="DH-11" minW={0}>
         <HighlightCard
-          label="Reported today"
-          tone={rag(rd.compliance, 'rdCompliance') === 'green' ? 'good' : 'bad'}
-          name={`${full(rd.reporting)} of ${full(rd.count)} RDs`}
-          value={pct1(rd.compliance)}
-          caption={`Target ${kpiThresholds.rdCompliance.green}%${COMPARE_ON && complianceDelta != null ? ` · ${complianceDelta >= 0 ? '▲' : '▼'} ${Math.abs(complianceDelta).toFixed(1)} pts` : ''}`}
+          label="Current Stock In Hand"
+          tone="sales"
+          nameTag={UNITS}
+          name={full(rd.current.qty)}
+          valueTag={VALUE}
+          value={full(rd.current.value)}
+          caption={`${pct1(rd.current.qtyShare)} Of Total · ${plural(rd.reporting, 'RD')} Uploaded`}
         />
       </Box>
-      <Box data-kpi="DH-02" minW={0}>
-        <HighlightCard label="Current stock" tone="sales" name={units(rd.current.qty)} value={pkr(rd.reportedToday)} caption={`${pct0(rd.current.share)} of RD stock`} />
+      <Box data-kpi="DH-12" minW={0}>
+        <HighlightCard
+          label="Previous Stock In Hand"
+          tone="bad"
+          nameTag={UNITS}
+          name={full(rd.previous.qty)}
+          valueTag={VALUE}
+          value={full(rd.previous.value)}
+          caption={`${pct1(rd.previous.qtyShare)} Of Total · ${plural(rd.older, 'RD')} On An Older Upload`}
+        />
       </Box>
-      <Box data-kpi="DH-03" minW={0}>
-        <HighlightCard label="Stale stock" tone="bad" name={`${full(silent)} RDs not reported`} value={pkr(rd.staleValue)} caption={`${pct0(rd.staleValuePct)} of RD stock`} />
+      <Box data-kpi="DH-13" minW={0}>
+        <HighlightCard
+          label="Total Stock In Hand"
+          tone="target"
+          nameTag={UNITS}
+          name={full(rd.total.qty)}
+          valueTag={VALUE}
+          value={full(rd.total.value)}
+          caption={`Current + Previous · ${plural(rd.count, 'Distributor')}`}
+        />
       </Box>
-      <Box data-kpi="DH-11 DH-12 DH-13" minW={0}>
-        <HighlightCard label="Stock in hand" tone="target" name={units(rd.total.qty)} value={pkr(rd.total.value)} caption={`Previous ${pkr(rd.previous.value)}`} />
+      <Box data-kpi="DH-01" minW={0}>
+        <HighlightCard
+          label="Reported Today"
+          tone={rag(rd.compliance, 'rdCompliance') === 'green' ? 'good' : 'bad'}
+          name={`${full(rd.reporting)} Of ${full(rd.count)} RDs`}
+          value={pct1(rd.compliance)}
+          caption={`Target ${kpiThresholds.rdCompliance.green}%`}
+        />
       </Box>
       <Box data-kpi="DH-07" minW={0}>
         <HighlightCard
-          label="Data freshness"
+          label="Data Freshness"
           tone={rag(t.freshness, 'freshnessDays') === 'green' ? 'good' : 'bad'}
           name={fmtDate(t.closing)}
-          value={t.freshness == null ? DASH : `${t.freshness} day${t.freshness === 1 ? '' : 's'} old`}
-          caption="Latest stock date"
+          value={t.freshness == null ? DASH : `${t.freshness} Day${t.freshness === 1 ? '' : 's'} Old`}
+          caption="Warehouse Closing Stock"
         />
       </Box>
     </HighlightGrid>
@@ -96,9 +122,9 @@ const RD_LEVELS: Record<string, LevelDef<RdRow>> = {
   zone: { label: 'Zone', key: (r) => r.zone },
   region: { label: 'Region', key: (r) => r.region },
   branch: { label: 'Branch', key: (r) => String(r.branch_code ?? '') || r.branch_desc || 'Others', name: (r) => r.branch_desc || 'Others' },
-  status: { label: 'Upload status', key: (r) => r.status },
+  status: { label: 'Upload Status', key: (r) => r.status },
   // The RD's code is its own column (as 1.0), not beside the name.
-  rd: { label: 'RD name', key: (r) => String(r.ibl_distributor_code ?? ''), name: (r) => r.distributor_desc || 'Others' },
+  rd: { label: 'RD Name', key: (r) => String(r.ibl_distributor_code ?? ''), name: (r) => r.distributor_desc || 'Others' },
 };
 
 /** A text cell of the table (codes, names, dates): left of the figures, never added up. */
@@ -116,7 +142,7 @@ const TextCell = ({ children, bold }: { children: ReactNode; bold?: boolean }) =
  * an RD that did not upload shows its previous stock in red and "—" for current, as 1.0.
  */
 function RdList({ rows, where, loading }: { rows: RdStatusRow[]; where: (branch: string) => Geo; loading: boolean }) {
-  const list: RdRow[] = rows.map((r) => ({ ...r, ...where(r.branch_desc ?? ''), status: uploaded(r) ? 'Uploaded' : 'Not uploaded' }));
+  const list: RdRow[] = rows.map((r) => ({ ...r, ...where(r.branch_desc ?? ''), status: uploaded(r) ? 'Uploaded' : 'Not Uploaded' }));
   const byCode = new Map(list.map((r) => [String(r.ibl_distributor_code ?? ''), r]));
   const rdOf = (node?: GroupNode) => (node?.level === 'rd' ? byCode.get(node.id.split('rd:').pop() ?? '') : undefined);
   const dash = (v: number) => (v ? full(v) : '—');
@@ -143,7 +169,7 @@ function RdList({ rows, where, loading }: { rows: RdStatusRow[]; where: (branch:
 
   return (
     <GroupedTable<RdRow>
-      title="RD data status"
+      title="RD Data Status"
       rows={list}
       isLoading={loading}
       levels={RD_LEVELS}
@@ -151,24 +177,24 @@ function RdList({ rows, where, loading }: { rows: RdStatusRow[]; where: (branch:
       // Branches under their zone and region, as Sales Pulse 2.0 describes them; the flat list is 1.0's.
       presets={[
         { value: 'geo', label: 'Zone › Region › Branch › Distributor', levels: ['zone', 'region', 'branch', 'rd'] },
-        { value: 'status', label: 'Upload status › Zone › Region › Branch › Distributor', levels: ['status', 'zone', 'region', 'branch', 'rd'] },
+        { value: 'status', label: 'Upload Status › Zone › Region › Branch › Distributor', levels: ['status', 'zone', 'region', 'branch', 'rd'] },
         { value: 'rd', label: 'Distributor', levels: ['rd'] },
       ]}
       searchPlaceholder="Find RD or branch, name or code…"
       sums={(r) => ({ rds: 1, cq: n0(r.stock_qty), cv: n0(r.stock_value), pq: n0(r.last_stock_qty), pv: n0(r.last_stock_value), days: n0(r.day_diff) })}
       columns={[
-        textCol('code', 'RD code', 'minmax(110px, .8fr)', ['rd'], (r) => (r ? String(r.ibl_distributor_code ?? '') : '')),
-        textCol('bname', 'Branch name', 'minmax(130px, 1fr)', ['rd'], (r, node) => (r ? r.branch_desc ?? '—' : node?.level === 'branch' ? node.name : '')),
-        textCol('bcode', 'Branch code', 'minmax(100px, .7fr)', ['branch', 'rd'], (r, node) => (r ? String(r.branch_code ?? '') : node?.level === 'branch' ? (node.id.split('branch:').pop() ?? '').split('/')[0] : '')),
-        numCol('cq', 'Current stock in hand units', (t) => dash(t.cq ?? 0)),
-        numCol('cv', 'Current stock in hand value', (t) => dash(t.cv ?? 0)),
-        textCol('pdate', 'Previous stock date', 'minmax(120px, .9fr)', ['rd'], (r) => (r?.last_stock_date ? r.last_stock_date.slice(0, 10) : '')),
-        numCol('pq', 'Previous stock units', (t) => dash(t.pq ?? 0), staleInk),
-        numCol('pv', 'Previous stock value', (t) => dash(t.pv ?? 0), staleInk),
+        textCol('code', 'RD Code', 'minmax(110px, .8fr)', ['rd'], (r) => (r ? String(r.ibl_distributor_code ?? '') : '')),
+        textCol('bname', 'Branch Name', 'minmax(130px, 1fr)', ['rd'], (r, node) => (r ? r.branch_desc ?? '—' : node?.level === 'branch' ? node.name : '')),
+        textCol('bcode', 'Branch Code', 'minmax(100px, .7fr)', ['branch', 'rd'], (r, node) => (r ? String(r.branch_code ?? '') : node?.level === 'branch' ? (node.id.split('branch:').pop() ?? '').split('/')[0] : '')),
+        numCol('cq', 'Current Stock In Hand Units', (t) => dash(t.cq ?? 0)),
+        numCol('cv', 'Current Stock In Hand Value', (t) => dash(t.cv ?? 0)),
+        textCol('pdate', 'Previous Stock Date', 'minmax(120px, .9fr)', ['rd'], (r) => (r?.last_stock_date ? r.last_stock_date.slice(0, 10) : '')),
+        numCol('pq', 'Previous Stock Units', (t) => dash(t.pq ?? 0), staleInk),
+        numCol('pv', 'Previous Stock Value', (t) => dash(t.pv ?? 0), staleInk),
         // Days belong to one RD: a group or the Total shows none.
         {
           key: 'days',
-          header: 'Days difference',
+          header: 'Days Difference',
           width: 'minmax(110px, 1fr)',
           levels: ['rd'],
           render: (t, _all, bold, node) => (
@@ -237,7 +263,7 @@ function RdCharts({ rd, t, states }: { rd: ReturnType<typeof distribution>; t: R
             bars={[{ key: 'pct', label: 'Reported today', color: colors.sales, cellColor: (e) => ink(rag(Number(e.pct), 'rdCompliance')) }]}
             referenceValue={kpiThresholds.rdCompliance.green}
             referenceLabel={`Target ${kpiThresholds.rdCompliance.green}%`}
-            labelFormatter={(v) => pct0(v)}
+            labelFormatter={(v) => pct1(v)}
             showLabels
             height="100%"
           />
@@ -255,14 +281,14 @@ function RdCharts({ rd, t, states }: { rd: ReturnType<typeof distribution>; t: R
             ]}
             rows={[
               {
-                name: 'Data freshness',
-                cells: [{ text: t.freshness == null ? DASH : `${t.freshness} day${t.freshness === 1 ? '' : 's'} old` }, { text: rag(t.freshness, 'freshnessDays') === 'green' ? 'On track' : 'Stale', color: ink(rag(t.freshness, 'freshnessDays')) }],
+                name: 'Data Freshness',
+                cells: [{ text: t.freshness == null ? DASH : `${t.freshness} Day${t.freshness === 1 ? '' : 's'} Old` }, { text: rag(t.freshness, 'freshnessDays') === 'green' ? 'On Track' : 'Stale', color: ink(rag(t.freshness, 'freshnessDays')) }],
               },
               ...t.checks.map((c) => ({ name: c.label, cells: [{ text: c.ok ? 'Loaded' : 'Missing' }, { text: c.ok ? '✓' : '✕', color: c.ok ? colors.good : colors.bad }] })),
-              { name: 'Unclassified sales share', cells: [{ text: pct1(t.unclassified) }, { text: rag(t.unclassified, 'unclassifiedPct') === 'green' ? 'On track' : 'Check', color: ink(rag(t.unclassified, 'unclassifiedPct')) }] },
+              { name: 'Unclassified Sales Share', cells: [{ text: pct1(t.unclassified) }, { text: rag(t.unclassified, 'unclassifiedPct') === 'green' ? 'On Track' : 'Check', color: ink(rag(t.unclassified, 'unclassifiedPct')) }] },
               {
-                name: 'Benchmark version in force',
-                cells: [{ text: versions.length === 0 ? DASH : versions.length === 1 ? `From ${fmtDate(versions[0])}` : `${versions.length} versions` }, { text: versions.length ? '✓' : '✕', color: versions.length ? colors.good : colors.bad }],
+                name: 'Benchmark Version In Force',
+                cells: [{ text: versions.length === 0 ? DASH : versions.length === 1 ? `From ${fmtDate(versions[0])}` : `${versions.length} Versions` }, { text: versions.length ? '✓' : '✕', color: versions.length ? colors.good : colors.bad }],
               },
             ]}
           />
@@ -276,9 +302,9 @@ function RdCharts({ rd, t, states }: { rd: ReturnType<typeof distribution>; t: R
             nameHeader="Distributor"
             cols={[
               { key: 'b', label: 'Branch' },
-              { key: 'd', label: 'Days silent' },
-              { key: 'v', label: 'Last stock value' },
-              { key: 't', label: 'Last report' },
+              { key: 'd', label: 'Days Silent' },
+              { key: 'v', label: 'Last Stock Value' },
+              { key: 't', label: 'Last Report' },
             ]}
             rows={chronic.map((r) => ({
               name: String(r.ibl_distributor_code ?? ''),
@@ -300,8 +326,8 @@ function RdCharts({ rd, t, states }: { rd: ReturnType<typeof distribution>; t: R
               { key: 's', label: 'Share' },
             ]}
             rows={[
-              { name: 'Current', label: 'Current (reported today)', cells: [{ text: full(rd.current.qty) }, { text: pkr(rd.current.value) }, { text: pct1(rd.current.share) }] },
-              { name: 'Previous', label: 'Previous (older reports)', cells: [{ text: full(rd.previous.qty) }, { text: pkr(rd.previous.value) }, { text: pct1(rd.previous.share) }] },
+              { name: 'Current', label: 'Current (Reported Today)', cells: [{ text: full(rd.current.qty) }, { text: pkr(rd.current.value) }, { text: pct1(rd.current.share) }] },
+              { name: 'Previous', label: 'Previous (Older Reports)', cells: [{ text: full(rd.previous.qty) }, { text: pkr(rd.previous.value) }, { text: pct1(rd.previous.share) }] },
             ]}
             total={[full(rd.total.qty), pkr(rd.total.value), '100%']}
           />

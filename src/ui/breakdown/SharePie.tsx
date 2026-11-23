@@ -36,8 +36,8 @@ export function SharePie({
   const rest = total - unmapped - top.reduce((a, r) => a + r.sale, 0);
   const data = [
     ...top.map((r, i) => ({ name: r.name, value: r.sale, color: HUES[i], pickable: true })),
-    ...(rest > total * 0.0005 ? [{ name: 'Everything else', value: rest, color: OTHER, pickable: false }] : []),
-    ...(unmapped > 0 ? [{ name: 'Other / unmapped', value: unmapped, color: UNMAPPED_HUE, pickable: false }] : []),
+    ...(rest > total * 0.0005 ? [{ name: 'Everything Else', value: rest, color: OTHER, pickable: false }] : []),
+    ...(unmapped > 0 ? [{ name: 'Other / Unmapped', value: unmapped, color: UNMAPPED_HUE, pickable: false }] : []),
   ];
   const share = (v: number) => (total ? `${fmt1((v / total) * 100)}%` : '—');
 
@@ -78,7 +78,7 @@ export function SharePie({
         {/* Centre: the total, or the hovered slice. */}
         <Flex position="absolute" inset={0} direction="column" align="center" justify="center" pointerEvents="none">
           <Text fontSize="11px" color={colors.mutedText} textAlign="center" maxW="45%" truncate>
-            {hover ?? 'Total sales'}
+            {hover ?? 'Total Sales'}
           </Text>
           <Text fontSize="20px" fontWeight={700} color={colors.darkText} fontVariantNumeric="tabular-nums">
             <AnimatedValue value={fmt(hover ? data.find((d) => d.name === hover)?.value ?? 0 : total)} />

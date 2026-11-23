@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 import { colors, fmt1 } from '@/constants/theme';
 import { useCardLegend, type LegendItem } from '@/ui/chart-card/legend';
 import { ACTIVE_ROW, useOpenedRow } from '@/features/detail';
+import { titleCase } from '@/utils/titleCase';
 
 /** One series of a row: its value and colour, and its name for the tooltip. */
 export interface RowBarPart {
@@ -81,12 +82,12 @@ export function RowBars({
                 <Text color={colors.mutedText} whiteSpace="nowrap" fontVariantNumeric="tabular-nums">
                   {r.note == null && r.target != null ? (
                     <>
-                      {r.target > 0 ? `${fmt(r.target)} ${targetLabel}` : `no ${targetLabel}`}
+                      {r.target > 0 ? `${fmt(r.target)} ${titleCase(targetLabel)}` : `No ${titleCase(targetLabel)}`}
                       {pct != null && (
                         <>
                           {' · '}
                           <Box as="span" color={status(pct)} fontWeight={700}>
-                            {pct > 999 ? '>999%' : `${fmt1(pct)}%`}
+                            {`${fmt1(pct)}%`}
                           </Box>
                         </>
                       )}

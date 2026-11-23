@@ -9,7 +9,7 @@ export interface EmptyChartProps {
 
 export function EmptyChart({
   height = 250,
-  title = 'No data available',
+  title = 'No Data Available',
   subtitle = 'Try adjusting your filters',
 }: EmptyChartProps) {
   return (

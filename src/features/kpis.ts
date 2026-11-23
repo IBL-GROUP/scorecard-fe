@@ -306,8 +306,8 @@ export function wipByPlant(rows: WipRow[]) {
 
 export const RMPM_STATES = [
   { key: 'unrestricted_val', label: 'Unrestricted', held: false },
-  { key: 'stock_in_transit_val', label: 'In transit', held: false },
-  { key: 'quality_inspection_val', label: 'Quality inspection', held: true },
+  { key: 'stock_in_transit_val', label: 'In Transit', held: false },
+  { key: 'quality_inspection_val', label: 'Quality Inspection', held: true },
   { key: 'blocked_val', label: 'Blocked', held: true },
   { key: 'restricted_val', label: 'Restricted', held: true },
   { key: 'returns_val', label: 'Returns', held: true },
@@ -344,26 +344,29 @@ export function rdSummary(rows: RdStatusRow[]) {
   const prevQty = sum(rows, (r) => n0(r.last_stock_qty));
   const prevVal = sum(rows, (r) => n0(r.last_stock_value));
   const totVal = curVal + prevVal;
+  const totQty = curQty + prevQty;
   const staleValue = sum(silent, (r) => n0(r.last_stock_value));
   return {
     count: rows.length,
     reporting: reporting.length,
+    // 1.0's "carrying an older upload": RDs not uploaded today that still have earlier stock.
+    older: silent.filter((r) => n0(r.last_stock_qty) > 0).length,
     compliance: pct(reporting.length, rows.length),
     reportedToday: sum(reporting, (r) => n0(r.stock_value)),
     staleValue,
     staleValuePct: pct(staleValue, totVal),
-    current: { qty: curQty, value: curVal, share: pct(curVal, totVal) },
-    previous: { qty: prevQty, value: prevVal, share: pct(prevVal, totVal) },
-    total: { qty: curQty + prevQty, value: totVal },
+    current: { qty: curQty, value: curVal, share: pct(curVal, totVal), qtyShare: pct(curQty, totQty) },
+    previous: { qty: prevQty, value: prevVal, share: pct(prevVal, totVal), qtyShare: pct(prevQty, totQty) },
+    total: { qty: totQty, value: totVal },
   };
 }
 
 export const RD_AGE_BUCKETS = [
-  { label: '0 days', min: 0, max: 0 },
-  { label: '1 day', min: 1, max: 1 },
-  { label: '2–3 days', min: 2, max: 3 },
-  { label: '4–7 days', min: 4, max: 7 },
-  { label: '> 7 days', min: 8, max: Infinity },
+  { label: '0 Days', min: 0, max: 0 },
+  { label: '1 Day', min: 1, max: 1 },
+  { label: '2–3 Days', min: 2, max: 3 },
+  { label: '4–7 Days', min: 4, max: 7 },
+  { label: '> 7 Days', min: 8, max: Infinity },
 ] as const;
 
 /** DH-04: RDs per reporting-age bucket. */
@@ -407,9 +410,9 @@ export function planDataLoaded(iblTarget: number | null, budget: number | null, 
     return (num(b?.days ?? null) ?? 0) > 0 && (num(b?.threshold ?? null) ?? 0) > 0;
   });
   return [
-    { label: 'IBL target loaded', ok: (iblTarget ?? 0) > 0 },
-    { label: 'TSCL budget loaded', ok: (budget ?? 0) > 0 },
-    { label: 'Benchmarks and thresholds set', ok: benchOk },
+    { label: 'IBL Target Loaded', ok: (iblTarget ?? 0) > 0 },
+    { label: 'TSCL Budget Loaded', ok: (budget ?? 0) > 0 },
+    { label: 'Benchmarks And Thresholds Set', ok: benchOk },
   ];
 }
 
@@ -450,7 +453,7 @@ export function buildRisks(i: RiskInput, max: number = riskRules.maxItems): Risk
         out.push({
           id: `R2-${row.branch}-${idx}`,
           tone: v < riskRules.branchServiceBelow - 10 ? 'red' : 'amber',
-          text: `${row.branch}: Class ${RATED_CLASSES[idx]} service level ${v.toFixed(0)}% (target 90%)`,
+          text: `${row.branch}: Class ${RATED_CLASSES[idx]} service level ${v.toFixed(1).replace(/[.]0$/, '')}% (target 90%)`,
           tab: 'inventory',
           kpi: 'IN-10',
           chip: { key: 'branch', value: row.branch },
@@ -469,21 +472,21 @@ export function buildRisks(i: RiskInput, max: number = riskRules.maxItems): Risk
   // R5 — channel fill rate below 90%
   for (const ch of i.channels)
     if (ch.pct != null && ch.pct < riskRules.channelFillBelow)
-      out.push({ id: `R5-${ch.channel}`, tone: 'amber', text: `Channel “${ch.channel}” fill rate ${ch.pct.toFixed(0)}%`, tab: 'fulfilment', kpi: 'OP-03', chip: { key: 'channel', value: ch.channel }, weight: 70 });
+      out.push({ id: `R5-${ch.channel}`, tone: 'amber', text: `Channel “${ch.channel}” fill rate ${ch.pct.toFixed(1).replace(/[.]0$/, '')}%`, tab: 'fulfilment', kpi: 'OP-03', chip: { key: 'channel', value: ch.channel }, weight: 70 });
   // R6 — RDs silent > 3 days
   const stale = i.rdRows.filter((r) => n0(r.day_diff) > riskRules.staleRdDays);
   if (stale.length)
     out.push({ id: 'R6', tone: 'amber', text: `${stale.length} distributors silent for over ${riskRules.staleRdDays} days, ${i.fmtMoney(sum(stale, (r) => n0(r.last_stock_value)))} of stock unseen`, tab: 'distribution', kpi: 'DH-04', weight: 60 });
   // R7 — blocked + QI over 10%
   if (i.blockedQiPct != null && i.blockedQiPct > riskRules.heldMaterialAbove)
-    out.push({ id: 'R7', tone: 'amber', text: `${i.blockedQiPct.toFixed(1)}% of raw and packing material is blocked or in quality inspection`, tab: 'fulfilment', kpi: 'OP-11', weight: 55 });
+    out.push({ id: 'R7', tone: 'amber', text: `${i.blockedQiPct.toFixed(1).replace(/[.]0$/, '')}% of raw and packing material is blocked or in quality inspection`, tab: 'fulfilment', kpi: 'OP-11', weight: 55 });
   // R8 — plan alignment outside 90–110%
   if (i.planAlignmentPct != null && rag(i.planAlignmentPct, 'planAlignment') === 'red')
-    out.push({ id: 'R8', tone: 'amber', text: `Forecast is ${i.planAlignmentPct.toFixed(0)}% of budget: plans disagree`, tab: 'revenue', kpi: 'RV-11', weight: 50 });
+    out.push({ id: 'R8', tone: 'amber', text: `Forecast is ${i.planAlignmentPct.toFixed(1).replace(/[.]0$/, '')}% of budget: plans disagree`, tab: 'revenue', kpi: 'RV-11', weight: 50 });
   // O1 — class above 110% of target
   for (const c of i.classAttainment)
     if (c.pct > riskRules.classUpsideAbove)
-      out.push({ id: `O1-${c.cls}`, tone: 'opportunity', text: `Class ${c.cls} at ${c.pct.toFixed(0)}% of target this month`, tab: 'revenue', kpi: 'RV-12', chip: { key: 'cls', value: c.cls }, weight: 20 });
+      out.push({ id: `O1-${c.cls}`, tone: 'opportunity', text: `Class ${c.cls} at ${c.pct.toFixed(1).replace(/[.]0$/, '')}% of target this month`, tab: 'revenue', kpi: 'RV-12', chip: { key: 'cls', value: c.cls }, weight: 20 });
   // O2 — releasable excess
   const releasable = sum(excessByClass(i.classStock), (r) => r.value);
   if (releasable > 0)

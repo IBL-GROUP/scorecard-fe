@@ -24,7 +24,7 @@ import { rowsOf, type DashboardData } from '@/features/data';
 import { fulfilment, production, status } from '@/features/derive';
 import { fillByChannel, materialsBelow, rmpmByPlant, RMPM_STATES, wipByPlant } from '@/features/kpis';
 import { kpiThresholds, rag, riskRules, type Rag } from '@/features/kpiThresholds';
-import { DASH, change, full, money, pct0, pct1, pkr, units } from '@/features/format';
+import { DASH, change, full, money, pct1, pkr, units } from '@/features/format';
 import { COMPARE_ON, compareText } from '@/features/period';
 import { useDetail } from '@/features/detail';
 import { useFitScreen } from '@/features/fit';
@@ -35,8 +35,8 @@ const TYPE_COLORS = [colors.sales, colors.target, colors.prior, colors.accent, c
 /** RMPM stock states: usable in calm hues, held stock in warning hues. */
 const STATE_COLORS: Record<string, string> = {
   Unrestricted: colors.prior,
-  'In transit': colors.sales,
-  'Quality inspection': colors.warn,
+  'In Transit': colors.sales,
+  'Quality Inspection': colors.warn,
   Blocked: colors.bad,
   Restricted: colors.target,
   Returns: colors.borderStrong,
@@ -64,41 +64,41 @@ export function FulfilmentPage({ data }: { data: DashboardData }) {
     <HighlightGrid isLoading={sDispatch.isLoading && sWip.isLoading && sRpm.isLoading}>
       <Box data-kpi="OP-01" minW={0}>
         <HighlightCard
-          label="Order fill rate"
+          label="Order Fill Rate"
           tone={rag(f.pct, 'fillRate') === 'green' ? 'good' : 'bad'}
-          name={`Target ${kpiThresholds.fillRate.green}% · by quantity`}
+          name={`Target ${kpiThresholds.fillRate.green}% · By Quantity`}
           value={pct1(f.pct)}
-          caption={`${full(f.delivered)} of ${full(f.ordered)} delivered${vs(f.pct != null && f.cmpPct != null ? f.pct - f.cmpPct : null, 'pts')}`}
+          caption={`${full(f.delivered)} Of ${full(f.ordered)} Delivered${vs(f.pct != null && f.cmpPct != null ? f.pct - f.cmpPct : null, 'pts')}`}
         />
       </Box>
       <Box data-kpi="OP-02 OP-04" minW={0}>
         <HighlightCard
           label="Unfulfilled"
           tone="bad"
-          name={`${below.below} of ${below.total} materials below ${riskRules.materialFillBelow}%`}
+          name={`${below.below} Of ${below.total} Materials Below ${riskRules.materialFillBelow}%`}
           value={units(f.unfulfilled)}
-          caption={`Ordered but not delivered${vs(change(f.unfulfilled, f.cmpUnfulfilled))}`}
+          caption={`Ordered But Not Delivered${vs(change(f.unfulfilled, f.cmpUnfulfilled))}`}
         />
       </Box>
       <Box data-kpi="OP-07 OP-08" minW={0}>
         <HighlightCard
-          label="Production completion"
+          label="Production Completion"
           tone={rag(p.w.completion, 'productionCompletion') === 'green' ? 'good' : 'bad'}
-          name={`${full(p.w.openOrders)} open production orders`}
+          name={`${full(p.w.openOrders)} Open Production Orders`}
           value={pct1(p.w.completion)}
-          caption={`Received ÷ item quantity · target ${kpiThresholds.productionCompletion.green}%`}
+          caption={`Received ÷ Item Quantity · Target ${kpiThresholds.productionCompletion.green}%`}
         />
       </Box>
       <Box data-kpi="OP-06" minW={0}>
-        <HighlightCard label="WIP value" tone="sales" name="Work in progress, at cost" value={pkr(p.w.value)} caption={`Across ${full(new Set(p.wip.map((r) => r.plnt_desc)).size)} plants${vs(change(p.w.value, p.wCmp.value))}`} />
+        <HighlightCard label="WIP Value" tone="sales" name="Work In Progress, At Cost" value={pkr(p.w.value)} caption={`Across ${full(new Set(p.wip.map((r) => r.plnt_desc)).size)} Plants${vs(change(p.w.value, p.wCmp.value))}`} />
       </Box>
       <Box data-kpi="OP-10 OP-11" minW={0}>
         <HighlightCard
-          label="Material on hold"
+          label="Material On Hold"
           tone={rag(p.r.onHoldPct, 'onHoldPct') === 'green' ? 'good' : 'bad'}
-          name={`RMPM ${pkr(p.r.total)} at cost`}
+          name={`RMPM ${pkr(p.r.total)} At Cost`}
           value={pct1(p.r.onHoldPct)}
-          caption={`${pkr(p.r.held)} blocked, in QI, restricted or returned`}
+          caption={`${pkr(p.r.held)} Blocked, In QI, Restricted Or Returned`}
         />
       </Box>
     </HighlightGrid>
@@ -171,7 +171,7 @@ function DispatchCard({ data, state, onMaterial, onChannel }: { data: DashboardD
             onChange={setView}
             options={[
               { value: 'table' as const, label: 'Table' },
-              { value: 'channel' as const, label: 'By channel' },
+              { value: 'channel' as const, label: 'By Channel' },
             ]}
           />
         </Flex>
@@ -187,7 +187,7 @@ function DispatchCard({ data, state, onMaterial, onChannel }: { data: DashboardD
               { key: 's', label: 'Short' },
               { key: 'p', label: 'Fill' },
             ]}
-            total={[full(tot.ordered), full(tot.delivered), full(tot.short), totPct == null ? DASH : pct0(totPct)]}
+            total={[full(tot.ordered), full(tot.delivered), full(tot.short), totPct == null ? DASH : pct1(totPct)]}
             rows={list.map((r) => ({
               name: r.name,
               // A material opens its channel split only when it has one: in a single channel (or one-channel material) the row already says it all.
@@ -196,7 +196,7 @@ function DispatchCard({ data, state, onMaterial, onChannel }: { data: DashboardD
                 { text: full(r.ordered) },
                 { text: full(r.delivered) },
                 { text: r.short ? full(r.short) : '0', color: r.short ? colors.bad : undefined },
-                { text: r.pct == null ? DASH : pct0(r.pct), color: ink(rag(r.pct, 'fillRate')) },
+                { text: r.pct == null ? DASH : pct1(r.pct), color: ink(rag(r.pct, 'fillRate')) },
               ],
             }))}
             onRow={onMaterial}
@@ -256,7 +256,7 @@ function WipCard({ rows, state, hasDispatch, onMaterial, onPlant }: { rows: WipR
               value={scope}
               onChange={setScope}
               options={[
-                { value: 'all' as const, label: 'All orders' },
+                { value: 'all' as const, label: 'All Orders' },
                 { value: 'pending' as const, label: 'Pending GR' },
               ]}
             />
@@ -268,7 +268,7 @@ function WipCard({ rows, state, hasDispatch, onMaterial, onPlant }: { rows: WipR
             onChange={setView}
             options={[
               { value: 'table' as const, label: 'Table' },
-              { value: 'plant' as const, label: 'By plant' },
+              { value: 'plant' as const, label: 'By Plant' },
             ]}
           />
         </Flex>
@@ -277,9 +277,9 @@ function WipCard({ rows, state, hasDispatch, onMaterial, onPlant }: { rows: WipR
       {CardState({ ...state, empty: !rows.length || (view === 'table' && !shown.length), emptyText: scope === 'pending' && rows.length ? 'No order is waiting for its first goods receipt. See All orders.' : undefined }) ??
         (view === 'table' ? (
           <MatrixTable
-            nameHeader="Material · order"
+            nameHeader="Material · Order"
             cols={[
-              { key: 'q', label: 'WIP qty' },
+              { key: 'q', label: 'WIP Qty' },
               { key: 'v', label: 'Value' },
             ]}
             total={[full(tot.qty), money(tot.value)]}
@@ -306,7 +306,7 @@ function WipCard({ rows, state, hasDispatch, onMaterial, onPlant }: { rows: WipR
               .map(({ r, total }) => ({
                 key: String(r.plant),
                 name: String(r.plant),
-                note: `${money(total)} · ${full(rows.filter((x) => x.plnt_desc === r.plant).length)} orders`,
+                note: `${money(total)} · ${full(rows.filter((x) => x.plnt_desc === r.plant).length)} Orders`,
                 parts: byPlant.types.map((t, i) => ({ value: Number(r[t] ?? 0), color: TYPE_COLORS[i % TYPE_COLORS.length], label: t })),
               }))}
             onPick={onPlant}
@@ -337,26 +337,26 @@ const WIP_TYPES = ['TSCL -  Toll-In Bulk', 'HOTC - Mfg Finished Goods', 'TSCL - 
 /** 1.0's WIP Details: every production order; its filters (material type, plant, storage location, WIP) in the search bar. */
 function WipDetails({ rows, hasDispatch, onClose, onMaterial }: { rows: WipRow[]; hasDispatch: (m: string) => boolean; onClose: () => void; onMaterial: (m: string) => void }) {
   const { shown, values, setValues, searchFields } = useListFilter<WipRow>(rows, [
-    { key: 'status', label: 'WIP', of: (r) => (n0(r.good_received_qty) === 0 ? 'pending' : 'received'), fixed: [{ value: 'pending', label: 'Pending GR' }, { value: 'received', label: 'Goods received' }] },
-    { key: 'type', label: 'Material type', of: (r) => r.material_type_description, fixed: WIP_TYPES.map((t) => ({ value: t, label: t.replace(/\s+/g, ' ') })) },
+    { key: 'status', label: 'WIP', of: (r) => (n0(r.good_received_qty) === 0 ? 'pending' : 'received'), fixed: [{ value: 'pending', label: 'Pending GR' }, { value: 'received', label: 'Goods Received' }] },
+    { key: 'type', label: 'Material Type', of: (r) => r.material_type_description, fixed: WIP_TYPES.map((t) => ({ value: t, label: t.replace(/\s+/g, ' ') })) },
     { key: 'plant', label: 'Plant', of: (r) => r.plnt_desc },
-    { key: 'storage', label: 'Storage location', of: (r) => r.storage_loc_desc },
+    { key: 'storage', label: 'Storage Location', of: (r) => r.storage_loc_desc },
     { key: 'material', label: 'Material', of: (r) => r['Material Name'] },
-    { key: 'order', label: 'Order number', of: (r) => String(r.order_number ?? '') },
+    { key: 'order', label: 'Order Number', of: (r) => String(r.order_number ?? '') },
   ]);
   const columns: DetailColumn<WipRow>[] = [
     { key: 'm', header: 'Material', kind: 'text', value: (r) => r['Material Name'] },
-    { key: 't', header: 'Material type', kind: 'text', value: (r) => r.material_type_description },
-    { key: 'o', header: 'Order number', kind: 'text', value: (r) => String(r.order_number ?? '') },
+    { key: 't', header: 'Material Type', kind: 'text', value: (r) => r.material_type_description },
+    { key: 'o', header: 'Order Number', kind: 'text', value: (r) => String(r.order_number ?? '') },
     { key: 'p', header: 'Plant', kind: 'text', value: (r) => r.plnt_desc },
-    { key: 's', header: 'Storage location', kind: 'text', value: (r) => r.storage_loc_desc },
-    { key: 'i', header: 'Process item qty', kind: 'number', value: (r) => n0(r.item_qty) },
-    { key: 'g', header: 'Good received qty', kind: 'number', value: (r) => n0(r.good_received_qty), color: (v) => (v === 0 ? colors.bad : undefined) },
-    { key: 'q', header: 'Variance qty', kind: 'number', value: (r) => n0(r.Quantity) },
-    { key: 'v', header: 'WIP value', kind: 'number', value: (r) => n0(r['WIP Value']) },
+    { key: 's', header: 'Storage Location', kind: 'text', value: (r) => r.storage_loc_desc },
+    { key: 'i', header: 'Process Item Qty', kind: 'number', value: (r) => n0(r.item_qty) },
+    { key: 'g', header: 'Good Received Qty', kind: 'number', value: (r) => n0(r.good_received_qty), color: (v) => (v === 0 ? colors.bad : undefined) },
+    { key: 'q', header: 'Variance Qty', kind: 'number', value: (r) => n0(r.Quantity) },
+    { key: 'v', header: 'WIP Value', kind: 'number', value: (r) => n0(r['WIP Value']) },
   ];
   return (
-    <Overlay title="WIP details" subtitle="Every production order in WIP · 0 received = pending goods receipt" onClose={onClose} width="min(1700px, 96vw)">
+    <Overlay title="WIP Details" subtitle="Every production order in WIP · 0 received = pending goods receipt" onClose={onClose} width="min(1700px, 96vw)">
       <Box h="min(76vh, 820px)">
         <DetailTable
           rows={shown}
@@ -426,7 +426,7 @@ function RmpmCard({ rows, state, onMaterial, onPlant }: { rows: RpmRow[]; state:
             onChange={setView}
             options={[
               { value: 'table' as const, label: 'Table' },
-              { value: 'plant' as const, label: 'By plant' },
+              { value: 'plant' as const, label: 'By Plant' },
             ]}
           />
         </Flex>
@@ -437,9 +437,9 @@ function RmpmCard({ rows, state, onMaterial, onPlant }: { rows: RpmRow[]; state:
           <MatrixTable
             nameHeader="Material"
             cols={[
-              { key: 'q', label: 'Total qty' },
-              { key: 'v', label: 'Total cost' },
-              { key: 'h', label: 'On hold' },
+              { key: 'q', label: 'Total Qty' },
+              { key: 'v', label: 'Total Cost' },
+              { key: 'h', label: 'On Hold' },
             ]}
             total={[full(tot.qty), money(tot.value), pct1(holdPct(tot.held, tot.value))]}
             rows={shown.map((r, i) => {
@@ -447,7 +447,7 @@ function RmpmCard({ rows, state, onMaterial, onPlant }: { rows: RpmRow[]; state:
               return {
                 name: keyOf(r, i),
                 label: <TwoLine top={r.materialname} sub={`${r.plantname} · ${r.storagelocationname}`} />,
-                cells: [{ text: full(n0(r.total_qty)) }, { text: money(n0(r.total_val)), color: colors.darkText }, { text: h ? pct0(h) : '0%', color: h ? ink(rag(h, 'onHoldPct')) : undefined }],
+                cells: [{ text: full(n0(r.total_qty)) }, { text: money(n0(r.total_val)), color: colors.darkText }, { text: h ? pct1(h) : '0%', color: h ? ink(rag(h, 'onHoldPct')) : undefined }],
               };
             })}
             onRow={(k) => {
@@ -472,7 +472,7 @@ function RmpmCard({ rows, state, onMaterial, onPlant }: { rows: RpmRow[]; state:
                     <>
                       {money(total)} ·{' '}
                       <Box as="span" color={ink(rag(hold, 'onHoldPct'))} fontWeight={700}>
-                        {pct0(hold)} on hold
+                        {pct1(hold)} On Hold
                       </Box>
                     </>
                   ),
@@ -492,18 +492,18 @@ function RmpmCard({ rows, state, onMaterial, onPlant }: { rows: RpmRow[]; state:
 const RMPM_COLS: { label: string; qty: keyof RpmRow | null; val: keyof RpmRow | null }[] = [
   { label: 'Unrestricted', qty: 'unrestricted_qty', val: 'unrestricted_val' },
   { label: 'Restricted', qty: 'restricted_qty', val: 'restricted_val' },
-  { label: 'Quality inspection', qty: 'qualityinspection_qty', val: 'quality_inspection_val' },
+  { label: 'Quality Inspection', qty: 'qualityinspection_qty', val: 'quality_inspection_val' },
   { label: 'Blocked', qty: 'blocked_qty', val: 'blocked_val' },
-  { label: 'GR blocked', qty: null, val: 'gr_blocked_val' },
+  { label: 'GR Blocked', qty: null, val: 'gr_blocked_val' },
   { label: 'Returns', qty: 'return_qty', val: 'returns_val' },
-  { label: 'Stock in transit', qty: 'stockintransit_qty', val: 'stock_in_transit_val' },
-  { label: 'Stock transfer plant', qty: 'stocktransferplant_qty', val: 'stock_transfer_plant_val' },
-  { label: 'Stock transfer stor. loc.', qty: 'stocktransferstoragelocation_qty', val: null },
-  { label: 'Storage location', qty: null, val: 'storage_location_val' },
-  { label: 'Tied empties', qty: 'tiedempties_qty', val: 'tied_empties_val' },
+  { label: 'Stock In Transit', qty: 'stockintransit_qty', val: 'stock_in_transit_val' },
+  { label: 'Stock Transfer Plant', qty: 'stocktransferplant_qty', val: 'stock_transfer_plant_val' },
+  { label: 'Stock Transfer Stor. Loc.', qty: 'stocktransferstoragelocation_qty', val: null },
+  { label: 'Storage Location', qty: null, val: 'storage_location_val' },
+  { label: 'Tied Empties', qty: 'tiedempties_qty', val: 'tied_empties_val' },
   { label: 'Total', qty: 'total_qty', val: 'total_val' },
 ];
-const HELD_LABELS = ['Restricted', 'Quality inspection', 'Blocked', 'GR blocked', 'Returns'];
+const HELD_LABELS = ['Restricted', 'Quality Inspection', 'Blocked', 'GR Blocked', 'Returns'];
 
 /** 1.0's RMPM Details: Unit / Value as a switch; type (PM / RM), plant and storage location in the search bar. */
 function RmpmDetails({ rows, onClose }: { rows: RpmRow[]; onClose: () => void }) {
@@ -511,13 +511,13 @@ function RmpmDetails({ rows, onClose }: { rows: RpmRow[]; onClose: () => void })
   const { shown, values, setValues, searchFields } = useListFilter<RpmRow>(rows, [
     { key: 'type', label: 'Type', of: (r) => r.producttype, fixed: [{ value: 'TPKG', label: 'PM' }, { value: 'TRAW', label: 'RM' }] },
     { key: 'plant', label: 'Plant', of: (r) => r.plantname },
-    { key: 'storage', label: 'Storage location', of: (r) => r.storagelocationname },
+    { key: 'storage', label: 'Storage Location', of: (r) => r.storagelocationname },
     { key: 'material', label: 'Material', of: (r) => r.materialname },
   ]);
   const columns: DetailColumn<RpmRow>[] = [
     { key: 'm', header: 'Material', kind: 'text', value: (r) => r.materialname },
     { key: 'p', header: 'Plant', kind: 'text', value: (r) => r.plantname },
-    { key: 's', header: 'Storage location', kind: 'text', value: (r) => r.storagelocationname },
+    { key: 's', header: 'Storage Location', kind: 'text', value: (r) => r.storagelocationname },
     ...RMPM_COLS.flatMap((c): DetailColumn<RpmRow>[] => {
       const field = mode === 'unit' ? c.qty : c.val;
       if (!field) return [];
@@ -534,7 +534,7 @@ function RmpmDetails({ rows, onClose }: { rows: RpmRow[]; onClose: () => void })
     }),
   ];
   return (
-    <Overlay title="RMPM details" subtitle={`Raw and packing material by stock state · in ${mode === 'unit' ? 'units' : 'value at cost'}`} onClose={onClose} width="min(1800px, 97vw)">
+    <Overlay title="RMPM Details" subtitle={`Raw and packing material by stock state · in ${mode === 'unit' ? 'units' : 'value at cost'}`} onClose={onClose} width="min(1800px, 97vw)">
       <Box h="min(76vh, 820px)">
         <DetailTable
           rows={shown}

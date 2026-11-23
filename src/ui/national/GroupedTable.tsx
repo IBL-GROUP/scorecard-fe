@@ -11,6 +11,7 @@ import { InfoTip } from '@/ui/overlay';
 import type { HelpText } from '@/ui/help';
 import { byName } from '@/ui/byName';
 import { GroupSheets } from './GroupSheets';
+import { useRowWindow } from '@/features/rowWindow';
 /** A drill dimension and one step of a drill path (Sales Pulse 2.0's features/salesDashboard/drill). */
 export type DrillDim = string;
 export interface DrillStep {
@@ -65,7 +66,7 @@ const LEVELS: Record<string, LevelDef<GroupRow>> = {
   division: { label: 'Division', key: (r) => clean(r.division) },
   bu: { label: 'BU', key: (r) => clean(r.bu) },
   team: { label: 'Team', key: (r) => clean(r.team) },
-  category: { label: 'Business line', key: (r) => clean(r.category) },
+  category: { label: 'Business Line', key: (r) => clean(r.category) },
   brands: { label: 'Brand', key: (r) => clean(r.brands) },
   sku: { label: 'SKU', key: (r) => String(r.sku_code), name: (r) => clean(r.sku), showCode: true },
 };
@@ -135,7 +136,7 @@ const INLINE_LEVELS = 2;
 
 const clean = (v: unknown) => {
   const t = String(v ?? '').trim();
-  return !t || t === 'Others' || t === 'null' ? 'Other / unmapped' : t;
+  return !t || t === 'Others' || t === 'null' ? 'Other / Unmapped' : t;
 };
 const addInto = (a: Sums, b: Sums) => {
   for (const k in b) a[k] = (a[k] ?? 0) + b[k];
@@ -425,11 +426,11 @@ export function GroupedTable<R>({
 
   const detailsFor = (nd: Node): (() => void) | undefined => {
     const chain = [...ancestorsOf(nd), nd];
-    if (!onDrill || nd.name === 'Other / unmapped' || chain.some((c) => NO_SHEET.includes(c.level))) return undefined;
+    if (!onDrill || nd.name === 'Other / Unmapped' || chain.some((c) => NO_SHEET.includes(c.level))) return undefined;
     // The drill data names unmapped rows 'Others'.
     const path: DrillStep[] = chain.flatMap((c) => {
       const dim = DRILL_DIM[c.level];
-      return dim ? [{ dim, value: c.name === 'Other / unmapped' ? 'Others' : c.name }] : [];
+      return dim ? [{ dim, value: c.name === 'Other / Unmapped' ? 'Others' : c.name }] : [];
     });
     const next = shown[nd.depth + 1];
     // Opens on top of any group sheets, which stay where they are: closing
@@ -464,6 +465,8 @@ export function GroupedTable<R>({
     }
   };
   walk(tree);
+  // 50 rows drawn at a time, 50 more on scrolling; back to 50 for new data, grouping or search.
+  const win = useRowWindow(visible, tree);
 
   // Open groups pin under the header + total; measure that block's height.
   const headRef = useRef<HTMLDivElement>(null);
@@ -507,7 +510,7 @@ export function GroupedTable<R>({
         {toolbar && <Box flexShrink={0}>{toolbar}</Box>}
         <HStack gap={2} flex="0 1 auto" minW="120px">
           <Text fontSize="13px" color={colors.mutedText} whiteSpace="nowrap" flexShrink={0}>
-            Group by
+            Group By
           </Text>
           <Segmented
             size="xs"
@@ -520,7 +523,7 @@ export function GroupedTable<R>({
         {!q && inline.length > 1 && (
           <HStack gap={2} flexShrink={0}>
             <Text fontSize="13px" color={colors.mutedText} whiteSpace="nowrap">
-              Expand to
+              Expand To
             </Text>
             <Segmented
               size="xs"
@@ -545,7 +548,7 @@ export function GroupedTable<R>({
             title="Rows where every figure is zero"
             whiteSpace="nowrap"
           >
-            {hideEmpty ? `Show ${hidden} empty rows` : 'Hide empty rows'}
+            {hideEmpty ? `Show ${hidden} Empty Rows` : 'Hide Empty Rows'}
           </Box>
           <Input
             size="sm"
@@ -610,7 +613,7 @@ export function GroupedTable<R>({
             {q ? `Nothing matches “${query}”.` : 'No rows for this selection.'}
           </Text>
         ) : (
-          visible.map((n) => {
+          win.rows.map((n) => {
             // A group on the last inline level opens its levels in sheets
             // (GroupSheets) instead of unfolding here.
             const toSheets = n.children.length > 0 && n.depth >= INLINE_LEVELS - 1;
@@ -637,6 +640,7 @@ export function GroupedTable<R>({
             );
           })
         )}
+        {win.marker}
         </Box>
       </Box>
 
@@ -765,7 +769,7 @@ function Line({
   /** Open groups pin here (px from the top of the scroll area). */
   stickyTop?: number;
 }) {
-  const unmapped = node.name === 'Other / unmapped';
+  const unmapped = node.name === 'Other / Unmapped';
   const pinned = stickyTop != null;
   return (
     <Box

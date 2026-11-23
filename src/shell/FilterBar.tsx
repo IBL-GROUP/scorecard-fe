@@ -44,7 +44,7 @@ function CoverDaysInput() {
   return (
     <Flex align="center" gap="8px" flexShrink={0}>
       <label htmlFor="cover-days" style={{ fontSize: '13px', color: colors.mutedText, whiteSpace: 'nowrap' }}>
-        Cover days
+        Cover Days
       </label>
       <Input
         id="cover-days"

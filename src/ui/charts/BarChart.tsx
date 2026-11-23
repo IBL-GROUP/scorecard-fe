@@ -328,7 +328,7 @@ export function BarChart({
             .filter((d) => d[key] != null && d[key] !== '')
             .map((d) => ({ name: String(d[xKey]), value: Number(d[key]) }))}
           fmt={(abs) => labelFormatter(abs)}
-          note="◂ down · up ▸ (growth %)"
+          note="◂ Down · Up ▸ (Growth %)"
           onPick={onBarClick}
         />
       </Box>
@@ -405,14 +405,14 @@ export function BarChart({
     const thickness = bars.length > 1 ? 9 : 14;
     const rowH = thickness * bars.length + (bars.length > 1 ? 14 : 12);
     if (fill && !expanded && containerHeight > 0) {
-      // Room left after the axis (28), footnote (18) and reference note (22).
+      // Room left after the axis (36), footnote (18) and reference note (22).
       const room =
-        containerHeight - 28 - 24 - (referenceValue != null && referenceLabel && !legendInCard ? 26 : 0) - (showLegend && !legendInCard ? 26 : 0);
+        containerHeight - 36 - 24 - (referenceValue != null && referenceLabel && !legendInCard ? 26 : 0) - (showLegend && !legendInCard ? 26 : 0);
       topN = Math.max(3, Math.min(topN, Math.floor(room / rowH)));
     }
     // Cut after the fit above (Sales Pulse 2.0 cut before it, so a full card overflowed).
     const rows = [...(ranked.length + others.length > topN ? ranked.slice(0, Math.max(0, topN - others.length)) : ranked), ...others];
-    const chartH = rows.length * rowH + 28;
+    const chartH = rows.length * rowH + 36;
     const { ticks, domain } = computeTicks(
       referenceValue != null ? [...rows, { [bars[0].key]: referenceValue }] : rows,
       bars,
@@ -448,7 +448,7 @@ export function BarChart({
             <RechartsBarChart
               data={rows}
               layout="vertical"
-              margin={{ top: 0, right: showLabels ? 52 : 12, left: 0, bottom: 0 }}
+              margin={{ top: 0, right: showLabels ? 52 : 12, left: 0, bottom: 6 }}
               barCategoryGap={4}
               barGap={2}
             >
@@ -460,7 +460,7 @@ export function BarChart({
                 tick={makeValueTick(yTickFormatter, 'middle')}
                 tickLine={false}
                 axisLine={false}
-                height={20}
+                height={28}
               />
               <YAxis
                 type="category"
@@ -541,8 +541,8 @@ export function BarChart({
         </Box>
         {filteredData.length > rows.length && (
           <Text fontSize="11px" color={colors.mutedText} mt={1}>
-            {`Top ${rows.length} of ${filteredData.length}`}
-            {' · hover a bar for detail'}
+            {`Top ${rows.length} Of ${filteredData.length}`}
+            {' · Hover A Bar For Detail'}
           </Text>
         )}
       </Flex>

@@ -27,11 +27,12 @@ import { ACTIVE_ROW, KIND_LABEL, titleOf, useDetail, useOpenedRow, type DetailIt
 import { plan, service, stock } from '@/features/derive';
 import * as K from '@/features/kpis';
 import { rag } from '@/features/kpiThresholds';
-import { DASH, days, full, money, pct0, pct1, pkr } from '@/features/format';
+import { DASH, days, full, money, pct1, pkr } from '@/features/format';
 import { useActiveTab, useNav } from '@/features/nav';
 import type { Chip } from '@/features/store';
 import { TABS, type TabKey } from '@/features/tabs';
 import { geoOf } from '@/features/geo';
+import { useRowWindow } from '@/features/rowWindow';
 
 // ── Data lookup: the first tab that loaded a result of this name ──
 const TAB_ORDER: TabKey[] = ['overview', 'revenue', 'inventory', 'fulfilment', 'distribution'];
@@ -120,6 +121,8 @@ const sumOf = <T,>(xs: T[], f: (x: T) => number) => xs.reduce((t, x) => t + (f(x
  */
 function Rows({ head, rows, total, noTotal }: { head: string[]; rows: { cells: ReactNode[]; onClick?: () => void; key: string; tone?: string }[]; total?: ReactNode[]; noTotal?: boolean }) {
   const opened = useOpenedRow();
+  // Callers build rows afresh each render: back to 50 only when the list itself changes.
+  const win = useRowWindow(rows, `${rows.length}|${rows[0]?.key}|${rows[rows.length - 1]?.key}`);
   if (!rows.length)
     return (
       <Text p={6} textAlign="center" fontSize="13px" color={colors.mutedText}>
@@ -153,7 +156,7 @@ function Rows({ head, rows, total, noTotal }: { head: string[]; rows: { cells: R
               ))}
             </tr>
           )}
-          {rows.map((r) => (
+          {win.rows.map((r) => (
             <Box
               as="tr"
               key={r.key}
@@ -184,6 +187,7 @@ function Rows({ head, rows, total, noTotal }: { head: string[]; rows: { cells: R
               ))}
             </Box>
           ))}
+          {win.markerRow(head.length)}
         </tbody>
       </Box>
     </Box>
@@ -192,7 +196,7 @@ function Rows({ head, rows, total, noTotal }: { head: string[]; rows: { cells: R
 
 const RagText = ({ v, r, text }: { v?: number | null; r: ReturnType<typeof rag>; text?: string }) => (
   <Text as="span" color={ragCell(r).color} fontWeight={700}>
-    {text ?? pct0(v)}
+    {text ?? pct1(v)}
   </Text>
 );
 
@@ -327,13 +331,13 @@ function AlignClassBody({ cls, data }: { cls: string; data: DashboardData }) {
       </StatGrid>
       <Section title={`SKUs in ${clsName(cls)}`} hint="IBL target and TSCL budget for the month; budget is national">
         <Rows
-          head={['SKU', 'IBL target', 'TSCL budget', 'Forecast ÷ budget']}
+          head={['SKU', 'IBL Target', 'TSCL Budget', 'Forecast ÷ Budget']}
           total={[money(ibl), money(tscl), <RagText key="t" v={classPct} r={rag(classPct, 'planAlignment')} text={pct1(classPct)} />]}
           rows={rows.map((r) => {
             const p = r.tscl > 0 ? (r.ibl / r.tscl) * 100 : null;
             return {
               key: r.code,
-              cells: [r.name, money(r.ibl), money(r.tscl), p == null ? 'no budget' : <RagText key="p" v={p} r={rag(p, 'planAlignment')} text={pct1(p)} />],
+              cells: [r.name, money(r.ibl), money(r.tscl), p == null ? 'No Budget' : <RagText key="p" v={p} r={rag(p, 'planAlignment')} text={pct1(p)} />],
               onClick: () => push({ kind: 'sku', sku: r.name }),
             };
           })}
@@ -387,7 +391,7 @@ function geoLevels(data: DashboardData, cls: string) {
 function GeoRows({ rows, onPick, noun = 'branches' }: { rows: GeoRow[]; onPick: (name: string) => void; noun?: string }) {
   return (
     <Rows
-      head={['Name', noun === 'branches' ? 'Branches' : 'SKUs', 'Cover days', 'Service level']}
+      head={['Name', noun === 'branches' ? 'Branches' : 'SKUs', 'Cover Days', 'Service Level']}
       total={[String(sumOf(rows, (r) => r.branches)), '', '']}
       rows={rows.map((r) => ({
         key: r.name,
@@ -411,16 +415,16 @@ function GeoBody({ cls, zone, region, data }: { cls: string; zone: string; regio
   return (
     <>
       <StatGrid>
-        <Stat label="Cover days" value={days(here?.cover)} sub="Average of the branches" />
-        <Stat label="Service level" value={pct0(here?.service)} rag={rag(here?.service ?? null, 'serviceLevel')} sub="Share of SKUs above threshold" />
-        <Stat label={region ? 'Branches' : 'Regions'} value={region ? branches.length : regions.length} sub={region ? `in ${region}` : `in ${zone}`} />
+        <Stat label="Cover days" value={days(here?.cover)} sub="Average Of The Branches" />
+        <Stat label="Service level" value={pct1(here?.service)} rag={rag(here?.service ?? null, 'serviceLevel')} sub="Share Of SKUs Above Threshold" />
+        <Stat label={region ? 'Branches' : 'Regions'} value={region ? branches.length : regions.length} sub={region ? `In ${region}` : `In ${zone}`} />
       </StatGrid>
       {region ? (
-        <Section title={`Branches in ${region}`} hint={`${clsName(cls)} · open a branch for its SKUs`}>
+        <Section title={`Branches In ${region}`} hint={`${clsName(cls)} · open a branch for its SKUs`}>
           <GeoRows rows={branches} onPick={(b) => push({ kind: 'classBranch', cls, branch: b })} />
         </Section>
       ) : (
-        <Section title={`Regions in ${zone}`} hint={clsName(cls)}>
+        <Section title={`Regions In ${zone}`} hint={clsName(cls)}>
           <GeoRows rows={regions} onPick={(r) => push({ kind: 'geo', cls, zone, region: r })} />
         </Section>
       )}
@@ -443,18 +447,18 @@ function ClassBranchBody({ cls, branch, data }: { cls: string; branch: string; d
   return (
     <>
       <StatGrid>
-        <Stat label="Cover days" value={days(g?.cover)} sub={`Benchmark ${days(bm)} · threshold ${days(th)}`} />
-        <Stat label="Service level" value={pct0(g?.service)} rag={rag(g?.service ?? null, 'serviceLevel')} />
-        <Stat label="SKUs below threshold" value={th == null ? DASH : below} sub={`of ${skus.length} SKUs`} />
+        <Stat label="Cover days" value={days(g?.cover)} sub={`Benchmark ${days(bm)} · Threshold ${days(th)}`} />
+        <Stat label="Service level" value={pct1(g?.service)} rag={rag(g?.service ?? null, 'serviceLevel')} />
+        <Stat label="SKUs below threshold" value={th == null ? DASH : below} sub={`Of ${skus.length} SKUs`} />
         <Stat label="Zone · region" value={<Text as="span" fontSize="15px">{g?.zone ?? DASH}</Text>} sub={g?.region} />
       </StatGrid>
-      <Section title={`SKUs in ${clsName(cls)} at ${branch}`} hint="Lowest cover first · 0 d means no stock here">
+      <Section title={`SKUs In ${clsName(cls)} At ${branch}`} hint="Lowest cover first · 0 d means no stock here">
         <Rows
-          head={['SKU', 'Cover here', 'Threshold', 'Status']}
+          head={['SKU', 'Cover Here', 'Threshold', 'Status']}
           rows={skus.map(({ sku, v }, i) => ({
             // An SKU name can repeat within a class (one row per item code).
             key: `${sku}|${i}`,
-            cells: [sku, v === 0 ? 'No stock' : days(v), days(th), th != null && v < th ? <RagText key="b" r={v === 0 ? 'red' : 'amber'} text="Below threshold" /> : <RagText key="o" r="green" text="OK" />],
+            cells: [sku, v === 0 ? 'No Stock' : days(v), days(th), th != null && v < th ? <RagText key="b" r={v === 0 ? 'red' : 'amber'} text="Below Threshold" /> : <RagText key="o" r="green" text="OK" />],
             onClick: () => push({ kind: 'sku', sku }),
           }))}
         />
@@ -478,12 +482,12 @@ function ClassBody({ cls, data }: { cls: string; data: DashboardData }) {
   return (
     <>
       <StatGrid>
-        <Stat label="Cover days" value={days(c?.cd)} sub={`Benchmark ${days(c?.bm)} · threshold ${days(c?.th)}`} rag={rag(cov, 'coverage')} />
-        <Stat label="Inventory cost" value={pkr(c?.invCost)} sub={`TP ${money(c?.invTp)} · ${money(c?.qty)} units`} />
-        <Stat label="Excess cost" value={excess ? pkr(excess) : DASH} sub="Above benchmark" />
-        <Stat label="Sales this period" value={pkr(num(sales?.amount ?? null))} sub={att && att.target > 0 ? `${pct1((att.amount / att.target) * 100)} of month target` : undefined} />
+        <Stat label="Cover days" value={days(c?.cd)} sub={`Benchmark ${days(c?.bm)} · Threshold ${days(c?.th)}`} rag={rag(cov, 'coverage')} />
+        <Stat label="Inventory cost" value={pkr(c?.invCost)} sub={`TP ${money(c?.invTp)} · ${money(c?.qty)} Units`} />
+        <Stat label="Excess cost" value={excess ? pkr(excess) : DASH} sub="Above Benchmark" />
+        <Stat label="Sales this period" value={pkr(num(sales?.amount ?? null))} sub={att && att.target > 0 ? `${pct1((att.amount / att.target) * 100)} Of Month Target` : undefined} />
       </StatGrid>
-      <Section title={`${clsName(cls)} by zone`} hint="Zone › Region › Branch › SKU · cover and service are averages of the branches">
+      <Section title={`${clsName(cls)} By Zone`} hint="Zone › Region › Branch › SKU · cover and service are averages of the branches">
         <GeoRows rows={zones} onPick={(z) => push({ kind: 'geo', cls, zone: z })} />
       </Section>
     </>
@@ -509,14 +513,14 @@ function BranchBody({ branch, data }: { branch: string; data: DashboardData }) {
   return (
     <>
       <StatGrid>
-        <Stat label="Service level (avg)" value={pct0(row?.avg)} rag={rag(row?.avg, 'serviceLevel')} sub="Simple average of classes" />
+        <Stat label="Service level (avg)" value={pct1(row?.avg)} rag={rag(row?.avg, 'serviceLevel')} sub="Simple Average Of Classes" />
         {['A', 'B', 'C', 'N'].map((c, i) => (
-          <Stat key={c} label={`Class ${c}`} value={pct0(row?.cells[i])} rag={rag(row?.cells[i], 'serviceLevel')} />
+          <Stat key={c} label={`Class ${c}`} value={pct1(row?.cells[i])} rag={rag(row?.cells[i], 'serviceLevel')} />
         ))}
       </StatGrid>
-      <Section title={`Classes at ${branch}`} hint="Open a class for its SKUs here">
+      <Section title={`Classes At ${branch}`} hint="Open a class for its SKUs here">
         <Rows
-          head={['Class', 'Cover here', 'Threshold', 'Service level', 'SKUs below']}
+          head={['Class', 'Cover Here', 'Threshold', 'Service Level', 'SKUs Below']}
           rows={classRows.map((c) => {
             const ci = ['A', 'B', 'C', 'N'].indexOf(c.cls);
             const sl = ci >= 0 ? row?.cells[ci] ?? null : null;
@@ -556,12 +560,12 @@ function SkuBody({ sku, data }: { sku: string; data: DashboardData }) {
         <Stat label="Class" value={r?.classification ?? DASH} />
         <Stat label="Cover (avg of branches)" value={days(num(r?.total ?? null))} rag={rag(bm && r ? (n0(r.total) / bm) * 100 : null, 'coverage')} />
         <Stat label="Branches below threshold" value={th != null ? vals.filter((x) => x.v < th).length : DASH} sub={`Threshold ${days(th)}`} />
-        <Stat label="Fill rate" value={pct1(f.pct)} rag={rag(f.pct, 'fillRate')} sub={disp.length ? `${full(f.unfulfilled)} units short` : 'No orders in period'} />
+        <Stat label="Fill rate" value={pct1(f.pct)} rag={rag(f.pct, 'fillRate')} sub={disp.length ? `${full(f.unfulfilled)} Units Short` : 'No Orders In Period'} />
       </StatGrid>
       {/* The drill ends here: Class → SKU → cover by branch. A branch row opens nothing (user request, 17 Nov 2026; FR-EXEC-053). */}
-      <Section title="Cover by branch" hint="Lowest cover first · 0 d means no stock">
+      <Section title="Cover By Branch" hint="Lowest cover first · 0 d means no stock">
         <Rows
-          head={['Branch', 'Cover', 'Threshold', 'Of benchmark', 'Status']}
+          head={['Branch', 'Cover', 'Threshold', 'Of Benchmark', 'Status']}
           rows={[...vals]
             .sort((a, b) => a.v - b.v)
             .map((x) => {
@@ -570,10 +574,10 @@ function SkuBody({ sku, data }: { sku: string; data: DashboardData }) {
                 key: x.b,
                 cells: [
                   x.b,
-                  x.v === 0 ? 'No stock' : days(x.v),
+                  x.v === 0 ? 'No Stock' : days(x.v),
                   days(th),
                   bm ? <RagText key="p" v={(x.v / bm) * 100} r={rag((x.v / bm) * 100, 'coverage')} /> : DASH,
-                  <RagText key="s" r={short ? 'red' : 'green'} text={short ? 'Below threshold' : 'OK'} />,
+                  <RagText key="s" r={short ? 'red' : 'green'} text={short ? 'Below Threshold' : 'OK'} />,
                 ],
               };
             })}
@@ -593,13 +597,13 @@ function ChannelBody({ channel, data }: { channel: string; data: DashboardData }
   return (
     <>
       <StatGrid>
-        <Stat label="Fill rate" value={pct1(f.pct)} rag={rag(f.pct, 'fillRate')} sub="By quantity" />
-        <Stat label="Ordered" value={full(f.ordered)} sub="units" />
-        <Stat label="Delivered" value={full(f.delivered)} sub="units" />
-        <Stat label="Unfulfilled" value={full(f.unfulfilled)} sub={`${K.materialsBelow(rows).below} of ${K.materialsBelow(rows).total} materials below 90%`} />
+        <Stat label="Fill rate" value={pct1(f.pct)} rag={rag(f.pct, 'fillRate')} sub="By Quantity" />
+        <Stat label="Ordered" value={full(f.ordered)} sub="Units" />
+        <Stat label="Delivered" value={full(f.delivered)} sub="Units" />
+        <Stat label="Unfulfilled" value={full(f.unfulfilled)} sub={`${K.materialsBelow(rows).below} Of ${K.materialsBelow(rows).total} Materials Below 90%`} />
       </StatGrid>
-      <Section title={`Materials in ${channel}`} hint="Most unfulfilled first">
-        <Rows head={['Material', 'Ordered', 'Delivered', 'Short', 'Fill rate']} total={[full(sumOf(mats, (m) => n0(m.r.total_order_qty))), full(sumOf(mats, (m) => n0(m.r.total_delivery_qty))), full(sumOf(mats, (m) => m.short)), '']} rows={mats.map(({ r, short }) => ({ key: r.material_name, cells: [r.material_name, full(n0(r.total_order_qty)), full(n0(r.total_delivery_qty)), full(short), <RagText key="f" v={num(r.delivery_pct)} r={rag(num(r.delivery_pct), 'fillRate')} text={pct1(num(r.delivery_pct))} />] }))} />
+      <Section title={`Materials In ${channel}`} hint="Most Unfulfilled First">
+        <Rows head={['Material', 'Ordered', 'Delivered', 'Short', 'Fill Rate']} total={[full(sumOf(mats, (m) => n0(m.r.total_order_qty))), full(sumOf(mats, (m) => n0(m.r.total_delivery_qty))), full(sumOf(mats, (m) => m.short)), '']} rows={mats.map(({ r, short }) => ({ key: r.material_name, cells: [r.material_name, full(n0(r.total_order_qty)), full(n0(r.total_delivery_qty)), full(short), <RagText key="f" v={num(r.delivery_pct)} r={rag(num(r.delivery_pct), 'fillRate')} text={pct1(num(r.delivery_pct))} />] }))} />
       </Section>
     </>
   );
@@ -613,12 +617,12 @@ function MaterialBody({ material, data }: { material: string; data: DashboardDat
     <>
       <StatGrid>
         <Stat label="Fill rate" value={pct1(f.pct)} rag={rag(f.pct, 'fillRate')} />
-        <Stat label="Ordered" value={full(f.ordered)} sub="units" />
-        <Stat label="Unfulfilled" value={full(f.unfulfilled)} sub="units" />
-        <Stat label="In production" value={wip.length} sub={`${money(wip.reduce((t, r) => t + n0(r['WIP Value']), 0))} WIP value`} />
+        <Stat label="Ordered" value={full(f.ordered)} sub="Units" />
+        <Stat label="Unfulfilled" value={full(f.unfulfilled)} sub="Units" />
+        <Stat label="In production" value={wip.length} sub={`${money(wip.reduce((t, r) => t + n0(r['WIP Value']), 0))} WIP Value`} />
       </StatGrid>
-      <Section title="By channel">
-        <Rows head={['Channel', 'Ordered', 'Delivered', 'Fill rate']} total={[full(sumOf(rows, (r) => n0(r.total_order_qty))), full(sumOf(rows, (r) => n0(r.total_delivery_qty))), '']} rows={rows.map((r) => ({ key: r.channel_type, cells: [r.channel_type, full(n0(r.total_order_qty)), full(n0(r.total_delivery_qty)), <RagText key="f" v={num(r.delivery_pct)} r={rag(num(r.delivery_pct), 'fillRate')} text={pct1(num(r.delivery_pct))} />] }))} />
+      <Section title="By Channel">
+        <Rows head={['Channel', 'Ordered', 'Delivered', 'Fill Rate']} total={[full(sumOf(rows, (r) => n0(r.total_order_qty))), full(sumOf(rows, (r) => n0(r.total_delivery_qty))), '']} rows={rows.map((r) => ({ key: r.channel_type, cells: [r.channel_type, full(n0(r.total_order_qty)), full(n0(r.total_delivery_qty)), <RagText key="f" v={num(r.delivery_pct)} r={rag(num(r.delivery_pct), 'fillRate')} text={pct1(num(r.delivery_pct))} />] }))} />
       </Section>
     </>
   );
@@ -632,8 +636,8 @@ function OrderBody({ order, data }: { order: string; data: DashboardData }) {
   return (
     <>
       <StatGrid>
-        <Stat label="Completion" value={pct1(c)} rag={rag(c, 'productionCompletion')} sub={`${full(n0(r.good_received_qty))} of ${full(n0(r.item_qty))} received`} />
-        <Stat label="Still in production" value={full(n0(r.Quantity))} sub="units" />
+        <Stat label="Completion" value={pct1(c)} rag={rag(c, 'productionCompletion')} sub={`${full(n0(r.good_received_qty))} Of ${full(n0(r.item_qty))} Received`} />
+        <Stat label="Still in production" value={full(n0(r.Quantity))} sub="Units" />
         <Stat label="WIP value" value={pkr(n0(r['WIP Value']))} />
         <Stat label="Material type" value={<Text as="span" fontSize="14px">{r.material_type_description}</Text>} />
       </StatGrid>
@@ -641,7 +645,7 @@ function OrderBody({ order, data }: { order: string; data: DashboardData }) {
         <Rows noTotal head={['Field', 'Value']} rows={[
           { key: 'm', cells: ['Material', r['Material Name']], onClick: rowsFrom<DispatchVsOrderRow>(data, 'dispatch').some((x) => x.material_name === r['Material Name']) ? () => push({ kind: 'material', material: r['Material Name'] }) : undefined },
           { key: 'p', cells: ['Plant', `${r.plnt_desc} (${r.plant})`] },
-          { key: 's', cells: ['Storage location', `${r.storage_loc_desc} (${r.storage_loc})`] },
+          { key: 's', cells: ['Storage Location', `${r.storage_loc_desc} (${r.storage_loc})`] },
         ]} />
       </Section>
     </>
@@ -660,18 +664,18 @@ function WipPlantBody({ plant, data }: { plant: string; data: DashboardData }) {
   return (
     <>
       <StatGrid>
-        <Stat label="WIP value" value={pkr(w.value)} sub="At cost" />
-        <Stat label="Orders" value={full(rows.length)} sub={`${full(w.openOrders)} still open`} />
-        <Stat label="Pending GR" value={full(pending)} sub="Nothing received yet" />
-        <Stat label="Completion" value={pct1(w.completion)} rag={rag(w.completion, 'productionCompletion')} sub="Received ÷ item quantity" />
+        <Stat label="WIP value" value={pkr(w.value)} sub="At Cost" />
+        <Stat label="Orders" value={full(rows.length)} sub={`${full(w.openOrders)} Still Open`} />
+        <Stat label="Pending GR" value={full(pending)} sub="Nothing Received Yet" />
+        <Stat label="Completion" value={pct1(w.completion)} rag={rag(w.completion, 'productionCompletion')} sub="Received ÷ Item Quantity" />
       </StatGrid>
-      <Section title={`Orders at ${plant}`} hint="Largest WIP value first · open an order's material">
+      <Section title={`Orders At ${plant}`} hint="Largest WIP value first · open an order's material">
         <Rows
-          head={['Material', 'Order', 'Material type', 'Received', 'WIP value']}
-          total={['', '', `${full(sumOf(rows, (r) => n0(r.good_received_qty)))} of ${full(sumOf(rows, (r) => n0(r.item_qty)))}`, money(w.value)]}
+          head={['Material', 'Order', 'Material Type', 'Received', 'WIP Value']}
+          total={['', '', `${full(sumOf(rows, (r) => n0(r.good_received_qty)))} Of ${full(sumOf(rows, (r) => n0(r.item_qty)))}`, money(w.value)]}
           rows={rows.map((r) => ({
             key: String(r.order_number),
-            cells: [r['Material Name'], String(r.order_number), r.material_type_description, n0(r.good_received_qty) === 0 ? <RagText key="g" r="red" text="Pending GR" /> : `${full(n0(r.good_received_qty))} of ${full(n0(r.item_qty))}`, money(n0(r['WIP Value']))],
+            cells: [r['Material Name'], String(r.order_number), r.material_type_description, n0(r.good_received_qty) === 0 ? <RagText key="g" r="red" text="Pending GR" /> : `${full(n0(r.good_received_qty))} Of ${full(n0(r.item_qty))}`, money(n0(r['WIP Value']))],
             onClick: dispatched.has(r['Material Name']) ? () => push({ kind: 'material', material: r['Material Name'] }) : undefined,
           }))}
         />
@@ -691,14 +695,14 @@ function RmpmPlantBody({ plant, data }: { plant: string; data: DashboardData }) 
   return (
     <>
       <StatGrid>
-        <Stat label="Stock value" value={pkr(s.total)} sub="At cost" />
+        <Stat label="Stock value" value={pkr(s.total)} sub="At Cost" />
         <Stat label="On hold" value={pct1(s.onHoldPct)} rag={rag(s.onHoldPct, 'onHoldPct')} sub={pkr(s.held)} />
-        <Stat label="Blocked or in QI" value={pct1(s.blockedQiPct)} sub="Of the plant's stock value" />
-        <Stat label="Materials" value={full(rows.length)} sub={`${full(rows.filter((r) => held(r) > 0).length)} with stock on hold`} />
+        <Stat label="Blocked or in QI" value={pct1(s.blockedQiPct)} sub="Of The Plant's Stock Value" />
+        <Stat label="Materials" value={full(rows.length)} sub={`${full(rows.filter((r) => held(r) > 0).length)} With Stock On Hold`} />
       </StatGrid>
-      <Section title={`Materials at ${plant}`} hint="Largest cost first · open a material for its stock states">
+      <Section title={`Materials At ${plant}`} hint="Largest cost first · open a material for its stock states">
         <Rows
-          head={['Material', 'Storage location', 'Total cost', 'On hold']}
+          head={['Material', 'Storage Location', 'Total Cost', 'On Hold']}
           total={['', money(s.total), pct1(s.onHoldPct)]}
           rows={rows.map((r, i) => {
             const h = n0(r.total_val) > 0 ? (held(r) / n0(r.total_val)) * 100 : null;
@@ -722,14 +726,14 @@ function RmpmBody({ material, plant, data }: { material: string; plant: string; 
   return (
     <>
       <StatGrid>
-        <Stat label="Total value" value={pkr(total)} sub={`${full(n0(r.total_qty))} units`} />
+        <Stat label="Total value" value={pkr(total)} sub={`${full(n0(r.total_qty))} Units`} />
         <Stat label="On hold" value={pct1(s.onHoldPct)} rag={rag(s.onHoldPct, 'onHoldPct')} sub={pkr(s.held)} />
-        <Stat label="Usable now" value={pkr(n0(r.unrestricted_val))} sub={`${full(n0(r.unrestricted_qty))} units`} />
+        <Stat label="Usable now" value={pkr(n0(r.unrestricted_val))} sub={`${full(n0(r.unrestricted_qty))} Units`} />
         <Stat label="Where" value={<Text as="span" fontSize="14px">{r.plantname}</Text>} sub={r.storagelocationname} />
       </StatGrid>
-      <Section title="By stock state" hint="On-hold states in red when there is any">
+      <Section title="By Stock State" hint="On-hold states in red when there is any">
         <Rows
-          head={['Stock state', 'Value', 'Share']}
+          head={['Stock State', 'Value', 'Share']}
           total={[pkr(total), '100%']}
           rows={K.RMPM_STATES.map((st) => {
             const v = n0(r[st.key]);
@@ -758,13 +762,13 @@ export function DetailLayer({ data }: { data: DashboardData }) {
   const actionsFor = (item: DetailItem) => {
     switch (item.kind) {
       case 'class':
-        return [filterAction('inventory', { key: 'cls', value: item.cls }, 'Filter Inventory to this class'), filterAction('revenue', { key: 'cls', value: item.cls }, 'Filter Revenue')];
+        return [filterAction('inventory', { key: 'cls', value: item.cls }, 'Filter Inventory To This Class'), filterAction('revenue', { key: 'cls', value: item.cls }, 'Filter Revenue')];
       case 'branch':
-        return [filterAction('inventory', { key: 'branch', value: item.branch }, 'Filter Inventory to this branch')];
+        return [filterAction('inventory', { key: 'branch', value: item.branch }, 'Filter Inventory To This Branch')];
       case 'channel':
-        return [filterAction('fulfilment', { key: 'channel', value: item.channel }, 'Filter Fulfilment to this channel')];
+        return [filterAction('fulfilment', { key: 'channel', value: item.channel }, 'Filter Fulfilment To This Channel')];
       case 'material':
-        return [filterAction('fulfilment', { key: 'material', value: item.material }, 'Filter Fulfilment to this material')];
+        return [filterAction('fulfilment', { key: 'material', value: item.material }, 'Filter Fulfilment To This Material')];
       default:
         return [];
     }

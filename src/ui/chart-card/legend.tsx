@@ -1,5 +1,6 @@
 import { Box, Flex } from '@chakra-ui/react';
 import { createContext, useContext, useEffect, useId } from 'react';
+import { titleCase } from '@/utils/titleCase';
 import { colors } from '@/constants/theme';
 
 /**
@@ -55,7 +56,7 @@ export function LegendRow({ items }: { items: LegendItem[] }) {
       {items.map((item) => (
         <Flex key={`${item.shape ?? 'box'}:${item.label}`} align="center" gap="6px" whiteSpace="nowrap">
           <Swatch item={item} />
-          {item.label}
+          {titleCase(item.label)}
         </Flex>
       ))}
     </Flex>

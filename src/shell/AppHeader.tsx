@@ -224,7 +224,7 @@ export function AppHeader({
         >
           <FiBookOpen size={13} />
           <Text as="span" display={{ base: 'none', lg: 'inline' }}>
-            How we calculate
+            How We Calculate
           </Text>
         </Box>
         {methodsOpen && <MethodsOverlay tabs={tabs.map((t) => t.key)} onClose={() => setMethodsOpen(false)} />}

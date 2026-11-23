@@ -6,7 +6,7 @@ import type { Rag } from '@/features/kpiThresholds';
 // Status is never colour alone (PRD 5.3): every badge pairs colour with an
 // icon and a word.
 export const RAG_META: Record<Rag, { word: string; color: string; soft: string; Icon: typeof FiCheckCircle }> = {
-  green: { word: 'On track', color: colors.good, soft: colors.goodSoft, Icon: FiCheckCircle },
+  green: { word: 'On Track', color: colors.good, soft: colors.goodSoft, Icon: FiCheckCircle },
   amber: { word: 'Watch', color: colors.warn, soft: colors.warnSoft, Icon: FiAlertTriangle },
   red: { word: 'Act', color: colors.bad, soft: colors.badSoft, Icon: FiAlertOctagon },
 };

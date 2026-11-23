@@ -220,11 +220,11 @@ export function InfoTip({ text, help, size = 15 }: { text?: ReactNode; help?: He
             {help ? (
               <>
                 <Text fontWeight={700} mb="2px">
-                  What it means
+                  What It Means
                 </Text>
                 <Text mb={2}>{help.what}</Text>
                 <Text fontWeight={700} mb="2px">
-                  Where it comes from
+                  Where It Comes From
                 </Text>
                 <Text opacity={0.85}>{help.source}</Text>
               </>

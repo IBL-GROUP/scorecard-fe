@@ -6,6 +6,7 @@ import { colors, fmt1 } from '@/constants/theme';
 import { InfoTip } from '@/ui/overlay';
 import { HELP } from '@/ui/help';
 import { byName } from '@/ui/byName';
+import { useRowWindow } from '@/features/rowWindow';
 
 export interface BreakdownRow {
   name: string;
@@ -55,7 +56,7 @@ export interface BreakdownTableProps {
   showShare?: boolean;
 }
 
-const UNMAPPED = 'Other / unmapped';
+const UNMAPPED = 'Other / Unmapped';
 const isJunk = (n: string) => !n || n === 'Others' || n === 'null' || n === '—';
 
 export function BreakdownTable({
@@ -128,6 +129,7 @@ export function BreakdownTable({
       return (x < y ? -1 : x > y ? 1 : 0) * sort.dir;
     });
   }, [body, sort]); // eslint-disable-line react-hooks/exhaustive-deps
+  const win = useRowWindow(sorted, sorted);
 
   const paceColor = (pct: number) =>
     pct >= timeGonePct ? colors.good : pct >= timeGonePct * 0.8 ? colors.warn : colors.bad;
@@ -213,14 +215,14 @@ export function BreakdownTable({
           if (a == null) {
             return (
               <Box key={c.key} {...base} color={colors.mutedText} fontSize="12px">
-                No target
+                No Target
               </Box>
             );
           }
           return (
             // The % alone, coloured by pace (no bar), to leave room for the period columns.
             <Box key={c.key} {...base} fontWeight={600} color={paceColor(a)} title={`${fmt1(a)}% of target`}>
-              {a > 999 ? '>999' : fmt1(a)}%
+              {fmt1(a)}%
             </Box>
           );
         }
@@ -231,7 +233,7 @@ export function BreakdownTable({
           if (g == null) {
             return (
               <Box key={c.key} {...base} color={r.sale > 0 ? colors.good : colors.mutedText} fontSize="12px">
-                {r.sale > 0 ? 'new' : '—'}
+                {r.sale > 0 ? 'New' : '—'}
               </Box>
             );
           }
@@ -318,7 +320,7 @@ export function BreakdownTable({
         </Box>
         </Box>
         {/* Rows */}
-        {sorted.map((r) => {
+        {win.rows.map((r) => {
           const clickable = !!onPick && r.name !== UNMAPPED;
           const on = opened.isActive(r.name);
           return (
@@ -358,6 +360,7 @@ export function BreakdownTable({
             </Box>
           );
         })}
+        {win.marker}
         {other && (
           <Box
             className="sp-pin"

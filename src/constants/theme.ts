@@ -301,7 +301,7 @@ export const colors = {
 } as const;
 
 /**
- * One decimal at most, and none when it is zero: 222.2 · 222 · 1,027.7.
+ * The single pattern for every figure: one decimal at most, none when it is 0 — 222.2 · 222 · 1,027.7 · 121%.
  * Every money, percent and points figure on the dashboard goes through this.
  */
 export function fmt1(n: number): string {

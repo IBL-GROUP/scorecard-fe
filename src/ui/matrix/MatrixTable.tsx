@@ -6,6 +6,7 @@ import { Box, Flex, Text } from '@chakra-ui/react';
 import type { ReactNode } from 'react';
 import { colors } from '@/constants/theme';
 import { ACTIVE_ROW, useOpenedRow } from '@/features/detail';
+import { useRowWindow } from '@/features/rowWindow';
 
 export interface MatrixRow {
   name: string;
@@ -34,6 +35,8 @@ export function MatrixTable({
   onRow?: (name: string) => void;
 }) {
   const opened = useOpenedRow();
+  // Callers build rows afresh each render: back to 50 only when the list itself changes.
+  const win = useRowWindow(rows, `${rows.length}|${rows[0]?.name}|${rows[rows.length - 1]?.name}`);
   const th = { position: 'sticky' as const, top: 0, zIndex: 2, bg: colors.pageBg, px: 3, py: '7px', fontSize: '13px', fontWeight: 700, color: colors.darkText, borderBottom: '1px solid', borderColor: colors.border, whiteSpace: 'nowrap' as const };
   const tot = { position: 'sticky' as const, top: '33px', zIndex: 1, bg: colors.tableTotalStart, px: 3, py: '7px', fontSize: '13px', fontWeight: 700, color: colors.darkText, borderBottom: '1px solid', borderColor: colors.border };
   return (
@@ -65,7 +68,7 @@ export function MatrixTable({
               ))}
             </tr>
           )}
-          {rows.map((r) => (
+          {win.rows.map((r) => (
             <Box
               as="tr"
               key={r.name}
@@ -90,6 +93,7 @@ export function MatrixTable({
               ))}
             </Box>
           ))}
+          {win.markerRow(cols.length + 1)}
         </tbody>
       </Box>
     </Box>

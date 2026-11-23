@@ -86,18 +86,18 @@ export const KPI_HELP: Record<string, HelpText> = {
   ),
   'RV-12': h('Which classes are beating plan this month, and which are behind.', 'Classes ranked by current-month achievement (RV-06).'),
   'RV-13': h(
-    'What sold, in how many SKUs, and in what share. The 1.0 Sales Summary card.',
+    'What sold, in how many SKUs, and in what share.',
     '/sales-summary: SKUs sold, sales (TP), share = class sales ÷ total × 100 (1 decimal).',
   ),
   'RV-14': h(
-    'How much of the month’s IBL sales target has been achieved. The 1.0 Forecast Accuracy IBL gauge.',
+    'How much of the month’s IBL sales target has been achieved.',
     '/forecast-accuracy-monthly pct × 100 (1 decimal), with achieved sales, full-month target and the days-gone target (/forecast-accuracy-monthly/daysgone). A target of 0 shows “—”.',
   ),
   'RV-15': h(
-    'How much of the month’s TSCL budget has been achieved. The 1.0 Budget Accuracy TSCL gauge.',
+    'How much of the month’s TSCL budget has been achieved.',
     '/forecast-accuracy-yearly pct × 100, with EFP sales, budget and target_to_date.',
   ),
-  'RV-16': h('How far through the period we are. The 1.0 Days Gone pill.', 'round(days gone ÷ total days × 100). Total days run from the 1st of the From month to the end of the To month.'),
+  'RV-16': h('How far through the period we are.', 'round(days gone ÷ total days × 100). Total days run from the 1st of the From month to the end of the To month.'),
 
   // ── Inventory & Working Capital ──
   'IN-02': h('What our finished-goods stock is worth at cost.', '/cover-days/total inv_val_efp. Trade-price value in the caption.'),
@@ -122,17 +122,17 @@ export const KPI_HELP: Record<string, HelpText> = {
   'IN-11': h('Which branches need intervention first.', 'Simple average of each branch’s class percentages (not SKU-weighted).'),
   'IN-12': h('Is stock spread sensibly across branches?', 'Average cover days of each class’s SKUs per branch, from /inventory-days. Coloured against the class benchmark.'),
   'IN-13': h(
-    'What each class is judged against, and how big each class’s range is. The 1.0 Benchmark card and threshold banner.',
+    'What each class is judged against, and how big each class’s range is.',
     '/cover-days/benchmarks days, threshold, effective_date; /total-sku count (whole range, not filtered). 0 or missing shows “—”.',
   ),
   'IN-14': h(
-    'How many days of stock each class holds, worth how much, in what quantity. The 1.0 Cover Days card.',
+    'How many days of stock each class holds, worth how much, in what quantity.',
     '/cover-days and /cover-days/total: cover_days (TP) or cover_days_efp (EFP), inv_val or inv_val_efp, quantity.',
   ),
-  'IN-15': h('Is each class above its threshold? The 1.0 Threshold vs Actual chart.', '/tgt-vs-actual: cover_days_tgt (threshold) and cover_days.'),
-  'IN-16': h('How many SKUs in each class are under-stocked. The 1.0 SKUs Against Threshold chart.', '/above-below-threshold: counts above and below threshold.'),
+  'IN-15': h('Is each class above its threshold?', '/tgt-vs-actual: cover_days_tgt (threshold) and cover_days.'),
+  'IN-16': h('How many SKUs in each class are under-stocked.', '/above-below-threshold: counts above and below threshold.'),
   'IN-17': h(
-    'Cover of each SKU in each branch. The 1.0 Inventory Days table.',
+    'Cover of each SKU in each branch.',
     '/inventory-days. Class rows average their SKUs. Total column = simple average of branches with a value, not stock-weighted.',
   ),
 
@@ -154,9 +154,9 @@ export const KPI_HELP: Record<string, HelpText> = {
     '(blocked + quality inspection + restricted + returns) ÷ total value × 100, from /rpm. Band: Green ≤ 5%, Amber 5.1–10%, Red > 10%.',
   ),
   'OP-12': h('Where unusable material is, and in what state.', 'RMPM value by plant, split by stock state.'),
-  'OP-14': h('Ordered and delivered quantity per material and channel. The 1.0 Dispatch Vs Order table.', '/dispatch-vs-order, all fields.'),
-  'OP-15': h('Production orders in progress. The 1.0 WIP table.', '/wip, all fields. Detail by plant and material type.'),
-  'OP-16': h('Material held, by stock state. The 1.0 RMPM table.', '/rpm, all fields. Detail by plant.'),
+  'OP-14': h('Ordered and delivered quantity per material and channel.', '/dispatch-vs-order, all fields.'),
+  'OP-15': h('Production orders in progress.', '/wip, all fields. Detail by plant and material type.'),
+  'OP-16': h('Material held, by stock state.', '/rpm, all fields. Detail by plant.'),
 
   // ── Distribution & Data Health ──
   'DH-02': h('How much distributor stock we can see as of today.', 'Σ stock_value where stock_qty > 0, from /rd-status.'),
@@ -171,10 +171,10 @@ export const KPI_HELP: Record<string, HelpText> = {
   ),
   'DH-09': h('Is the item master complete enough for class-level figures?', 'Others (unclassified) sales ÷ total sales × 100, from /sales-summary. Band: Green ≤ 2%, Amber 2.1–5%, Red > 5%.'),
   'DH-10': h('Which benchmark version the figures are judged against.', 'effective_date per class from /cover-days/benchmarks.'),
-  'DH-11': h('Stock RDs reported today. The 1.0 Current Stock in Hand box.', 'Σ stock_qty and Σ stock_value from /rd-status; share of the total.'),
-  'DH-12': h('Stock in the RDs’ last earlier reports. The 1.0 Previous Stock in Hand box.', 'Σ last_stock_qty and Σ last_stock_value; share of the total.'),
-  'DH-13': h('Current plus previous stock. The 1.0 Total Stock in Hand box. Includes earlier reports.', 'Current + previous stock in hand.'),
-  'DH-14': h('Each distributor’s reporting status. The 1.0 RD table.', '/rd-status, all fields. Uploaded when today’s stock_qty > 0.'),
+  'DH-11': h('Stock RDs reported today.', 'Σ stock_qty and Σ stock_value from /rd-status; share of the total.'),
+  'DH-12': h('Stock in the RDs’ last earlier reports.', 'Σ last_stock_qty and Σ last_stock_value; share of the total.'),
+  'DH-13': h('Current plus previous stock. Includes earlier reports.', 'Current + previous stock in hand.'),
+  'DH-14': h('Each distributor’s reporting status.', '/rd-status, all fields. Uploaded when today’s stock_qty > 0.'),
 };
 
 // Items repeated on more than one tab share the Overview's text.

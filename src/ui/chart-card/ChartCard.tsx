@@ -4,6 +4,7 @@ import { FiMaximize2 } from 'react-icons/fi';
 import { ExpandedContext, InfoTip, Overlay } from '@/ui/overlay';
 import type { HelpText } from '@/ui/help';
 import { colors } from '@/constants/theme';
+import { titleCaseNode } from '@/utils/titleCase';
 import { CardLegendContext, LegendRow, type LegendItem } from './legend';
 
 export interface ChartCardProps {
@@ -106,7 +107,7 @@ export function ChartCard({
               color={colors.cardAccent}
               lineHeight="1.3"
             >
-              {title}
+              {titleCaseNode(title)}
             </Text>
             {legend && (
               <Box mt="3px">
@@ -243,7 +244,7 @@ export function ChartCard({
         </Box>
       </Box>
       {expanded && (
-        <Overlay title={title} subtitle={legend && <LegendRow items={legend} />} onClose={() => setExpanded(false)}>
+        <Overlay title={titleCaseNode(title)} subtitle={legend && <LegendRow items={legend} />} onClose={() => setExpanded(false)}>
           <CardLegendContext.Provider value={putLegend}>
             {/* Every pop-up the height of Sales Pulse 2.0's expanded charts (AchCharts Host),
                 so tables, pies and short lists open as large as the charts do. */}

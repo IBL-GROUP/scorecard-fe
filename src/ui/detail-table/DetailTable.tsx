@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 import { colors } from '@/constants/theme';
 import { byName } from '@/ui/byName';
 import { ACTIVE_ROW, useOpenedRow } from '@/features/detail';
+import { useRowWindow } from '@/features/rowWindow';
 
 export interface DetailColumn<R> {
   key: string;
@@ -65,6 +66,7 @@ export function DetailTable<R>({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, q, sort]);
+  const win = useRowWindow(shown, shown);
   const totals = columns.map((c) => (c.kind === 'number' && !c.noTotal ? shown.reduce((t, r) => t + (Number(c.value(r)) || 0), 0) : null));
 
   const exportRows = () => {
@@ -85,7 +87,7 @@ export function DetailTable<R>({
         {toolbar}
         <Flex align="center" gap={2} ml="auto">
           <Text fontSize="13px" color={colors.mutedText} whiteSpace="nowrap">
-            {full(shown.length)} of {full(allRows ?? rows.length)} rows
+            {full(shown.length)} Of {full(allRows ?? rows.length)} Rows
           </Text>
           {!toolbar && (
           <Input size="sm" h="32px" w="200px" placeholder={searchPlaceholder} value={query} onChange={(e) => setQuery(e.target.value)} borderRadius="4px" fontSize="13px" />
@@ -124,7 +126,7 @@ export function DetailTable<R>({
                 </Box>
               </tr>
             )}
-            {shown.map((r, ri) => {
+            {win.rows.map((r, ri) => {
               const opens = !!onRow && (rowOpens?.(r) ?? true);
               return (
               <Box
@@ -165,6 +167,7 @@ export function DetailTable<R>({
               </Box>
               );
             })}
+            {win.markerRow(columns.length)}
           </tbody>
         </Box>
       </Box>

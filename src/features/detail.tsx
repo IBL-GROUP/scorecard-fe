@@ -43,13 +43,13 @@ export const KIND_LABEL: Record<DetailItem['kind'], string> = {
 export function titleOf(i: DetailItem): string {
   switch (i.kind) {
     case 'class':
-      return i.cls === 'Others' ? 'Other (unclassified)' : `Class ${i.cls}`;
+      return i.cls === 'Others' ? 'Other (Unclassified)' : `Class ${i.cls}`;
     case 'alignClass':
-      return `${i.cls === 'Others' ? 'Other' : `Class ${i.cls}`} · forecast vs budget by SKU`;
+      return `${i.cls === 'Others' ? 'Other' : `Class ${i.cls}`} · Forecast vs Budget By SKU`;
     case 'geo':
       return i.region ?? i.zone;
     case 'classBranch':
-      return `${i.cls === 'Others' ? 'Other' : `Class ${i.cls}`} at ${i.branch}`;
+      return `${i.cls === 'Others' ? 'Other' : `Class ${i.cls}`} At ${i.branch}`;
     case 'branch':
       return i.branch;
     case 'sku':
