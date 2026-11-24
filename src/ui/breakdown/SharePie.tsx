@@ -7,7 +7,7 @@ import { AnimatedValue } from '@/ui/motion';
 
 // Fixed categorical order (validated for colour-blind separation; the legend
 // beside the pie names every slice, so identity is never colour alone).
-const HUES = ['#3B5BDB', '#12A594', '#E8590C', '#8B5CF6', '#D69E2E', '#1C7ED6', '#D6336C', '#5C940D'];
+const HUES = ['#3B5BDB', '#D69E2E', '#9C36B5', '#6B7280', '#A0703C', '#91A7FF', '#E8C170', '#C9A3E0'] // no red or green: those mean +/− (user, 24 Nov 2026);
 const OTHER = '#9CA3AF';
 const UNMAPPED_HUE = '#6B7280';
 const isJunk = (n: string) => !n || n === 'Others' || n === 'null' || n === '—';

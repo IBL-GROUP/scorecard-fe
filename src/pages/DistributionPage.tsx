@@ -25,7 +25,8 @@ import { geoOf, type Geo } from '@/features/geo';
 
 const INK: Record<Rag, string> = { green: colors.good, amber: colors.warn, red: colors.bad };
 const ink = (r: Rag | null | undefined) => (r ? INK[r] : colors.bodyText);
-const AGE_COLOR = (min: number) => (min <= 1 ? colors.good : min <= 3 ? colors.warn : colors.bad);
+// Newest uploads darkest, older ones lighter (red and green are for +/− bars only).
+const AGE_COLOR = (min: number) => (min <= 1 ? colors.sales : min <= 3 ? colors.prior : colors.borderStrong);
 const fmtDate = (s: string | null | undefined) =>
   s ? new Date(`${s.slice(0, 10)}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : DASH;
 
@@ -259,8 +260,7 @@ function RdCharts({ rd, t, states }: { rd: ReturnType<typeof distribution>; t: R
             xKey="branch"
             orientation="horizontal"
             rankAscending
-            topN={byBranch.length}
-            bars={[{ key: 'pct', label: 'Reported today', color: colors.sales, cellColor: (e) => ink(rag(Number(e.pct), 'rdCompliance')) }]}
+            bars={[{ key: 'pct', label: 'Reported today', color: colors.sales }]}
             referenceValue={kpiThresholds.rdCompliance.green}
             referenceLabel={`Target ${kpiThresholds.rdCompliance.green}%`}
             labelFormatter={(v) => pct1(v)}

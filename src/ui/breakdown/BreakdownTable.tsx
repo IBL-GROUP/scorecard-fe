@@ -138,9 +138,10 @@ export function BreakdownTable({
   const cols: { key: SortKey; label: string; align: 'start' | 'center'; show: boolean; w?: string }[] = [
     { key: 'name', label: 'Name', align: 'start', show: true },
     { key: 'count', label: countLabel ?? '', align: 'center', show: !!countLabel, w: '64px' },
-    { key: 'sale', label: saleLabel ?? 'Sales', align: 'center', show: true, w: '92px' },
-    { key: 'prior', label: priorLabel ?? '', align: 'center', show: !!priorLabel, w: '92px' },
+    // Periods oldest first: last year, last month, then the selected period (user, 24 Nov 2026).
     { key: 'ly', label: lyLabel ?? '', align: 'center', show: !!lyLabel, w: '92px' },
+    { key: 'prior', label: priorLabel ?? '', align: 'center', show: !!priorLabel, w: '92px' },
+    { key: 'sale', label: saleLabel ?? 'Sales', align: 'center', show: true, w: '92px' },
     { key: 'target', label: targetLabel, align: 'center', show: showTarget, w: '84px' },
     { key: 'ach', label: 'Ach %', align: 'center', show: showTarget, w: '72px' },
     { key: 'share', label: 'Share', align: 'center', show: showShare, w: '64px' },

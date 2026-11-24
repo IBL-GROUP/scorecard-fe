@@ -203,10 +203,9 @@ export function InventoryPage({ data }: { data: DashboardData }) {
                 data={sv.matrix.map((m, i) => ({ branch: m.branch, avg: m.avg ?? 0, worst: i < 5 }))}
                 xKey="branch"
                 orientation="horizontal"
-                // Worst first, as 1.0's ranking (the bottom five in red); as many as fit, ⤢ for every branch.
+                // Worst first, as 1.0's ranking; the bottom five in the brand blue (red and green are for +/− bars only).
                 rankAscending
-                topN={sv.matrix.length}
-                bars={[{ key: 'avg', label: 'Average of its classes', color: colors.borderStrong, cellColor: (e) => (e.worst ? colors.bad : colors.borderStrong) }]}
+                bars={[{ key: 'avg', label: 'Average of its classes', color: colors.borderStrong, cellColor: (e) => (e.worst ? colors.sales : colors.borderStrong) }]}
                 referenceValue={kpiThresholds.serviceLevel.green}
                 referenceLabel={`Target ${kpiThresholds.serviceLevel.green}%`}
                 labelFormatter={(v) => pct1(v)}
@@ -272,8 +271,8 @@ function SkuSplit({ rows, onPick }: { rows: { cls: string; above: number; below:
     <RowBars
       fmt={full}
       legend={[
-        { label: 'Above threshold', color: colors.good },
-        { label: 'Below threshold', color: colors.bad },
+        { label: 'Above threshold', color: colors.sales },
+        { label: 'Below threshold', color: colors.prior },
       ]}
       rows={rows.map((r) => {
         const total = r.above + r.below;
@@ -290,8 +289,8 @@ function SkuSplit({ rows, onPick }: { rows: { cls: string; above: number; below:
             </>
           ),
           parts: [
-            { value: r.above, color: colors.good, label: 'Above threshold' },
-            { value: r.below, color: colors.bad, label: 'Below threshold' },
+            { value: r.above, color: colors.sales, label: 'Above threshold' },
+            { value: r.below, color: colors.prior, label: 'Below threshold' },
           ],
         };
       })}

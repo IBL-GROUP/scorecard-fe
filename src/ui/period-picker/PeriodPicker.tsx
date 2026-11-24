@@ -50,6 +50,9 @@ const maxIso = (a: string, b: string) => (a > b ? a : b);
 export const fmtMonth = (month: string, style: 'long' | 'short' = 'short') =>
   parse(month).toLocaleDateString('en-GB', { month: style, year: 'numeric' });
 
+/** A button label's years in short form: "Nov 2026" → "Nov '26", "1–23 Nov 2026" → "1–23 Nov '26". */
+export const shortYear = (label: string) => label.replace(/\b(19|20)(\d\d)\b/g, "'$2");
+
 /** The month(s) a range falls in, short: "Nov '26", "Oct–Nov '26", "Dec '25–Jan '26". */
 export function monthTag(start: string, end: string) {
   if (!start || !end) return '';
@@ -348,10 +351,10 @@ export function PeriodPicker({ value, onApply, compareEnabled = true, dataDays, 
         whiteSpace="nowrap"
       >
         <FiCalendar size={14} />
-        <span>{buttonA}</span>
+        <span>{shortYear(buttonA)}</span>
         {(compareMode !== 'off' || compareLy) && (
           <Text as="span" fontWeight={400} opacity={0.65}>
-            vs {buttonB}
+            vs {shortYear(buttonB)}
           </Text>
         )}
         <FiChevronDown size={14} />
@@ -368,7 +371,8 @@ export function PeriodPicker({ value, onApply, compareEnabled = true, dataDays, 
           w="min(900px, calc(100vw - 32px))"
           maxH="calc(100vh - 110px)"
           overflowY="auto"
-          bg={colors.cardBg}
+          bg={`color-mix(in srgb, ${colors.cardBg} 68%, transparent)`}
+          backdropFilter="blur(16px) saturate(160%)"
           border="1px solid"
           borderColor={colors.border}
           borderRadius="8px"
@@ -670,7 +674,7 @@ export function PeriodPicker({ value, onApply, compareEnabled = true, dataDays, 
             py={4}
             borderTop="1px solid"
             borderColor={colors.sunkBg}
-            bg={colors.pageBg}
+            bg={`color-mix(in srgb, ${colors.pageBg} 55%, transparent)`}
             borderBottomRadius="8px"
           >
             <HStack gap={2} fontSize="13px" color={colors.bodyText} flex={1} minW={0} wrap="wrap">
@@ -820,7 +824,7 @@ function CompareOption({
       borderRadius="6px"
       border="1px solid"
       borderColor={active ? colors.brand : colors.border}
-      bg={active ? colors.brandSoft : colors.cardBg}
+      bg={active ? colors.brandSoft : `color-mix(in srgb, ${colors.cardBg} 50%, transparent)`}
       opacity={disabled ? 0.55 : 1}
       cursor={disabled ? 'not-allowed' : 'pointer'}
       _hover={disabled || active ? undefined : { bg: colors.hoverBg }}

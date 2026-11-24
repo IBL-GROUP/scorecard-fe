@@ -563,7 +563,8 @@ export function SearchBar({
           left={0}
           right={0}
           zIndex={60}
-          bg={colors.cardBg}
+          bg={`color-mix(in srgb, ${colors.cardBg} 68%, transparent)`}
+          backdropFilter="blur(16px) saturate(160%)"
           border="1px solid"
           borderColor={colors.border}
           borderRadius="4px"
@@ -647,7 +648,8 @@ export function SearchBar({
           left={0}
           right={0}
           zIndex={60}
-          bg={colors.cardBg}
+          bg={`color-mix(in srgb, ${colors.cardBg} 68%, transparent)`}
+          backdropFilter="blur(16px) saturate(160%)"
           border="1px solid"
           borderColor={colors.border}
           borderRadius="4px"

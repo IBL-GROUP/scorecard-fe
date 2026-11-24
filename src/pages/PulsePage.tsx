@@ -377,7 +377,8 @@ function Health({ m }: { m: Model }) {
         rows={m.health.map((h) => ({
           key: h.key,
           name: titleCase(h.name),
-          parts: [{ value: h.value ?? 0, color: h.rag ? INK[h.rag] : colors.prior, label: titleCase(h.name) }],
+          // The status reads in the note; the column stays blue (red and green are for +/− bars only).
+          parts: [{ value: h.value ?? 0, color: colors.sales, label: titleCase(h.name) }],
           target: h.target,
           note: (
             <>
@@ -394,9 +395,7 @@ function Health({ m }: { m: Model }) {
           ),
         }))}
         legend={[
-          { label: 'On Target', color: colors.good },
-          { label: 'Watch', color: colors.warn },
-          { label: 'Below', color: colors.bad },
+          { label: 'Actual', color: colors.sales },
           { label: 'Target', color: colors.target, shape: 'line' },
         ]}
         fmt={(n) => `${fmt1(n)}%`}

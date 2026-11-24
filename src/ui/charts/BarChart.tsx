@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { Box, Flex, HStack, Text } from '@chakra-ui/react';
+import { Box, Flex, HStack } from '@chakra-ui/react';
 import { EmptyChart } from './EmptyChart';
 import { useCardLegend } from '@/ui/chart-card/legend';
 import { DivergingBars } from './DivergingBars';
@@ -48,18 +48,13 @@ export interface BarChartProps {
   /** A single +/− series (growth %): drawn as DivergingBars, around zero. */
   isNegitive?: boolean;
   tooltipOrder?: string[];
-  /**
-   * 'auto' (default) draws ranked horizontal bars once there are more than
-   * AUTO_HORIZONTAL_AT categories, so long names stay readable.
-   */
+  /** 'vertical' keeps the data's order; 'auto' / 'horizontal' rank the columns (largest first, Others last). */
   orientation?: 'auto' | 'vertical' | 'horizontal';
-  /** Horizontal mode only: how many rows to show before "Showing N of M". */
-  topN?: number;
-  /** Horizontal mode only: rank lowest first (a service ranking shows its worst branches first). */
+  /** Ranked charts: rank lowest first (a service ranking shows its worst branches first). */
   rankAscending?: boolean;
-  /** Horizontal mode only: keep the data's own order (buckets, ages) instead of ranking by value. */
+  /** Ranked charts: keep the data's own order (buckets, ages) instead of ranking by value. */
   keepOrder?: boolean;
-  /** Which series get value labels. Defaults to the last (current-period) series. */
+  /** Ranked charts: the series columns are ranked by (default the last). Every series gets value labels. */
   labelKeys?: string[];
   /** Draws a dashed Midnight benchmark line at this value (e.g. 100% of target). */
   referenceValue?: number;
@@ -68,7 +63,6 @@ export interface BarChartProps {
   onBarClick?: (name: string) => void;
 }
 
-const AUTO_HORIZONTAL_AT = 6;
 
 const formatCompact = (value: number) => formatCompactShared(value);
 
@@ -81,6 +75,21 @@ const LABEL_HALO = {
   strokeWidth: 3,
   strokeLinejoin: 'round',
 } as const;
+
+/** px per character of a value label (11px bold tabular numerals). */
+const CHAR_W = 7;
+
+/** Dark or white text, whichever reads on a bar's fill (a theme var or a hex). */
+function inkOn(fill: string) {
+  let c = fill;
+  const m = /^var\((--[^),\s]+)/.exec(c);
+  if (m && typeof document !== 'undefined') c = getComputedStyle(document.documentElement).getPropertyValue(m[1]).trim();
+  const hex = /^#([0-9a-f]{6})$/i.exec(c)?.[1];
+  if (!hex) return '#FFFFFF';
+  const n = parseInt(hex, 16);
+  const lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return lum > 0.6 ? '#141A2A' : '#FFFFFF';
+}
 
 // xLabelColors colours a category's label (Sales Pulse 2.0 declared the prop but never drew it).
 function renderXTick(tickWidth: number, tickMargin = 6, labelColors?: Record<string, string>) {
@@ -127,40 +136,6 @@ function renderXTick(tickWidth: number, tickMargin = 6, labelColors?: Record<str
             {line}
           </text>
         ))}
-      </g>
-    );
-  };
-}
-
-let tickCtx: CanvasRenderingContext2D | null = null;
-/** Width of a tick label in px at the tick font. */
-function measureTick(t: string) {
-  tickCtx ??= document.createElement('canvas').getContext('2d');
-  if (!tickCtx) return t.length * 7;
-  tickCtx.font = `${TICK_STYLE.fontWeight} ${parseFloat(TICK_STYLE.fontSize)}px ${getComputedStyle(document.body).fontFamily}`;
-  return tickCtx.measureText(t).width;
-}
-
-function renderCategoryTick(maxChars: number) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (props: any) => {
-    const { x, y, payload } = props;
-    const full = String(payload?.value ?? '');
-    const text =
-      full.length > maxChars ? full.slice(0, maxChars - 1) + '…' : full;
-    return (
-      <g transform={`translate(${x},${y})`}>
-        <title>{full}</title>
-        <text
-          x={-8}
-          y={0}
-          dy={4}
-          textAnchor="end"
-          fill={colors.bodyText}
-          style={TICK_STYLE}
-        >
-          {text}
-        </text>
       </g>
     );
   };
@@ -260,7 +235,6 @@ export function BarChart({
   isNegitive = false,
   tooltipOrder,
   orientation = 'auto',
-  topN = 10,
   rankAscending = false,
   keepOrder = false,
   xLabelColors,
@@ -271,11 +245,9 @@ export function BarChart({
 }: BarChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(0);
   const expanded = useExpanded();
   if (expanded) {
     // Full-size view: every row, taller columns.
-    topN = Number.POSITIVE_INFINITY;
     height = typeof height === 'number' ? Math.round(height * 1.7) : 520;
   }
   // height="100%": fill the card and, for ranked bars, show as many rows as fit.
@@ -291,14 +263,12 @@ export function BarChart({
   const legendInCard = useCardLegend(
     showLegend || refItem.length ? [...(showLegend ? legendItems.map((b) => ({ label: b.label, color: b.color })) : []), ...refItem] : null
   );
-  const labelled = new Set(labelKeys ?? [bars[bars.length - 1]?.key]);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const measure = () => {
       setContainerWidth(el.offsetWidth);
-      setContainerHeight(el.offsetHeight);
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -335,11 +305,18 @@ export function BarChart({
     );
   }
 
-  const horizontal =
-    !isStacked &&
-    !verticalXLabels &&
-    (orientation === 'horizontal' ||
-      (orientation === 'auto' && filteredData.length > AUTO_HORIZONTAL_AT));
+  // Every bar chart draws as columns (user, 24 Nov 2026: no horizontal bars). A chart that
+  // ranked its rows keeps that order, left to right; Others is never ranked or cut, and comes last.
+  const isOthers = (r: Record<string, unknown>) => /^others?\b/i.test(String(r[xKey] ?? '').trim());
+  const plotData = (() => {
+    if (orientation === 'vertical' || isStacked || verticalXLabels) return filteredData;
+    const sortKey = labelKeys?.[0] ?? bars[bars.length - 1].key;
+    const kept = filteredData.filter((r) => !isOthers(r));
+    const ranked = keepOrder
+      ? kept
+      : [...kept].sort((a, b) => ((Number(b[sortKey]) || 0) - (Number(a[sortKey]) || 0)) * (rankAscending ? -1 : 1));
+    return [...ranked, ...filteredData.filter(isOthers)];
+  })();
 
   const legend = showLegend && !legendInCard && (
     <HStack
@@ -373,6 +350,41 @@ export function BarChart({
     </HStack>
   );
 
+
+  // Every bar shows its own value (user, 23 Nov 2026), the way the daily columns do:
+  // columns upright inside their top (above a short one), rows at their end.
+  const fillOf = (bar: BarConfig, row: Record<string, unknown> | undefined) => (bar.cellColor && row ? bar.cellColor(row) : bar.color);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const columnLabel = (bar: BarConfig, data: Record<string, unknown>[]) => (props: any) => {
+    const { x, y, width, height: h, value, index } = props;
+    const v = Number(value);
+    const w = Number(width);
+    if (!v || w <= 0) return null;
+    const top = Math.min(Number(y), Number(y) + Number(h));
+    const bottom = Math.max(Number(y), Number(y) + Number(h));
+    const neg = v < 0;
+    const text = labelFormatter(v);
+    const inside = bottom - top >= text.length * CHAR_W + 8;
+    if (isStacked && !inside) return null;
+    const cx = Number(x) + w / 2;
+    // Turned upright: from the bar's end inward when it fits, else outward from it.
+    const ay = neg ? (inside ? bottom - 6 : bottom + 4) : inside ? top + 6 : top - 4;
+    const anchor = neg === inside ? 'start' : 'end';
+    return (
+      <text
+        x={cx}
+        y={ay}
+        transform={`rotate(-90 ${cx} ${ay})`}
+        textAnchor={anchor}
+        dominantBaseline="central"
+        fill={inside ? inkOn(fillOf(bar, data[index])) : colors.darkText}
+        style={{ ...LABEL_STYLE, fontSize: w < 14 ? 10 : 11, ...(inside ? {} : LABEL_HALO) }}
+      >
+        {text}
+      </text>
+    );
+  };
+
   const tooltip = (
     <Tooltip
       offset={12}
@@ -391,178 +403,20 @@ export function BarChart({
     />
   );
 
-  // ── Horizontal, ranked ────────────────────────────────────────────────────
-  if (horizontal) {
-    // Ranked by the labelled series (this period), else the last one.
-    const sortKey = labelKeys?.[0] ?? bars[bars.length - 1].key;
-    // Others is never ranked or cut: it always draws, last.
-    const isOthers = (r: Record<string, unknown>) => /^others?\b/i.test(String(r[xKey] ?? '').trim());
-    const kept = filteredData.filter((r) => !isOthers(r));
-    const ranked = keepOrder
-      ? kept
-      : kept.sort((a, b) => ((Number(b[sortKey]) || 0) - (Number(a[sortKey]) || 0)) * (rankAscending ? -1 : 1));
-    const others = filteredData.filter(isOthers);
-    const thickness = bars.length > 1 ? 9 : 14;
-    const rowH = thickness * bars.length + (bars.length > 1 ? 14 : 12);
-    if (fill && !expanded && containerHeight > 0) {
-      // Room left after the axis (36), footnote (18) and reference note (22).
-      const room =
-        containerHeight - 36 - 24 - (referenceValue != null && referenceLabel && !legendInCard ? 26 : 0) - (showLegend && !legendInCard ? 26 : 0);
-      topN = Math.max(3, Math.min(topN, Math.floor(room / rowH)));
-    }
-    // Cut after the fit above (Sales Pulse 2.0 cut before it, so a full card overflowed).
-    const rows = [...(ranked.length + others.length > topN ? ranked.slice(0, Math.max(0, topN - others.length)) : ranked), ...others];
-    const chartH = rows.length * rowH + 36;
-    const { ticks, domain } = computeTicks(
-      referenceValue != null ? [...rows, { [bars[0].key]: referenceValue }] : rows,
-      bars,
-      false
-    );
-    const labelChars = containerWidth && containerWidth < 380 ? 14 : 20;
-    // Size the label column to the longest label as it will actually draw,
-    // so names are never clipped at the left edge.
-    const catWidth = Math.ceil(
-      Math.max(
-        40,
-        ...rows.map((r) => {
-          const full = String((r as Record<string, unknown>)[xKey] ?? '');
-          return measureTick(full.length > labelChars ? full.slice(0, labelChars - 1) + '…' : full);
-        })
-      ) + 14
-    );
-
-    return (
-      <Flex
-        w="100%"
-        h={fill && !expanded ? '100%' : undefined}
-        direction="column"
-        position="relative"
-        ref={containerRef}
-        overflow="hidden"
-      >
-        {legend}
-        {referenceNote}
-        {/* Fixed height: rows are dropped to fit, never squashed. */}
-        <Box h={`${chartH}px`} flexShrink={0}>
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsBarChart
-              data={rows}
-              layout="vertical"
-              margin={{ top: 0, right: showLabels ? 52 : 12, left: 0, bottom: 6 }}
-              barCategoryGap={4}
-              barGap={2}
-            >
-              <CartesianGrid stroke={colors.gridStroke} horizontal={false} />
-              <XAxis
-                type="number"
-                domain={domain}
-                ticks={ticks}
-                tick={makeValueTick(yTickFormatter, 'middle')}
-                tickLine={false}
-                axisLine={false}
-                height={28}
-              />
-              <YAxis
-                type="category"
-                dataKey={xKey}
-                width={catWidth}
-                tick={renderCategoryTick(labelChars)}
-                tickLine={false}
-                axisLine={false}
-                interval={0}
-              />
-              {domain[0] < 0 && <ReferenceLine x={0} stroke={colors.borderStrong} />}
-              {referenceValue != null && (
-                <ReferenceLine
-                  x={referenceValue}
-                  stroke={colors.benchmark}
-                  strokeWidth={2}
-                  strokeDasharray="4 3"
-                  ifOverflow="extendDomain"
-                />
-              )}
-              {tooltip}
-              {bars.map((bar) => (
-                <Bar
-                  key={bar.key}
-                  dataKey={bar.key}
-                  name={bar.label}
-                  fill={bar.color}
-                  barSize={thickness}
-                  radius={[0, 3, 3, 0]}
-                  isAnimationActive={false}
-                  cursor={onBarClick ? 'pointer' : undefined}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  onClick={onBarClick ? (d: any) => onBarClick(String(d?.payload?.[xKey] ?? d?.[xKey] ?? '')) : undefined}
-                >
-                  {bar.cellColor &&
-                    rows.map((entry, index) => (
-                      <Cell key={index} fill={bar.cellColor!(entry)} />
-                    ))}
-                  {showLabels && labelled.has(bar.key) && (
-                    <LabelList
-                      dataKey={bar.key}
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      content={(props: any) => {
-                        const { x, y, width, height: h, value, index } = props;
-                        const v = Number(value);
-                        if (!v) return null;
-                        const w = Number(width);
-                        const left = Math.min(Number(x), Number(x) + w);
-                        const right = Math.max(Number(x), Number(x) + w);
-                        const neg = v < 0;
-                        // Long negative bars run into the category labels, so
-                        // their value goes inside the bar instead.
-                        const inside = neg && right - left > 48;
-                        // In a pair, start the label after the longer bar, so it
-                        // never sits on top of the comparison bar.
-                        const row = rows[index] ?? {};
-                        const maxV = Math.max(...bars.map((b) => Number(row[b.key]) || 0));
-                        const end = !neg && maxV > v ? left + (right - left) * (maxV / v) : right;
-                        return (
-                          <text
-                            x={inside ? left + 5 : neg ? left - 4 : end + 4}
-                            y={Number(y) + Number(h) / 2}
-                            dy={4}
-                            textAnchor={inside ? 'start' : neg ? 'end' : 'start'}
-                            fill={inside ? '#FFFFFF' : colors.darkText}
-                            style={inside ? LABEL_STYLE : { ...LABEL_STYLE, ...LABEL_HALO }}
-                          >
-                            {labelFormatter(v)}
-                          </text>
-                        );
-                      }}
-                    />
-                  )}
-                </Bar>
-              ))}
-            </RechartsBarChart>
-          </ResponsiveContainer>
-        </Box>
-        {filteredData.length > rows.length && (
-          <Text fontSize="11px" color={colors.mutedText} mt={1}>
-            {`Top ${rows.length} Of ${filteredData.length}`}
-            {' · Hover A Bar For Detail'}
-          </Text>
-        )}
-      </Flex>
-    );
-  }
-
-  // ── Vertical columns (few categories) ──────────────────────────────────────
+  // ── Columns ──────────────────────────────────────
   const size = barSize ?? (bars.length > 1 ? 18 : 28);
   const itemSlotWidth = size * bars.length + 22;
   const yAxisWidth = 48;
-  const neededWidth = filteredData.length * itemSlotWidth + yAxisWidth;
+  const neededWidth = plotData.length * itemSlotWidth + yAxisWidth;
   const innerWidth = Math.max(containerWidth, neededWidth);
   const tickWidth =
-    innerWidth && filteredData.length
-      ? (innerWidth - yAxisWidth) / filteredData.length - 8
+    innerWidth && plotData.length
+      ? (innerWidth - yAxisWidth) / plotData.length - 8
       : 50;
   const { ticks, domain: yDomain } = computeTicks(
     referenceValue != null
-      ? [...filteredData, { [bars[0].key]: referenceValue }]
-      : filteredData,
+      ? [...plotData, { [bars[0].key]: referenceValue }]
+      : plotData,
     bars,
     isStacked
   );
@@ -581,8 +435,8 @@ export function BarChart({
         <Box style={{ width: innerWidth }} h="100%" minW="100%">
           <ResponsiveContainer width="100%" height="100%">
             <RechartsBarChart
-              data={filteredData}
-              margin={{ top: showLabels ? 20 : 4, right: 4, left: 0, bottom: 0 }}
+              data={plotData}
+              margin={{ top: showLabels ? 24 : 4, right: 4, left: 0, bottom: 0 }}
               barCategoryGap={barCategoryGap}
               barGap={2}
               barSize={size}
@@ -636,45 +490,10 @@ export function BarChart({
                     onClick={onBarClick ? (d: any) => onBarClick(String(d?.payload?.[xKey] ?? d?.[xKey] ?? '')) : undefined}
                   >
                     {bar.cellColor &&
-                      filteredData.map((entry, index) => (
+                      plotData.map((entry, index) => (
                         <Cell key={index} fill={bar.cellColor!(entry)} />
                       ))}
-                    {showLabels && labelled.has(bar.key) && (
-                      <LabelList
-                        dataKey={bar.key}
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        content={(props: any) => {
-                          const { x, y, width, height: h, value, index } = props;
-                          const v = Number(value);
-                          if (!v) return null;
-                          const w = Number(width);
-                          const top = Math.min(Number(y), Number(y) + Number(h));
-                          const bottom = Math.max(Number(y), Number(y) + Number(h));
-                          const neg = v < 0;
-                          // One label per group, centred over the whole group and
-                          // above its tallest bar, so every label sits clear of
-                          // both bars at the same distance.
-                          const n = bars.length;
-                          const idx = bars.findIndex((b) => b.key === bar.key);
-                          const groupLeft = Number(x) - idx * (w + 2);
-                          const cx = groupLeft + (n * w + (n - 1) * 2) / 2;
-                          const row = filteredData[index] ?? {};
-                          const maxV = Math.max(...bars.map((b) => Number(row[b.key]) || 0));
-                          const topOfMax = !neg && maxV > v ? bottom - (bottom - top) * (maxV / v) : top;
-                          return (
-                            <text
-                              x={cx}
-                              y={neg ? bottom + 13 : topOfMax - 6}
-                              textAnchor="middle"
-                              fill={colors.darkText}
-                              style={{ ...LABEL_STYLE, ...LABEL_HALO }}
-                            >
-                              {labelFormatter(v)}
-                            </text>
-                          );
-                        }}
-                      />
-                    )}
+                    {showLabels && <LabelList dataKey={bar.key} content={columnLabel(bar, plotData)} />}
                   </Bar>
                 );
               })}

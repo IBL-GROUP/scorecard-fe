@@ -31,7 +31,8 @@ import { useFitScreen } from '@/features/fit';
 
 const INK: Record<Rag, string> = { green: colors.good, amber: colors.warn, red: colors.bad };
 const ink = (r: Rag | null | undefined) => (r ? INK[r] : colors.bodyText);
-const TYPE_COLORS = [colors.sales, colors.target, colors.prior, colors.accent, colors.borderStrong];
+// No red or green (or the target teal): those mean +/− and target (user, 24 Nov 2026).
+const TYPE_COLORS = [colors.sales, colors.prior, colors.lastYear, colors.accent, colors.borderStrong];
 /** RMPM stock states: usable in calm hues, held stock in warning hues. */
 const STATE_COLORS: Record<string, string> = {
   Unrestricted: colors.prior,

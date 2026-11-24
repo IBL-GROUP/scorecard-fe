@@ -20,7 +20,7 @@ import { Segmented } from '@/ui/segmented';
 import { colors, fmt1, formatCompact } from '@/constants/theme';
 import { clsColor } from '@/constants/classColors';
 import { SUMMARY_HELP, helpFor, type HelpText } from '@/constants/help';
-import { num, type CategoryAccuracyRow, type DailyAccuracyRow, type IblVsTsclRow, type SalesSummaryRow, type SalesTypeRow, type TotalSkuRow } from '@/api/types';
+import { byClassCode, num, type CategoryAccuracyRow, type DailyAccuracyRow, type IblVsTsclRow, type SalesSummaryRow, type SalesTypeRow, type TotalSkuRow } from '@/api/types';
 import { rowsOf, type DashboardData } from '@/features/data';
 import { plan, status, stock, trust } from '@/features/derive';
 import { categoryCells, classHistory, projectedMonthEnd, salesSummary, salesTypeSplit } from '@/features/kpis';
@@ -29,10 +29,9 @@ import { useDetail } from '@/features/detail';
 import { useFitScreen } from '@/features/fit';
 import { rag } from '@/features/kpiThresholds';
 
-const CLASS_ORDER = ['A', 'B', 'C', 'N', 'Others'];
 const clsName = (c: string) => (c === 'Others' ? 'Other' : `Class ${c}`);
 const clsOf = (name: string) => (name === 'Other' ? 'Others' : name.replace(/^Class /, ''));
-const byClass = (a: string, b: string) => CLASS_ORDER.indexOf(a) - CLASS_ORDER.indexOf(b);
+const byClass = byClassCode;
 const fmt = (n: number) => formatCompact(n);
 const pct = (n: number | null | undefined) => (n == null ? '—' : `${fmt1(n)}%`);
 const closingLabel = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -216,7 +215,6 @@ function ClassHistoryChart({ history, onPick }: { history: ReturnType<typeof cla
         { key: m1, label: monthLabel(m1, 'long'), color: colors.prior },
         { key: m2, label: monthLabel(m2, 'long'), color: colors.current },
       ]}
-      labelKeys={[m2]}
       compact
       showLabels
       orientation="vertical"
@@ -654,7 +652,6 @@ export function SummaryPage({ data }: { data: DashboardData }) {
                 { key: 'benchmark', label: 'Benchmark', color: colors.borderStrong },
                 { key: 'threshold', label: 'Threshold', color: colors.prior },
               ]}
-              labelKeys={['cover']}
               showLabels
               compact
               orientation="vertical"

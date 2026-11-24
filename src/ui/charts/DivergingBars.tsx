@@ -185,6 +185,8 @@ export function DivergingBars({
                 const over = Math.abs(i.value) > max;
                 const bw = Math.max(2, Math.min(Math.abs(i.value), max) * scale);
                 const bx = neg ? zeroX - bw : zeroX;
+                const text = `${over ? (neg ? '‹ ' : '› ') : ''}${i.label ?? `${neg ? '−' : '+'}${format(Math.abs(i.value))}`}`;
+                const inside = bw >= textWidth(text, '600 11px sans-serif') + 10;
                 const gapRow = hidden > 0 && k === Math.ceil(fit / 2);
                 return (
                   <g
@@ -199,17 +201,17 @@ export function DivergingBars({
                     <text style={{ fontSize: 12 }} x={LABEL - 8} y={cy + 4} textAnchor="end" fill="var(--sp-body-text)">
                       {fitName(i.name, LABEL - 12)}
                     </text>
-                    <rect x={bx} y={cy - 6} width={bw} height={12} rx={3} fill={neg ? 'var(--sp-bad)' : 'var(--sp-good)'} className="sp-rise" />
+                    <rect x={bx} y={cy - 8} width={bw} height={16} rx={3} fill={neg ? 'var(--sp-bad)' : 'var(--sp-good)'} className="sp-rise" />
+                    {/* The value inside its bar at the outer end (as the columns do); past the end when the bar is too short. */}
                     <text
-                      x={neg ? bx - 4 : bx + bw + 4}
+                      x={inside ? (neg ? bx + 5 : bx + bw - 5) : neg ? bx - 4 : bx + bw + 4}
                       y={cy + 4}
-                      textAnchor={neg ? 'end' : 'start'}
+                      textAnchor={inside === neg ? 'start' : 'end'}
                       fontWeight={600}
-                      fill={neg ? 'var(--sp-bad)' : 'var(--sp-good)'}
+                      fill={inside ? '#FFFFFF' : neg ? 'var(--sp-bad)' : 'var(--sp-good)'}
                       style={{ fontSize: 11, fontVariantNumeric: 'tabular-nums' }}
                     >
-                      {over ? (neg ? '‹ ' : '› ') : ''}
-                      {i.label ?? `${neg ? '−' : '+'}${format(Math.abs(i.value))}`}
+                      {text}
                     </text>
                   </g>
                 );

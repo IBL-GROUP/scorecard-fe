@@ -373,14 +373,9 @@ function LostTable({ rows, totalGap, target, onOpen }: { rows: { branch: string;
             <Text textAlign="right" color={colors.darkText} fontWeight={600}>
               {fmt1(r.gap)} pts
             </Text>
-            <Flex align="center" gap={2} minW={0}>
-              <Box flex={1} h="6px" bg={colors.sunkBg} borderRadius="3px" overflow="hidden">
-                <Box h="100%" w="100%" bg={colors.bad} borderRadius="3px" className="sp-grow" style={{ transform: `scaleX(${shareOf / 100})` }} />
-              </Box>
-              <Text fontSize="12px" color={colors.mutedText} w="42px" textAlign="right">
-                {fmt1(shareOf)}%
-              </Text>
-            </Flex>
+            <Text fontSize="12px" color={colors.mutedText} textAlign="right">
+              {fmt1(shareOf)}%
+            </Text>
             <Box as="button" aria-label={`Open ${r.branch}`} title={`Open ${r.branch}`} onClick={() => onOpen(r.branch)} color={colors.brand} cursor="pointer" display="flex" justifyContent="center">
               <FiArrowUpRight size={15} />
             </Box>

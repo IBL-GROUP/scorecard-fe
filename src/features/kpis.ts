@@ -4,7 +4,7 @@
 // metric (BR-MET-…); these functions only combine fields the existing
 // endpoints already return. Each function names the PRD ID it serves.
 
-import { INV_BRANCHES, n0, num, RATED_CLASSES, type BenchmarkRow, type CategoryAccuracyRow, type SalesTypeRow, type CoverDaysRow, type DispatchVsOrderRow, type RdStatusRow, type RpmRow, type SalesSummaryRow, type ServiceMeasureRow, type ThresholdRow, type WipRow } from '@/api/types';
+import { byClassCode, INV_BRANCHES, n0, num, RATED_CLASSES, type BenchmarkRow, type CategoryAccuracyRow, type SalesTypeRow, type CoverDaysRow, type DispatchVsOrderRow, type RdStatusRow, type RpmRow, type SalesSummaryRow, type ServiceMeasureRow, type ThresholdRow, type WipRow } from '@/api/types';
 import { monthKeyFromLabel } from './period';
 import { rag, riskRules } from './kpiThresholds';
 
@@ -81,8 +81,7 @@ export function classHistory(responses: CategoryAccuracyRow[][], endIso: string,
       row[month] = Math.round(p * 10) / 10;
       byCls.set(cls, row);
     }
-  const order = ['A', 'B', 'C', 'N', 'Others'];
-  const rows = [...byCls.values()].sort((a, b) => order.indexOf(String(a.cls)) - order.indexOf(String(b.cls)));
+  const rows = [...byCls.values()].sort((a, b) => byClassCode(String(a.cls), String(b.cls)));
   return { months, rows };
 }
 
@@ -125,8 +124,8 @@ export function salesSummary(rows: SalesSummaryRow[]) {
 /** RV-01 split (FR-EXEC-048): the user's order, Sales Pulse 2.0's colours; any other type after. */
 const SALES_TYPES: { key: string; label: string; color: string }[] = [
   { key: 'rd to trade', label: 'Rd to trade', color: '#3B5BDB' },
-  { key: 'ibl to trade', label: 'Ibl to trade', color: '#12A594' },
-  { key: 'pharma healthcare to trade', label: 'Pharma Healthcare to trade', color: '#E8590C' },
+  { key: 'ibl to trade', label: 'Ibl to trade', color: '#D69E2E' },
+  { key: 'pharma healthcare to trade', label: 'Pharma Healthcare to trade', color: '#9C36B5' },
 ];
 export function salesTypeSplit(rows: SalesTypeRow[]) {
   const known = SALES_TYPES.map((t) => ({ label: t.label, color: t.color, value: rows.filter((r) => r.sales_type.trim().toLowerCase() === t.key).reduce((s, r) => s + n0(r.amount), 0) }));

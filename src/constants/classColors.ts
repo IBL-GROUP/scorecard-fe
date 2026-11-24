@@ -7,7 +7,9 @@
 // DSR's 'Other / unmapped' grey. Same hex in light and dark, as in DSR.
 // (Before: a non-RAG set, A #2563EB, B #0891B2, C #C026D3, N #7C3AED.)
 
-const light = { A: '#3B5BDB', B: '#12A594', C: '#E8590C', N: '#8B5CF6', Others: '#6B7280' };
+// 24 Nov 2026 (user): no red or green outside +/− bars, so B (was teal #12A594) and C (was
+// orange #E8590C) moved to Sales Pulse's new categorical hues.
+const light = { A: '#3B5BDB', B: '#D69E2E', C: '#9C36B5', N: '#A0703C', Others: '#6B7280' };
 const dark = light;
 
 /** The class hues as hex, for SVG attributes (axis tick fills) that cannot read a CSS variable. */

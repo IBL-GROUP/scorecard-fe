@@ -4,9 +4,12 @@
 
 import { Box, Flex, Text } from '@chakra-ui/react';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import { clsColor } from '@/constants/classColors';
 import { colors } from '@/constants/theme';
+import { fetchRows } from '@/features/data';
+import { num, type TotalSkuRow } from '@/api/types';
 
 export const CLASS_LEGEND = ['A', 'B', 'C', 'N', 'Others'] as const;
 
@@ -40,13 +43,27 @@ export function ClassBadge({ cls, size = 20 }: { cls: string; size?: number }) {
 }
 
 /**
- * The class legend of the control panel, after Cover days: each class's marker and its name.
- * It only explains — classes are picked in the search box's Filters
- * menu. Shown by default; the eye hides it (remembered in this browser).
+ * The class legend of the control panel, after Cover days: each class's marker, its name and
+ * how many SKUs it holds (1.0's "No. of SKUs": /total-sku, the whole product range, not narrowed
+ * by any filter). It only explains — classes are picked in the search box's Filters menu.
+ * Shown by default; the eye hides it (remembered in this browser).
  */
 const LEGEND_KEY = 'sc2-class-legend';
 
+/** SKUs per class (A, B, C, N, Others), as 1.0's Benchmark card counts them. */
+function useClassSkuCounts() {
+  const q = useQuery({ queryKey: ['api', '/total-sku'], queryFn: () => fetchRows('/total-sku') as Promise<TotalSkuRow[]>, staleTime: 30 * 60_000 });
+  const counts: Record<string, number> = {};
+  for (const r of q.data ?? []) {
+    const t = (r.classification ?? '').trim();
+    const c = t === '' || t === 'Other' || t === 'Others' ? 'Others' : t;
+    counts[c] = (counts[c] ?? 0) + (num(r.count) ?? 0);
+  }
+  return q.data ? counts : null;
+}
+
 export function ClassLegend() {
+  const counts = useClassSkuCounts();
   const [shown, setShown] = useState(() => {
     try {
       return localStorage.getItem(LEGEND_KEY) !== 'hidden';
@@ -67,11 +84,16 @@ export function ClassLegend() {
     <Flex align="center" flexShrink={0} gap={3} aria-label="Classes">
       {shown &&
         CLASS_LEGEND.map((c) => (
-          <Flex key={c} align="center" gap="6px">
+          <Flex key={c} align="center" gap="6px" title={counts ? `${className(c)}: ${(counts[c] ?? 0).toLocaleString('en-US')} SKUs` : className(c)}>
             <ClassBadge cls={c} size={18} />
             <Text fontSize="13px" color={colors.bodyText} whiteSpace="nowrap">
               {className(c)}
             </Text>
+            {counts && (
+              <Text as="span" fontSize="12px" fontWeight={700} color={clsColor(c)} bg={colors.sunkBg} px="6px" borderRadius="10px" lineHeight="18px" fontVariantNumeric="tabular-nums">
+                {(counts[c] ?? 0).toLocaleString('en-US')}
+              </Text>
+            )}
           </Flex>
         ))}
       <Box

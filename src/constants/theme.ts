@@ -8,7 +8,7 @@ import { compact } from '@/features/format';
 // Colours carry meaning, the same way everywhere:
 //   Sales        = Cobalt          → `sales` / `current`
 //   earlier sales (B period) = light Cobalt → `prior` (same measure, earlier)
-//   same days last year = muted red (#BA5A5A) → `lastYear` (the third comparison bar)
+//   same days last year = amber (#D69E2E; red and green are kept for +/− bars only) → `lastYear` (the third comparison bar)
 //   Target       = Teal            → `target` (lines, bars, the 100% marker)
 //   good / close / behind = green / amber / red, always with ▲▼ or a label
 
@@ -55,7 +55,7 @@ const light: Palette = {
   navbarActive: '#E9EDF8',
 
   prior: '#AFBCE6',
-  lastYear: '#BA5A5A',
+  lastYear: '#D69E2E',
   current: '#233A87',
 
   gridStroke: '#E7E9ED',
@@ -127,7 +127,7 @@ const dark: Palette = {
   navbarActive: '#2B2926',
 
   prior: '#5E5A6E',
-  lastYear: '#BA5A5A',
+  lastYear: '#E0B04F',
   current: '#8EA2F0',
 
   gridStroke: '#2A2825',
@@ -169,7 +169,8 @@ const baseCss = `:root{${block(light)}color-scheme:light}html.dark{${block(dark)
 const motionCss = `:root{--sp-m-100:100ms;--sp-m-150:150ms;--sp-m-200:200ms;--sp-m-300:300ms;--sp-ease-out:cubic-bezier(.16,1,.3,1);--sp-ease-in:cubic-bezier(.7,0,.84,0);--sp-ease-spring:cubic-bezier(.34,1.4,.64,1)}
 :where(button:not(:disabled),[role=button],[role=radio],[role=tab],[role=menuitemradio],a[href]){transition:scale var(--sp-m-300) var(--sp-ease-spring),background-color var(--sp-m-150) ease-out,color var(--sp-m-150) ease-out,border-color var(--sp-m-150) ease-out,box-shadow var(--sp-m-150) ease-out,opacity var(--sp-m-150) ease-out}
 :where(button:not(:disabled),[role=button],[role=radio],[role=tab],[role=menuitemradio],a[href]):active{scale:.97;transition:scale var(--sp-m-100) var(--sp-ease-in)}
-.sp-rn{display:inline-flex;white-space:pre;font-variant-numeric:tabular-nums}
+.sp-rn{display:inline-flex;align-items:flex-end;white-space:pre;font:inherit;font-variant-numeric:tabular-nums;line-height:1.15em;vertical-align:bottom}
+.sp-rn>span{display:inline-block;height:1.15em;line-height:1.15em}
 .sp-rn-col{display:inline-block;height:1.15em;line-height:1.15em;overflow:hidden;vertical-align:bottom}
 .sp-rn-strip{display:block;transition:transform var(--sp-m-300) var(--sp-ease-out)}
 .sp-rn-strip>span{display:block;height:1.15em}

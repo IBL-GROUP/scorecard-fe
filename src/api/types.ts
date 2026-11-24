@@ -15,6 +15,18 @@ export type ClassCode = 'A' | 'B' | 'C' | 'N' | 'Others';
 export const CLASSES: ClassCode[] = ['A', 'B', 'C', 'N', 'Others'];
 export const RATED_CLASSES: Exclude<ClassCode, 'Others'>[] = ['A', 'B', 'C', 'N'];
 
+/**
+ * Class order everywhere: A, B, C, N, then any other code the data brings
+ * (e.g. DC) A→Z, and Others last. An unknown code used to sort first.
+ */
+export const byClassCode = (a: string, b: string) => {
+  const rank = (c: string) => (c === 'Others' ? 2 : (RATED_CLASSES as string[]).includes(c) ? 0 : 1);
+  const ra = rank(a);
+  const rb = rank(b);
+  if (ra !== rb) return ra - rb;
+  return ra === 0 ? (RATED_CLASSES as string[]).indexOf(a) - (RATED_CLASSES as string[]).indexOf(b) : a.localeCompare(b);
+};
+
 export interface SalesSummaryRow { classification: string; sku: Num; amount: Num }
 /** /sales-summary/by-sales-type: sales split by the view's sales type ('Rd to trade', 'Ibl to trade', 'Pharma Healthcare to trade'). */
 export interface SalesTypeRow { sales_type: string; amount: Num }
