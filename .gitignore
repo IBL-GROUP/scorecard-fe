@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+.env
+.env.*
+
 # Claude Code
 .claude/settings.local.json
 
