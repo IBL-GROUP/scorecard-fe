@@ -24,6 +24,7 @@ import { ChartCard } from '@/ui/chart-card';
 import { RowBars } from '@/ui/row-bars';
 import { InfoTip, Overlay } from '@/ui/overlay';
 import { AnimatedValue } from '@/ui/motion';
+import { ClassBadge } from '@/ui/class-badge';
 import { titleCase } from '@/utils/titleCase';
 import { ReviewSheet } from '@/ui/pulse/ReviewSheet';
 import type { AnalyzePoint } from '@/ui/analyze';
@@ -224,7 +225,7 @@ export function PulsePage({ data }: { data: DashboardData }) {
   return (
     <Grid templateColumns={{ base: '1fr', lg: 'minmax(0, 1fr) 300px' }} gap={3} h={{ lg: '100%' }} minH={0}>
       <Flex direction="column" gap={3} minH={0} minW={0}>
-        <Band data={data} m={m} onReview={m.loading ? undefined : () => setReviewOpen(true)} />
+        <Band m={m} onReview={m.loading ? undefined : () => setReviewOpen(true)} />
         <Grid templateColumns={{ base: '1fr', lg: 'minmax(0, 1fr) minmax(0, 1.1fr)' }} gap={3} flex={1} minH={0}>
           <Health m={m} />
           <ServiceGrid m={m} />
@@ -243,7 +244,7 @@ const BAND_BAD = '#F4A39B';
 const BAND_INK: Record<Rag, string> = { green: BAND_GOOD, amber: BAND_WARN, red: BAND_BAD };
 
 /** The supply chain at a glance, numbers first (Sales Pulse's Band). */
-function Band({ data, m, onReview }: { data: DashboardData; m: Model; onReview?: () => void }) {
+function Band({ m, onReview }: { m: Model; onReview?: () => void }) {
   const { s, sv, f, wc, working } = m;
   const tip = (h: HelpText | undefined) =>
     h && (
@@ -251,10 +252,6 @@ function Band({ data, m, onReview }: { data: DashboardData; m: Model; onReview?:
         <InfoTip help={h} size={13} />
       </Box>
     );
-  const red = m.health.filter((h) => h.rag === 'red').length;
-  const amber = m.health.filter((h) => h.rag === 'amber').length;
-  const overall: Rag = red ? 'red' : amber ? 'amber' : 'green';
-  const statusText = red ? `${red} Below Target` : amber ? `${amber} To Watch` : 'All On Target';
   const ink = (r: Rag | null) => (r ? BAND_INK[r] : colors.bandInk);
   // Working capital bar: finished goods (its excess hatched at the end), WIP, RMPM.
   const share = (n: number) => (working > 0 ? (n / working) * 100 : 0);
@@ -262,23 +259,17 @@ function Band({ data, m, onReview }: { data: DashboardData; m: Model; onReview?:
 
   return (
     <Box bg={colors.band} color={colors.bandInk} borderRadius="6px" px={5} py={4} flexShrink={0} data-kpi="EX-04 EX-05 EX-06 EX-07 EX-08">
-      <Flex align="center" gap={3} mb={3} wrap="wrap">
-        <Text fontSize="13px" color={colors.bandMuted}>
-          {rangeLabel(data.window)}
-        </Text>
-        {m.loading ? (
-          <Skeleton h="22px" w="110px" />
-        ) : (
-          <Box px="10px" py="2px" borderRadius="full" fontSize="13px" fontWeight={700} color={BAND_INK[overall]} border="1px solid" borderColor={BAND_INK[overall]}>
-            {statusText}
-          </Box>
-        )}
-        {tip(PULSE_HELP.status)}
+      {/* The Analyze button sits in the metrics row, right after Working Capital (user, 25 Nov 2026). */}
+      <Grid templateColumns={{ base: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr)) auto' }} gap={4} alignItems="center" className="sp-stagger">
+        <BandNum label="Service Level" value={pct1(sv.level)} valueColor={ink(rag(sv.level, 'serviceLevel'))} help={tip(helpFor('EX-05'))} />
+        <BandNum label="Order Fill Rate" value={pct1(f.pct)} valueColor={ink(rag(f.pct, 'fillRate'))} help={tip(helpFor('EX-06'))} />
+        <BandNum label="Days Of Cover" value={dayText(s.totalCd)} valueColor={ink(rag(s.coverage, 'coverage'))} help={tip(helpFor('EX-04'))} />
+        <BandNum label="Working Capital" value={pkr(working)} valueColor={colors.bandTarget} help={tip(helpFor('EX-07'))} />
         {onReview && (
           <Box
             as="button"
-            ml="auto"
             onClick={onReview}
+            justifySelf="start"
             display="inline-flex"
             alignItems="center"
             gap={1}
@@ -287,6 +278,7 @@ function Band({ data, m, onReview }: { data: DashboardData; m: Model; onReview?:
             borderRadius="4px"
             fontSize="13px"
             fontWeight={600}
+            whiteSpace="nowrap"
             bg="rgba(255,255,255,.10)"
             color={colors.bandInk}
             border="1px solid rgba(255,255,255,.22)"
@@ -296,13 +288,6 @@ function Band({ data, m, onReview }: { data: DashboardData; m: Model; onReview?:
             Analyze The Supply Chain <FiArrowRight size={13} />
           </Box>
         )}
-      </Flex>
-      <Grid templateColumns={{ base: 'repeat(2, minmax(0, 1fr))', md: 'repeat(5, minmax(0, 1fr))' }} gap={4} className="sp-stagger">
-        <BandNum label="Service Level" value={pct1(sv.level)} valueColor={ink(rag(sv.level, 'serviceLevel'))} sub={`${full(sv.below)} Of ${full(sv.above + sv.below)} SKUs Below Threshold`} help={tip(helpFor('EX-05'))} />
-        <BandNum label="Order Fill Rate" value={pct1(f.pct)} valueColor={ink(rag(f.pct, 'fillRate'))} sub={`${full(f.unfulfilled)} Units Not Dispatched`} help={tip(helpFor('EX-06'))} />
-        <BandNum label="Days Of Cover" value={dayText(s.totalCd)} valueColor={ink(rag(s.coverage, 'coverage'))} sub={`Benchmark ${dayText(s.wBm)} · ${pct1(s.coverage)}`} help={tip(helpFor('EX-04'))} />
-        <BandNum label="Excess Stock" value={pkr(s.excess.value)} valueColor={ink(rag(s.excess.pct, 'excessPct'))} sub={`${pct1(s.excess.pct)} Of Finished Goods`} help={tip(helpFor('EX-08'))} />
-        <BandNum label="Working Capital" value={pkr(working)} valueColor={colors.bandTarget} sub="Finished Goods + WIP + RMPM, At Cost" help={tip(helpFor('EX-07'))} />
       </Grid>
       <Box mt={4}>
         <Flex h="8px" borderRadius="4px" bg={colors.bandLine} overflow="hidden">
@@ -315,7 +300,7 @@ function Band({ data, m, onReview }: { data: DashboardData; m: Model; onReview?:
           <Box w={`${share(wc.wip)}%`} bg={colors.bandTarget} title={`WIP ${money(wc.wip)}`} />
           <Box w={`${share(wc.rmpm)}%`} bg={colors.bandMuted} title={`RMPM ${money(wc.rmpm)}`} />
         </Flex>
-        <Flex justify="space-between" mt="6px" fontSize="12px" color={colors.bandMuted} gap={3} wrap="wrap" fontVariantNumeric="tabular-nums">
+        <Flex justify="space-between" align="center" mt="6px" fontSize="12px" color={colors.bandMuted} gap={3} wrap="wrap" fontVariantNumeric="tabular-nums">
           <HStack gap={3}>
             {(
               [
@@ -339,7 +324,7 @@ function Band({ data, m, onReview }: { data: DashboardData; m: Model; onReview?:
             <Text as="span" color={colors.bandInk} fontWeight={600}>
               {money(excess)}
             </Text>{' '}
-            Excess Could Be Released
+            Excess Stock
           </Text>
         </Flex>
       </Box>
@@ -347,7 +332,7 @@ function Band({ data, m, onReview }: { data: DashboardData; m: Model; onReview?:
   );
 }
 
-function BandNum({ label, value, sub, valueColor, help }: { label: string; value: string; sub: string; valueColor?: string; help: React.ReactNode }) {
+function BandNum({ label, value, valueColor, help }: { label: string; value: string; valueColor?: string; help: React.ReactNode }) {
   return (
     <Box minW={0}>
       <HStack gap="6px">
@@ -358,9 +343,6 @@ function BandNum({ label, value, sub, valueColor, help }: { label: string; value
       </HStack>
       <Text fontSize="22px" fontWeight={700} color={valueColor ?? colors.bandInk} fontVariantNumeric="tabular-nums" lineHeight="1.25">
         <AnimatedValue value={value} />
-      </Text>
-      <Text fontSize="11px" color={colors.bandMuted} truncate title={sub}>
-        {sub}
       </Text>
     </Box>
   );
@@ -402,11 +384,12 @@ function Health({ m }: { m: Model }) {
   );
 }
 
-/** Sales Pulse's Achievement grid, for service: the lowest branches × class, each cell opening that branch's class. */
+/** Sales Pulse's Achievement grid, for service: every branch × class (lowest first, scrolling across), each cell opening that branch's class. */
 function ServiceGrid({ m }: { m: Model }) {
   const detail = useDetail();
-  const MAX_ROWS = 6;
-  const rows = m.sv.matrix.filter((r) => r.avg != null).slice(0, MAX_ROWS);
+  // Every branch, lowest first; the grid scrolls across when they do not fit (user, 25 Nov 2026).
+  // A branch with no service figures sorts first in the matrix; it goes last here.
+  const rows = [...m.sv.matrix.filter((r) => r.avg != null), ...m.sv.matrix.filter((r) => r.avg == null)];
   const { green, amber } = kpiThresholds.serviceLevel;
   const look = (v: number | null) =>
     v == null ? { bg: colors.sunkBg, fg: colors.mutedText } : v >= green ? { bg: colors.goodSoft, fg: colors.good } : v >= amber ? { bg: colors.warnSoft, fg: colors.warn } : { bg: colors.badSoft, fg: colors.bad };
@@ -416,9 +399,6 @@ function ServiceGrid({ m }: { m: Model }) {
         <Text fontSize="16px" fontWeight={700} color={colors.cardAccent} whiteSpace="nowrap">
           Service Grid
         </Text>
-        <Text fontSize="12px" color={colors.mutedText} truncate>
-          lowest branches · click a cell to open it
-        </Text>
         <Box ml="auto">
           <InfoTip help={PULSE_HELP.serviceGrid} />
         </Box>
@@ -426,26 +406,33 @@ function ServiceGrid({ m }: { m: Model }) {
       {m.st.svc.isLoading && !rows.length ? (
         <Skeleton flex={1} borderRadius="4px" />
       ) : (
-        <Box flex={1} minH={0} display="grid" gridTemplateColumns={`minmax(90px, 1.3fr) repeat(${RATED_CLASSES.length + 1}, minmax(0, 1fr))`} gridTemplateRows={`auto repeat(${rows.length}, minmax(0, 1fr))`} gap="4px">
+        // Branches across, classes down (user, 25 Nov 2026); each class row led by its badge.
+        <Box flex={1} minH={0} overflowX="auto" pb="4px" display="grid" gridTemplateColumns={`minmax(64px, auto) repeat(${rows.length}, minmax(76px, 1fr))`} gridTemplateRows={`auto repeat(${RATED_CLASSES.length + 1}, minmax(0, 1fr))`} gap="4px">
           <Box />
-          {[...RATED_CLASSES.map((c) => `Class ${c}`), 'Average'].map((c) => (
-            <Text key={c} fontSize="11px" fontWeight={600} color={colors.mutedText} textAlign="center" truncate px={1}>
-              {c}
+          {rows.map((r) => (
+            <Text key={r.branch} fontSize="11px" fontWeight={600} color={colors.mutedText} textAlign="center" truncate px={1} title={r.branch}>
+              {r.branch}
             </Text>
           ))}
-          {rows.map((r) => (
-            <Box key={r.branch} display="contents">
-              <Text fontSize="13px" fontWeight={600} color={colors.darkText} truncate title={r.branch} alignSelf="center">
-                {r.branch}
-              </Text>
-              {[...r.cells, r.avg].map((v, i) => {
-                const cls = RATED_CLASSES[i];
+          {[...RATED_CLASSES, null].map((cls, i) => (
+            <Box key={cls ?? 'avg'} display="contents">
+              <Flex align="center" justify="flex-start">
+                {cls ? (
+                  <ClassBadge cls={cls} size={20} />
+                ) : (
+                  <Text fontSize="13px" fontWeight={600} color={colors.darkText}>
+                    Average
+                  </Text>
+                )}
+              </Flex>
+              {rows.map((r) => {
+                const v = cls ? r.cells[i] : r.avg;
                 const st = look(v);
                 const opens = v != null;
                 return (
                   <Box
                     as="button"
-                    key={cls ?? 'avg'}
+                    key={r.branch}
                     onClick={() => opens && (cls ? detail.open({ kind: 'classBranch', cls, branch: r.branch }) : detail.open({ kind: 'branch', branch: r.branch }))}
                     title={cls ? `${r.branch} × Class ${cls}` : `${r.branch}, all classes`}
                     bg={st.bg}
@@ -482,9 +469,6 @@ function ServiceGrid({ m }: { m: Model }) {
             <Text>{l}</Text>
           </HStack>
         ))}
-        <Text ml="auto">
-          Lowest {rows.length} Of {m.sv.matrix.length} Branches
-        </Text>
       </Flex>
     </Flex>
   );

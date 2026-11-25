@@ -278,8 +278,8 @@ export const PULSE_HELP = {
     'Each bar is the KPI’s value; the tick is its target; the colour is its band (green on target, amber watch, red below). A row opens the KPI on its tab.',
   ),
   serviceGrid: h(
-    'The branches with the lowest service level, class by class.',
-    'SKU-% per branch and class from /service-measure; the six lowest branches by average. Green ≥ 90%, amber 80–89.9%, red < 80%. A cell opens that class at that branch.',
+    "Every branch's service level, class by class, lowest first.",
+    'SKU-% per branch and class from /service-measure; all branches, lowest average first (scroll across for the rest). Green ≥ 90%, amber 80–89.9%, red < 80%. A cell opens that class at that branch.',
   ),
 } satisfies Record<string, HelpText>;
 

@@ -88,7 +88,7 @@ export function ClassLegend() {
           <Flex key={c} align="center" gap="6px" title={counts ? `${className(c)}: ${(counts[c] ?? 0).toLocaleString('en-US')} SKUs` : className(c)}>
             <ClassBadge cls={c} size={18} />
             <Text fontSize="13px" color={colors.bodyText} whiteSpace="nowrap">
-              {className(c)}
+              {c === 'Others' ? 'Other' : c}
             </Text>
             {counts && (
               <Text as="span" fontSize="12px" fontWeight={700} color={clsColor(c)} bg={colors.sunkBg} px="6px" borderRadius="10px" lineHeight="18px" fontVariantNumeric="tabular-nums">

@@ -326,10 +326,8 @@ function StockByClass({ d, basis, onPick }: { d: ReturnType<typeof stock> & { ra
   // not the whole item list: with "Other" picked it was still all 311.
   const totalSkus = rows.reduce((a, r) => a + (skus(r.cls) ?? 0), 0);
   const total = d.total;
-  const tpl = 'minmax(96px, 1.3fr) repeat(7, minmax(0, 1fr))';
-  const head = ['Name', 'Benchmark', 'Threshold', 'SKUs', `Cover ${basis}`, 'Coverage', `Value ${basis}`, 'Units'];
-  const coverage = (cd: number | null, bm: number | null) => (cd != null && bm ? (cd / bm) * 100 : null);
-  const tone = (c: number | null) => (c == null ? colors.mutedText : c < 60 || c > 150 ? colors.bad : c >= 80 && c <= 120 ? colors.good : colors.warn);
+  const tpl = 'minmax(96px, 1.3fr) repeat(6, minmax(0, 1fr))';
+  const head = ['Name', 'Benchmark', 'Threshold', 'SKUs', 'Cover', 'Value', 'Units'];
   const totalCover = basis === 'TP' ? d.totalCd : num(total?.cover_days_efp ?? null);
   // BreakdownTable's cell, row and header styles.
   const cell = (isTotal: boolean) => ({
@@ -369,16 +367,12 @@ function StockByClass({ d, basis, onPick }: { d: ReturnType<typeof stock> & { ra
             <Box {...cell(true)} color={colors.sales}>
               {days(totalCover)}
             </Box>
-            <Box {...cell(true)} color={tone(d.coverage)}>
-              {pct(d.coverage)}
-            </Box>
             <Box {...cell(true)}>{fmt(num(basis === 'TP' ? total?.inv_val ?? null : total?.inv_val_efp ?? null) ?? 0)}</Box>
             <Box {...cell(true)}>{(num(total?.quantity ?? null) ?? 0).toLocaleString('en-US')}</Box>
           </Box>
         </Box>
         {rows.map((r) => {
           const cd = basis === 'TP' ? r.cd : r.cdEfp;
-          const cov = coverage(r.cd, r.bm);
           const below = r.th != null && r.cd != null && r.cd < r.th;
           return (
             <Box
@@ -406,9 +400,6 @@ function StockByClass({ d, basis, onPick }: { d: ReturnType<typeof stock> & { ra
               <Box {...cell(false)}>{skus(r.cls)?.toLocaleString('en-US') ?? '—'}</Box>
               <Box {...cell(false)} fontWeight={600} color={below ? colors.bad : colors.sales} title={below ? 'Below threshold' : undefined}>
                 {days(cd)}
-              </Box>
-              <Box {...cell(false)} fontWeight={600} color={tone(cov)} title="TP cover days ÷ benchmark">
-                {pct(cov)}
               </Box>
               <Box {...cell(false)}>{fmt(basis === 'TP' ? r.invTp : r.invCost)}</Box>
               <Box {...cell(false)}>{r.qty.toLocaleString('en-US')}</Box>
@@ -466,10 +457,9 @@ export function SummaryPage({ data }: { data: DashboardData }) {
   const dailyTarget = num(st.total?.daily_target ?? null);
   const invTarget = st.wBm != null && dailyTarget ? st.wBm * dailyTarget : null;
   const coverInk = st.coverage == null ? undefined : rag(st.coverage, 'coverage') === 'green' ? colors.good : colors.warn;
-  const longClasses = st.excessByClass.filter((c) => c.value > 0).sort((a, b) => b.value - a.value).map((c) => clsName(c.cls));
   const tiles: KpiTileProps[] = [
     {
-      label: 'Sales TP',
+      label: 'Sales',
       value: fmt(sales.total),
       help: helpFor('RV-01'),
       isLoading: sSales.isLoading,
@@ -477,7 +467,7 @@ export function SummaryPage({ data }: { data: DashboardData }) {
       split: split.map((s) => ({ label: s.label.replace(/^Rd /, 'RD ').replace(/^Ibl /, 'IBL '), value: s.value, text: fmt(s.value), color: s.color })),
     },
     {
-      label: 'Inventory TP',
+      label: 'Inventory',
       value: fmt(invTp),
       help: SUMMARY_HELP.inventory,
       isLoading: sStock.isLoading,
@@ -492,7 +482,7 @@ export function SummaryPage({ data }: { data: DashboardData }) {
       ),
     },
     {
-      label: 'Inventory target TP',
+      label: 'Inventory target',
       value: invTarget == null ? '—' : fmt(invTarget),
       help: SUMMARY_HELP.inventoryTarget,
       isLoading: sStock.isLoading,
@@ -503,13 +493,12 @@ export function SummaryPage({ data }: { data: DashboardData }) {
           <>
             <Text as="span" fontWeight={600} color={coverInk}>
               {invTp >= invTarget ? `${fmt(invTp - invTarget)} Over` : `${fmt(invTarget - invTp)} Under`}
-            </Text>{' '}
-            · Inventory Is {pct(st.coverage)} Of It
+            </Text>
           </>
         ),
     },
     {
-      label: 'Cover days TP',
+      label: 'Cover days',
       value: st.totalCd == null ? '—' : fmt1(st.totalCd),
       valueSuffix: 'days',
       help: helpFor('IN-14'),
@@ -521,35 +510,6 @@ export function SummaryPage({ data }: { data: DashboardData }) {
             {pct(st.coverage)} Of Benchmark
           </Text>
         </>
-      ),
-    },
-    {
-      label: 'Excess stock cost',
-      value: fmt(st.excess.value),
-      help: helpFor('IN-04'),
-      isLoading: sStock.isLoading,
-      caption: (
-        <>
-          <Text as="span" fontWeight={600} color={rag(st.excess.pct, 'excessPct') === 'green' ? colors.good : colors.warn}>
-            {pct(st.excess.pct)} Of Finished Goods
-          </Text>
-          {longClasses.length > 0 && <> · {longClasses.join(', ')}</>}
-        </>
-      ),
-    },
-    {
-      label: 'Stock-out risk TP',
-      value: fmt(st.shortfallValue),
-      help: helpFor('IN-05'),
-      isLoading: sStock.isLoading,
-      caption: st.shortfall.length ? (
-        <Text as="span" fontWeight={600} color={colors.bad}>
-          {st.shortfall.map((c) => clsName(c.cls)).join(', ')} Below Threshold
-        </Text>
-      ) : (
-        <Text as="span" fontWeight={600} color={colors.good}>
-          No Class Below Its Threshold
-        </Text>
       ),
     },
   ];
@@ -593,7 +553,7 @@ export function SummaryPage({ data }: { data: DashboardData }) {
     // On a desktop window the tab fills the screen and does not scroll (as Sales Pulse 2.0);
     // a card too short for its content scrolls inside, and ⤢ opens it full size.
     <Flex direction="column" gap={3} h={fit ? '100%' : undefined} minH={0}>
-      <Grid templateColumns={{ base: '1fr', md: 'repeat(3, 1fr)', xl: 'repeat(6, minmax(0, 1fr))' }} gap={3} flexShrink={0} className="sp-stagger">
+      <Grid templateColumns={{ base: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(4, minmax(0, 1fr))' }} gap={3} w="100%" flexShrink={0} className="sp-stagger">
         {tiles.map((t) => (
           <KpiTile key={t.label} {...t} />
         ))}

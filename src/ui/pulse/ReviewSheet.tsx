@@ -160,7 +160,7 @@ function Body({ onClose, periodLabel, m }: { onClose: () => void; periodLabel: s
         <Flex direction="column" gap={4} className="sp-stagger">
           {/* A. Where we stand */}
           <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }} gap={3} className="sp-stagger">
-            <Stat label="Service Level" value={pct1(sv.level)} valueInk={ink(rag(sv.level, 'serviceLevel'))} sub={`${full(sv.below)} Of ${full(sv.above + sv.below)} SKUs Below Threshold`} help={REVIEW_HELP.service} tone="sales" />
+            <Stat label="Service Level" value={pct1(sv.level)} valueInk={ink(rag(sv.level, 'serviceLevel'))} sub={`${full(sv.above)} Of ${full(sv.above + sv.below)} SKUs Above Threshold`} help={REVIEW_HELP.service} tone="sales" />
             <Stat label="Order Fill Rate" value={pct1(f.pct)} valueInk={ink(rag(f.pct, 'fillRate'))} sub={`${full(f.unfulfilled)} Of ${full(f.ordered)} Units Not Dispatched`} help={REVIEW_HELP.fill} tone="sales" />
             <Stat label="Days Of Cover" value={dayText(s.totalCd)} valueInk={ink(rag(s.coverage, 'coverage'))} sub={`Benchmark ${dayText(s.wBm)} · ${pct1(s.coverage)}`} help={REVIEW_HELP.cover} tone="target" />
             <Stat label="Working Capital" value={money(working)} sub={`FG ${money(wc.fg)} · WIP ${money(wc.wip)} · RMPM ${money(wc.rmpm)}`} help={REVIEW_HELP.wc} tone="target" />
