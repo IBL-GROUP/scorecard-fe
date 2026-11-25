@@ -51,7 +51,7 @@ export function ClassBadge({ cls, size = 20 }: { cls: string; size?: number }) {
 const LEGEND_KEY = 'sc2-class-legend';
 
 /** SKUs per class (A, B, C, N, Others), as 1.0's Benchmark card counts them. */
-function useClassSkuCounts() {
+export function useClassSkuCounts() {
   const q = useQuery({ queryKey: ['api', '/total-sku'], queryFn: () => fetchRows('/total-sku') as Promise<TotalSkuRow[]>, staleTime: 30 * 60_000 });
   const counts: Record<string, number> = {};
   for (const r of q.data ?? []) {
@@ -83,7 +83,8 @@ export function ClassLegend() {
   return (
     <Flex align="center" flexShrink={0} gap={3} aria-label="Classes">
       {shown &&
-        CLASS_LEGEND.map((c) => (
+        // Other only when it has SKUs (user, 25 Nov 2026): an empty "Other 0" is noise.
+        CLASS_LEGEND.filter((c) => c !== 'Others' || (counts?.Others ?? 0) > 0).map((c) => (
           <Flex key={c} align="center" gap="6px" title={counts ? `${className(c)}: ${(counts[c] ?? 0).toLocaleString('en-US')} SKUs` : className(c)}>
             <ClassBadge cls={c} size={18} />
             <Text fontSize="13px" color={colors.bodyText} whiteSpace="nowrap">

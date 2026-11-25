@@ -1,1 +1,1 @@
-export { Overlay, InfoTip, ExpandedContext, useExpanded } from './Overlay';
+export { Overlay, InfoTip, ExpandedContext, useExpanded, setPeriodNames, usePeriodNames, fillPeriods } from './Overlay';

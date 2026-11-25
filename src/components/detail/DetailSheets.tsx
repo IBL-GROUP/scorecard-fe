@@ -733,7 +733,7 @@ function RmpmBody({ material, plant, data }: { material: string; plant: string; 
       </StatGrid>
       <Section title="By Stock State" hint="On-hold states in red when there is any">
         <Rows
-          head={['Stock State', 'Value', 'Share']}
+          head={['Stock State', 'Value', 'Contribution']}
           total={[pkr(total), '100%']}
           rows={K.RMPM_STATES.map((st) => {
             const v = n0(r[st.key]);

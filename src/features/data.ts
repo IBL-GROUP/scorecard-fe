@@ -26,7 +26,7 @@ import {
   todayIso,
   type Window,
 } from './period';
-import { useStore } from './store';
+import { useStore, type Filters } from './store';
 import { SECTION_OF, TABS, type Section, type TabKey } from './tabs';
 
 export interface Spec {
@@ -65,7 +65,25 @@ export function isSourcePending(error: unknown): boolean {
   return res?.status === 503 && res.data?.code === 'SOURCE_PENDING';
 }
 
-/** Effective SKU list: hand-picked SKUs win; else the chosen divisions' SKUs (FR-FILT-006). */
+/** The product hierarchy's levels on an item row, outermost first. */
+export const HIERARCHY = [
+  { key: 'division', col: 'division' },
+  { key: 'bu', col: 'business_unit' },
+  { key: 'team', col: 'team' },
+  { key: 'brand', col: 'brands' },
+] as const;
+
+/**
+ * The items under the chosen Division › BU › Team › Brand values, down to (not
+ * including) `upTo`; null when none of those levels is chosen.
+ */
+export function hierarchyItems(items: FilterItemRow[], filters: Filters, upTo?: (typeof HIERARCHY)[number]['key']): FilterItemRow[] | null {
+  const end = upTo ? HIERARCHY.findIndex((h) => h.key === upTo) : HIERARCHY.length;
+  const levels = HIERARCHY.slice(0, end).filter((h) => filters[h.key].length);
+  if (!levels.length) return null;
+  return items.filter((i) => levels.every((h) => filters[h.key].includes(i[h.col] ?? 'Others')));
+}
+
 function useFilterOptions(enabled: boolean) {
   const items = useQuery({ queryKey: ['api', '/filters'], queryFn: () => fetchRows('/filters') as Promise<FilterItemRow[]>, enabled, staleTime: 30 * 60_000 });
   const branches = useQuery({ queryKey: ['api', '/filters/branches'], queryFn: () => fetchRows('/filters/branches') as Promise<FilterBranchRow[]>, enabled, staleTime: 30 * 60_000 });
@@ -204,15 +222,17 @@ export function useDashboardData(active: TabKey) {
   const { window: w, compare, filters } = st;
   const options = useFilterOptions(st.can('SUMMARY') || st.can('SERVICE_MEASURE'));
 
-  // FR-FILT-006: divisions expand to their SKU codes; Division itself is never sent.
+  // FR-FILT-006: hand-picked SKUs win; else Division › BU › Team › Brand expand to their
+  // SKU codes (vw_items_class). The hierarchy itself is never sent.
   const sku = useMemo(
-    () =>
-      filters.sku.length
-        ? filters.sku
-        : filters.division.length
-          ? options.items.filter((i) => i.division && filters.division.includes(i.division)).map((i) => i.item_code)
-          : [],
-    [filters.sku, filters.division, options.items],
+    () => {
+      if (filters.sku.length) return filters.sku;
+      const picked = hierarchyItems(options.items, filters);
+      if (!picked) return [];
+      // Picks with no SKU in common show nothing, not everything (an empty list means "all").
+      return picked.length ? picked.map((i) => i.item_code) : ['(none)'];
+    },
+    [filters, options.items],
   );
   // Branches: hand-picked ones win; otherwise the branches of the chosen zones and regions
   // (the API filters by branch; a zone or region is the set of its branches).

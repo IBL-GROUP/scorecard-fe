@@ -1,5 +1,5 @@
 import { Box, Flex, Text } from '@chakra-ui/react';
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { FiX } from 'react-icons/fi';
 import { colors } from '@/constants/theme';
@@ -96,9 +96,38 @@ export function Overlay({ title, subtitle, onClose, children, width = 'min(1200p
  */
 let closeOpenTip: (() => void) | null = null;
 
+/**
+ * The periods on screen by name ("Nov '26", "Oct '26"), so a help card never
+ * says "A" or "B" (user, 25 Nov 2026). The period picker publishes them; help
+ * texts carry {cur} and {prev}, filled in when the card opens.
+ */
+type PeriodNames = { cur?: string; prev?: string };
+let periodNames: PeriodNames = {};
+const periodListeners = new Set<() => void>();
+export function setPeriodNames(next: PeriodNames) {
+  if (next.cur === periodNames.cur && next.prev === periodNames.prev) return;
+  periodNames = next;
+  periodListeners.forEach((l) => l());
+}
+export const usePeriodNames = () =>
+  useSyncExternalStore(
+    (cb) => {
+      periodListeners.add(cb);
+      return () => periodListeners.delete(cb);
+    },
+    () => periodNames,
+  );
+/** "{cur}" / "{prev}" → the period names, or plain words when none is set. */
+export const fillPeriods = (text: string, names: PeriodNames) =>
+  text.replace(/\{cur\}/g, names.cur || 'the selected period').replace(/\{prev\}/g, names.prev || 'the comparison period');
+
+
 export function InfoTip({ text, help, size = 15 }: { text?: ReactNode; help?: HelpText; size?: number }) {
   const ref = useRef<HTMLSpanElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
+  const names = usePeriodNames();
+  const what = help ? fillPeriods(help.what, names) : '';
+  const source = help ? fillPeriods(help.source, names) : '';
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const W = 280;
 
@@ -124,12 +153,13 @@ export function InfoTip({ text, help, size = 15 }: { text?: ReactNode; help?: He
     };
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
     const onScroll = () => close();
-    document.addEventListener('mousedown', onDown);
+    // Capture phase: a sheet or dialog that stops the click still lets it close this.
+    document.addEventListener('mousedown', onDown, true);
     document.addEventListener('keydown', onKey);
     window.addEventListener('resize', onScroll);
     document.addEventListener('scroll', onScroll, true);
     return () => {
-      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('mousedown', onDown, true);
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', onScroll);
       document.removeEventListener('scroll', onScroll, true);
@@ -155,7 +185,7 @@ export function InfoTip({ text, help, size = 15 }: { text?: ReactNode; help?: He
       tabIndex={0}
       role="button"
       aria-expanded={!!pos}
-      aria-label={help ? `What is this? ${help.what}` : 'What is this?'}
+      aria-label={help ? `What is this? ${what}` : 'What is this?'}
       color={pos ? colors.brand : colors.mutedText}
       cursor="pointer"
       onClick={toggle}
@@ -222,11 +252,11 @@ export function InfoTip({ text, help, size = 15 }: { text?: ReactNode; help?: He
                 <Text fontWeight={700} mb="2px">
                   What It Means
                 </Text>
-                <Text mb={2}>{help.what}</Text>
+                <Text mb={2}>{what}</Text>
                 <Text fontWeight={700} mb="2px">
                   Where It Comes From
                 </Text>
-                <Text opacity={0.85}>{help.source}</Text>
+                <Text opacity={0.85}>{source}</Text>
               </>
             ) : (
               text

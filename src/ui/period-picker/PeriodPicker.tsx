@@ -4,6 +4,7 @@ import { FiCalendar, FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiIn
 import { Segmented } from '@/ui/segmented';
 import { colors } from '@/constants/theme';
 import { comparisonWindow } from '@/features/period';
+import { setPeriodNames } from '@/ui/overlay';
 
 // Sales Pulse 2.0's period picker (dsr-fe components/period-picker), the same
 // layout and behaviour, wired to Supply Chain Pulse's store through props.
@@ -321,6 +322,11 @@ export function PeriodPicker({ value, onApply, compareEnabled = true, dataDays, 
     ]
       .filter(Boolean)
       .join(' & ') || 'No Comparison';
+  // Help cards name these periods instead of "A" / "B" (see setPeriodNames).
+  const prevName = compareMode !== 'off' ? (isFullMonthToDate ? fmtMonth(monthOf(appliedB.start)) : rangeLabel(appliedB.start, appliedB.end)) : undefined;
+  useEffect(() => {
+    setPeriodNames({ cur: shortYear(buttonA), prev: prevName ? shortYear(prevName) : undefined });
+  }, [buttonA, prevName]);
 
   const recent = useMemo(() => {
     const out: string[] = [];
@@ -417,7 +423,7 @@ export function PeriodPicker({ value, onApply, compareEnabled = true, dataDays, 
             <Box px={6} py={5} minW={0}>
               <Flex justify="space-between" align="center" gap={3} mb={4} wrap="wrap">
                 <HStack gap={2}>
-                  <Badge letter="A" tone="a" />
+                  <Badge tone="a" />
                   <Text fontWeight={700} fontSize="15px" color={colors.darkText}>
                     Period
                   </Text>
@@ -631,7 +637,7 @@ export function PeriodPicker({ value, onApply, compareEnabled = true, dataDays, 
             {/* Compare B */}
             <Flex direction="column" px={5} py={5} gap={3} borderLeft={{ md: '1px solid' }} borderColor={colors.sunkBg}>
               <HStack gap={2} mb={1}>
-                <Badge letter="B" tone="b" />
+                <Badge tone="b" />
                 <Text fontWeight={700} fontSize="15px" color={colors.darkText}>
                   Compare With
                 </Text>
@@ -678,7 +684,7 @@ export function PeriodPicker({ value, onApply, compareEnabled = true, dataDays, 
             borderBottomRadius="8px"
           >
             <HStack gap={2} fontSize="13px" color={colors.bodyText} flex={1} minW={0} wrap="wrap">
-              <Badge letter="A" tone="a" />
+              <Badge tone="a" />
               <Text as="span" fontWeight={600} color={colors.darkText}>
                 {rangeLabel(start, end)}
               </Text>
@@ -692,7 +698,7 @@ export function PeriodPicker({ value, onApply, compareEnabled = true, dataDays, 
               )}
               {compare !== 'off' && (
                 <>
-                  <Badge letter="B" tone="b" />
+                  <Badge tone="b" />
                   <Text as="span" fontWeight={600} color={colors.darkText}>
                     {rangeLabel(b.start, b.end)}
                   </Text>
@@ -705,7 +711,7 @@ export function PeriodPicker({ value, onApply, compareEnabled = true, dataDays, 
               )}
               {ly && (
                 <>
-                  <Badge letter="LY" tone="ly" />
+                  <Badge tone="ly" />
                   <Text as="span" fontWeight={600} color={colors.darkText}>
                     {rangeLabel(lyR.start, lyR.end)}
                   </Text>
@@ -760,25 +766,23 @@ export function PeriodPicker({ value, onApply, compareEnabled = true, dataDays, 
   );
 }
 
-function Badge({ letter, tone }: { letter: string; tone: 'a' | 'b' | 'ly' }) {
+/**
+ * The period's colour, as the charts use it: selected period, comparison
+ * period, last year. A swatch, not a letter — the periods are named in words
+ * beside it (user, 25 Nov 2026: no "A" / "B").
+ */
+function Badge({ tone }: { tone: 'a' | 'b' | 'ly' }) {
   return (
     <Box
       as="span"
-      display="inline-flex"
-      alignItems="center"
-      justifyContent="center"
-      minW="18px"
-      px={letter.length > 1 ? '3px' : 0}
-      h="18px"
-      borderRadius="4px"
-      fontSize="11px"
-      fontWeight={700}
+      display="inline-block"
+      w="10px"
+      h="10px"
+      borderRadius="3px"
       bg={tone === 'a' ? colors.brand : tone === 'ly' ? colors.lastYear : colors.prior}
-      color={tone === 'a' ? colors.onBrand : colors.darkText}
       flexShrink={0}
-    >
-      {letter}
-    </Box>
+      aria-hidden="true"
+    />
   );
 }
 

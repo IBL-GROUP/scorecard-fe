@@ -323,7 +323,7 @@ function RdCharts({ rd, t, states }: { rd: ReturnType<typeof distribution>; t: R
             cols={[
               { key: 'q', label: 'Units' },
               { key: 'v', label: 'Value' },
-              { key: 's', label: 'Share' },
+              { key: 's', label: 'Contribution' },
             ]}
             rows={[
               { name: 'Current', label: 'Current (Reported Today)', cells: [{ text: full(rd.current.qty) }, { text: pkr(rd.current.value) }, { text: pct1(rd.current.share) }] },

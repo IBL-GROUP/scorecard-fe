@@ -29,7 +29,6 @@ import { ReviewSheet } from '@/ui/pulse/ReviewSheet';
 import type { AnalyzePoint } from '@/ui/analyze';
 
 const INK: Record<Rag, string> = { green: colors.good, amber: colors.warn, red: colors.bad };
-const RAG_WORD: Record<Rag, string> = { green: 'On Target', amber: 'Watch', red: 'Below' };
 const tabLabel = (k: TabKey) => TABS.find((t) => t.key === k)?.mid ?? k;
 const dayText = (n: number | null | undefined) => (n == null ? DASH : `${Math.round(n)} d`);
 
@@ -380,18 +379,13 @@ function Health({ m }: { m: Model }) {
           // The status reads in the note; the column stays blue (red and green are for +/− bars only).
           parts: [{ value: h.value ?? 0, color: colors.sales, label: titleCase(h.name) }],
           target: h.target,
-          note: (
-            <>
+          // No status word beside the figure (user, 25 Nov 2026): the note's colour carries it.
+          note: h.rag ? (
+            <Box as="span" color={INK[h.rag]} fontWeight={600}>
               {titleCase(h.note)}
-              {h.rag && (
-                <>
-                  {' · '}
-                  <Box as="span" color={INK[h.rag]} fontWeight={700}>
-                    {RAG_WORD[h.rag]}
-                  </Box>
-                </>
-              )}
-            </>
+            </Box>
+          ) : (
+            titleCase(h.note)
           ),
         }))}
         legend={[

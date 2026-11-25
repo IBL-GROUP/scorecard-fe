@@ -1,1 +1,1 @@
-export { ClassBadge, ClassLegend, classLetter, className, CLASS_LEGEND } from './ClassBadge';
+export { ClassBadge, ClassLegend, classLetter, className, CLASS_LEGEND, useClassSkuCounts } from './ClassBadge';

@@ -116,7 +116,15 @@ export interface RdStatusRow {
   last_stock_date: string | null;
   day_diff: Num;
 }
-export interface FilterItemRow { item_code: string; item_description: string; classification: string | null; division: string | null }
+export interface FilterItemRow {
+  item_code: string;
+  item_description: string;
+  classification: string | null;
+  division: string | null;
+  business_unit: string | null;
+  team: string | null;
+  brands: string | null;
+}
 export interface FilterBranchRow { hub_branch_code: Num; hub_branch_desc: string; storage_location_code: Num; zone?: string; region?: string }
 
 /** The 14 fixed Inventory Days / Service Measure branches (BR-SVC-001). */

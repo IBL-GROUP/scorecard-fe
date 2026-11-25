@@ -128,9 +128,13 @@ export function InventoryPage({ data }: { data: DashboardData }) {
     ],
   }));
   // Cover days by branch and class (IN-12), against each class's benchmark.
+  // The Other column only when Other holds cover somewhere (user, 25 Nov 2026).
+  const coverClasses = CLASSES.filter(
+    (c) => c !== 'Others' || invClasses.some((r) => r.cls === 'Others' && r.vals.some((v) => v != null && v > 0)),
+  );
   const coverRows = INV_BRANCHES.map((b, bi) => ({
     name: b.label,
-    cells: CLASSES.map((c) => {
+    cells: coverClasses.map((c) => {
       const v = invClasses.find((r) => r.cls === c)?.vals[bi];
       const bm = bmOf(c);
       const has = v != null && v > 0;
@@ -222,7 +226,7 @@ export function InventoryPage({ data }: { data: DashboardData }) {
                     { label: 'outside', color: colors.bad },
                   ]}
                 />
-                <MatrixTable cols={classHead(CLASSES)} rows={coverRows} onRow={openBranch} />
+                <MatrixTable cols={classHead(coverClasses)} rows={coverRows} onRow={openBranch} />
               </>
             ))}
         </ChartCard>

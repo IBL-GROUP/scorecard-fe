@@ -40,7 +40,7 @@ export function BreakdownBars({
     .filter((r) => r.sale || r.target || r.prior || r.ly)
     .sort((a, b) => Number(isJunk(a.name)) - Number(isJunk(b.name)) || byName(a.name, b.name));
   const aName = periods?.a || 'This period';
-  const bName = periods?.b || 'B period';
+  const bName = periods?.b || 'Comparison period';
   const lyName = periods?.ly || 'Last year';
   // Oldest period first, as columns (user, 24 Nov 2026: no horizontal bars).
   const series = [

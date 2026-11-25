@@ -5,7 +5,7 @@
 
 import { Box, Flex, Grid, Text } from '@chakra-ui/react';
 import { useMemo, useState } from 'react';
-import { Overlay } from '@/ui/overlay';
+import { Overlay, fillPeriods, usePeriodNames } from '@/ui/overlay';
 import { colors } from '@/constants/theme';
 import { PULSE_HELP, SUMMARY_HELP, helpFor, type HelpText } from '@/constants/help';
 import { REVIEW_HELP } from '@/ui/pulse/ReviewSheet';
@@ -156,12 +156,13 @@ const SHARED: { title: string; text: string }[] = [
 ];
 
 export function MethodsOverlay({ tabs, onClose }: { tabs: TabKey[]; onClose: () => void }) {
+  const names = usePeriodNames();
   const [q, setQ] = useState('');
   const groups = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return GROUPS.filter((g) => tabs.includes(g.tab))
       .map((g) => ({ ...g, items: g.items.filter((i): i is [string, HelpText] => !!i[1]) }))
-      .map((g) => (needle ? { ...g, items: g.items.filter(([t, h]) => `${t} ${h.what} ${h.source}`.toLowerCase().includes(needle)) } : g))
+      .map((g) => (needle ? { ...g, items: g.items.filter(([t, h]) => `${t} ${fillPeriods(h.what, names)} ${fillPeriods(h.source, names)}`.toLowerCase().includes(needle)) } : g))
       .filter((g) => g.items.length);
   }, [q, tabs]);
   return (
@@ -212,10 +213,10 @@ export function MethodsOverlay({ tabs, onClose }: { tabs: TabKey[]; onClose: () 
                     {t}
                   </Text>
                   <Text fontSize="13px" color={colors.bodyText}>
-                    {h.what}
+                    {fillPeriods(h.what, names)}
                   </Text>
                   <Text fontSize="13px" color={colors.mutedText}>
-                    {h.source}
+                    {fillPeriods(h.source, names)}
                   </Text>
                 </Grid>
               ))}

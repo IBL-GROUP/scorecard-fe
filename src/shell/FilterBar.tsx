@@ -8,13 +8,13 @@ import { daysInMonth, parse } from '@/features/period';
 import { SearchBar, type SearchField } from '@/components/search';
 import { colors } from '@/constants/theme';
 import { useStore, type Filters } from '@/features/store';
-import type { DashboardData } from '@/features/data';
+import { HIERARCHY, hierarchyItems, type DashboardData } from '@/features/data';
 import { TABS, type TabKey } from '@/features/tabs';
 import { rangeLabel } from '@/features/period';
 import { supplyChainAnalysis } from '@/pages/PulsePage';
 import { PeriodControl } from './PeriodControl';
 import { AnalyzeOverlay } from '@/ui/analyze';
-import { ClassLegend } from '@/ui/class-badge';
+import { ClassLegend, useClassSkuCounts } from '@/ui/class-badge';
 import { Segmented } from '@/ui/segmented';
 import { FiBarChart2, FiList, FiZap } from 'react-icons/fi';
 import { VIEW_TABS, setTabView, useTabView, type TabView } from '@/features/views';
@@ -78,14 +78,39 @@ export function FilterBar({ data, tab }: { data: DashboardData; tab: TabKey }) {
   // sources with no division, class or branch: there the bar says the filters wait for the other tabs.
   const datesOnly = tab === 'fulfilment' || tab === 'distribution';
 
+  const skuCounts = useClassSkuCounts();
   const fields: SearchField[] = useMemo(() => {
-    const divisions = [...new Set(data.options.items.map((i) => i.division).filter(Boolean) as string[])].sort();
     // One row per hub branch (the list has one per storage location); names A→Z with Others last.
     const geo = [...new Map(data.options.branches.map((b) => [String(b.hub_branch_code), b])).values()].sort((x, y) => x.hub_branch_desc.localeCompare(y.hub_branch_desc));
     const uniq = (xs: string[]) => [...new Set(xs)].sort((x, y) => Number(x === 'Others') - Number(y === 'Others') || x.localeCompare(y, undefined, { numeric: true }));
+    // Division › BU › Team › Brand › SKU, as every OneThunder dashboard (user, 25 Nov 2026):
+    // each level lists only what sits under the levels chosen above it.
+    const under = (upTo?: (typeof HIERARCHY)[number]['key']) => hierarchyItems(data.options.items, st.filters, upTo) ?? data.options.items;
+    const level = (key: (typeof HIERARCHY)[number]['key'], label: string): SearchField => {
+      const col = HIERARCHY.find((h) => h.key === key)!.col;
+      return { key, label, multi: true, options: uniq(under(key).map((i) => i[col] ?? 'Others')).map((v) => ({ value: v, label: v })) };
+    };
     return [
-      { key: 'division', label: 'Division', multi: true, options: divisions.map((d) => ({ value: d, label: d })) },
-      { key: 'classification', label: 'Class', multi: true, options: CLASSES.map((c) => ({ value: c, label: c === 'Others' ? 'Other' : `Class ${c}` })) },
+      level('division', 'Division'),
+      level('bu', 'BU'),
+      level('team', 'Team'),
+      level('brand', 'Brand'),
+      {
+        key: 'sku',
+        label: 'SKU',
+        multi: true,
+        options: under().map((i) => ({ value: i.item_code, label: `${i.item_description} · ${i.item_code}` })),
+      },
+      // Other is offered only when it has SKUs, or is already picked (so it can be removed).
+      {
+        key: 'classification',
+        label: 'Class',
+        multi: true,
+        options: CLASSES.filter((c) => c !== 'Others' || (skuCounts?.Others ?? 0) > 0 || st.filters.classification.includes('Others')).map((c) => ({
+          value: c,
+          label: c === 'Others' ? 'Other' : `Class ${c}`,
+        })),
+      },
       // Zone › Region › Branch (vw_zone_region_data), as Sales Pulse 2.0: each narrows the next.
       { key: 'zone', label: 'Zone', multi: true, options: uniq(geo.map((b) => b.zone ?? 'Others')).map((z) => ({ value: z, label: z })) },
       {
@@ -102,20 +127,14 @@ export function FilterBar({ data, tab }: { data: DashboardData; tab: TabKey }) {
           .filter((b) => (!st.filters.zone.length || st.filters.zone.includes(b.zone ?? 'Others')) && (!st.filters.region.length || st.filters.region.includes(b.region ?? 'Others')))
           .map((b) => ({ value: String(b.hub_branch_code), label: b.hub_branch_desc })),
       },
-      // SKU, as 1.0: the chosen divisions narrow the list.
-      {
-        key: 'sku',
-        label: 'SKU',
-        multi: true,
-        options: data.options.items
-          .filter((i) => !st.filters.division.length || (i.division != null && st.filters.division.includes(i.division)))
-          .map((i) => ({ value: i.item_code, label: `${i.item_description} · ${i.item_code}` })),
-      },
     ];
-  }, [data.options.items, data.options.branches, st.filters.division, st.filters.zone, st.filters.region]);
+  }, [data.options.items, data.options.branches, st.filters, skuCounts]);
 
   const values: Record<string, string> = {
     division: st.filters.division.join(','),
+    bu: st.filters.bu.join(','),
+    team: st.filters.team.join(','),
+    brand: st.filters.brand.join(','),
     classification: st.filters.classification.join(','),
     zone: st.filters.zone.join(','),
     region: st.filters.region.join(','),
@@ -125,7 +144,7 @@ export function FilterBar({ data, tab }: { data: DashboardData; tab: TabKey }) {
   // Classes are picked in the search box (its Filters menu, as Sales Pulse 2.0 offers Primary / Secondary);
   // the legend only explains them.
   const apply = (next: Record<string, string>) => {
-    const f: Filters = { division: split(next.division), classification: split(next.classification), zone: split(next.zone), region: split(next.region), branch: split(next.branch), sku: split(next.sku) };
+    const f: Filters = { division: split(next.division), bu: split(next.bu), team: split(next.team), brand: split(next.brand), classification: split(next.classification), zone: split(next.zone), region: split(next.region), branch: split(next.branch), sku: split(next.sku) };
     st.applyFilters(f);
   };
 
@@ -175,7 +194,7 @@ export function FilterBar({ data, tab }: { data: DashboardData; tab: TabKey }) {
               aria-disabled={datesOnly || undefined}
               title={datesOnly ? 'Filters do not apply to this tab' : undefined}
             >
-              <SearchBar fields={fields} values={values} onChange={apply} favoritesKey="supplyChainPulse.favorites" quickFilterKeys={['classification']} placeholder="Search division, class, zone, branch, SKU…" />
+              <SearchBar fields={fields} values={values} onChange={apply} favoritesKey="supplyChainPulse.favorites" quickFilterKeys={['classification']} placeholder="Search division, BU, team, brand, SKU, class, branch…" />
             </Box>
             {datesOnly ? null : (
               <>

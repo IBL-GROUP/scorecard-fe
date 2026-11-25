@@ -144,7 +144,7 @@ export function BreakdownTable({
     { key: 'sale', label: saleLabel ?? 'Sales', align: 'center', show: true, w: '92px' },
     { key: 'target', label: targetLabel, align: 'center', show: showTarget, w: '84px' },
     { key: 'ach', label: 'Ach %', align: 'center', show: showTarget, w: '72px' },
-    { key: 'share', label: 'Share', align: 'center', show: showShare, w: '64px' },
+    { key: 'share', label: 'Contribution', align: 'center', show: showShare, w: '92px' },
     { key: 'growth', label: 'Growth', align: 'center', show: showGrowth, w: '74px' },
   ];
   const visible = cols.filter((c) => c.show);

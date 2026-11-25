@@ -210,7 +210,7 @@ export const HELP = {
     'Worked out by the card that shows it, from the data already on the screen.',
   ),
   biggestDrop: h(
-    'The largest fall in sales value against B. If nothing fell, the one that grew least.',
+    'The largest fall in sales value against {prev}. If nothing fell, the one that grew least.',
     'Worked out by the card that shows it, from the data already on the screen.',
   ),
   colAch: h(
@@ -218,11 +218,11 @@ export const HELP = {
     'Worked out by the card that shows it, from the data already on the screen.',
   ),
   colGrowth: h(
-    'Change against the comparison period (B).',
+    'Growth against {prev}.',
     'Worked out by the card that shows it, from the data already on the screen.',
   ),
   colSales: h(
-    'Sales in the selected days (A).',
+    'Sales in {cur}.',
     'Worked out by the card that shows it, from the data already on the screen.',
   ),
   colShare: h(
@@ -238,7 +238,7 @@ export const HELP = {
     'Worked out by the card that shows it, from the data already on the screen.',
   ),
   fastestGrowing: h(
-    'The biggest % growth against the comparison period (B).',
+    'The biggest % growth against {prev}.',
     'Worked out by the card that shows it, from the data already on the screen.',
   ),
   overstock: h(

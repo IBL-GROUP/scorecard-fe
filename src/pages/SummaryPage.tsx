@@ -322,6 +322,9 @@ function useKeptView<T extends string>(key: string, allowed: readonly T[], fallb
 function StockByClass({ d, basis, onPick }: { d: ReturnType<typeof stock> & { range: TotalSkuRow[] }; basis: 'TP' | 'EFP'; onPick: (cls: string) => void }) {
   const rows = [...d.cls].sort((a, b) => byClass(a.cls, b.cls));
   const skus = (c: string) => num(d.range.find((r) => (r.classification || 'Others') === c)?.count ?? null);
+  // The Total counts the classes this table shows (they follow the Class filter),
+  // not the whole item list: with "Other" picked it was still all 311.
+  const totalSkus = rows.reduce((a, r) => a + (skus(r.cls) ?? 0), 0);
   const total = d.total;
   const tpl = 'minmax(96px, 1.3fr) repeat(7, minmax(0, 1fr))';
   const head = ['Name', 'Benchmark', 'Threshold', 'SKUs', `Cover ${basis}`, 'Coverage', `Value ${basis}`, 'Units'];
@@ -362,7 +365,7 @@ function StockByClass({ d, basis, onPick }: { d: ReturnType<typeof stock> & { ra
             <Box {...cell(true)} color={colors.mutedText}>
               —
             </Box>
-            <Box {...cell(true)}>{d.range.reduce((a, r) => a + (num(r.count) ?? 0), 0).toLocaleString('en-US')}</Box>
+            <Box {...cell(true)}>{totalSkus.toLocaleString('en-US')}</Box>
             <Box {...cell(true)} color={colors.sales}>
               {days(totalCover)}
             </Box>

@@ -1,24 +1,28 @@
 // Page state for Supply Chain Pulse: period, comparison, filters, local chips,
 // the cover-days input and the signed-in user.
 //
-// Period presets apply at once; Division / Classification / Branch are staged
-// and applied together.
+// Period presets apply at once; the filters (Division › BU › Team › Brand › SKU,
+// Class, Zone › Region › Branch) are staged and applied together.
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { presetWindow, todayIso, type CompareKey, type PresetKey, type Window } from './period';
 import type { Section, TabKey } from './tabs';
 
 export interface Filters {
+  /** The product hierarchy, Division › BU › Team › Brand: each expands to its SKUs (vw_items_class). */
   division: string[];
+  bu: string[];
+  team: string[];
+  brand: string[];
   classification: string[];
   /** Zone and region (vw_zone_region_data): they narrow to their branches, as in Sales Pulse 2.0. */
   zone: string[];
   region: string[];
   branch: string[];
-  /** Hand-picked SKU codes; they win over the division's SKUs (as 1.0). */
+  /** Hand-picked SKU codes; they win over the hierarchy's SKUs (as 1.0). */
   sku: string[];
 }
-export const EMPTY_FILTERS: Filters = { division: [], classification: [], zone: [], region: [], branch: [], sku: [] };
+export const EMPTY_FILTERS: Filters = { division: [], bu: [], team: [], brand: [], classification: [], zone: [], region: [], branch: [], sku: [] };
 
 export type ChipKey = 'cls' | 'branch' | 'channel' | 'material';
 export interface Chip { key: ChipKey; value: string }
