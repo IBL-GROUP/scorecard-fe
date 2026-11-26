@@ -11,14 +11,29 @@ export interface Envelope<T> {
   data: T[];
 }
 
-export type ClassCode = 'A' | 'B' | 'C' | 'N' | 'Others';
-export const CLASSES: ClassCode[] = ['A', 'B', 'C', 'N', 'Others'];
-export const RATED_CLASSES: Exclude<ClassCode, 'Others'>[] = ['A', 'B', 'C', 'N'];
+// DC is a classification too and always listed (user, 26 Nov 2026); Other is the optional
+// bucket, offered only when it holds something.
+export type ClassCode = 'A' | 'B' | 'C' | 'N' | 'DC' | 'Others';
+export const CLASSES: ClassCode[] = ['A', 'B', 'C', 'N', 'DC', 'Others'];
+export const RATED_CLASSES: Exclude<ClassCode, 'Others' | 'DC'>[] = ['A', 'B', 'C', 'N'];
 
 /**
  * Class order everywhere: A, B, C, N, then any other code the data brings
  * (e.g. DC) A→Z, and Others last. An unknown code used to sort first.
  */
+/** The classifications every per-class view lists, in order. Other is not here: it is optional. */
+export const ALL_CLASSES = ['A', 'B', 'C', 'N', 'DC'] as const;
+
+/**
+ * `rows` with an empty row for every classification it lacks (DC is a class even with nothing
+ * in it — user, 26 Nov 2026). `picked` is the Class filter: only classes it allows are added.
+ */
+export function withEveryClass<T>(rows: T[], clsOf: (r: T) => string, empty: (cls: string) => T, picked: readonly string[] = []): T[] {
+  const have = new Set(rows.map(clsOf));
+  const add = ALL_CLASSES.filter((c) => !have.has(c) && (!picked.length || picked.includes(c)));
+  return [...rows, ...add.map((c) => empty(c))];
+}
+
 export const byClassCode = (a: string, b: string) => {
   const rank = (c: string) => (c === 'Others' ? 2 : (RATED_CLASSES as string[]).includes(c) ? 0 : 1);
   const ra = rank(a);
@@ -125,7 +140,7 @@ export interface FilterItemRow {
   team: string | null;
   brands: string | null;
 }
-export interface FilterBranchRow { hub_branch_code: Num; hub_branch_desc: string; storage_location_code: Num; zone?: string; region?: string }
+export interface FilterBranchRow { hub_branch_code: Num; hub_branch_desc: string; storage_location_code: Num; zone?: string; market?: string; region?: string }
 
 /** The 14 fixed Inventory Days / Service Measure branches (BR-SVC-001). */
 export const INV_BRANCHES = [

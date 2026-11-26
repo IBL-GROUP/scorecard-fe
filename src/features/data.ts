@@ -96,7 +96,7 @@ function windowParams(w: Window, base: Record<string, unknown>) {
 
 /** All specs, per tab, for the current filters. */
 /** The endpoints whose cover days use the days the month's target is spread over (FR-EXEC-047). */
-export const COVER_DAYS_PATHS = ['/cover-days', '/cover-days/total', '/inventory-days', '/service-measure', '/above-below-threshold', '/tgt-vs-actual'];
+export const COVER_DAYS_PATHS = ['/cover-days', '/cover-days/total', '/cover-days/benchmarks', '/inventory-days', '/service-measure', '/above-below-threshold', '/tgt-vs-actual'];
 
 /** Adds ?coverDays to those endpoints' calls when the user set one; otherwise the specs as they are. */
 export function withCoverDays(specs: Record<TabKey, Spec[]>, coverDays: number | null): Record<TabKey, Spec[]> {
@@ -234,16 +234,16 @@ export function useDashboardData(active: TabKey) {
     },
     [filters, options.items],
   );
-  // Branches: hand-picked ones win; otherwise the branches of the chosen zones and regions
-  // (the API filters by branch; a zone or region is the set of its branches).
+  // Branches: hand-picked ones win; otherwise the branches of the chosen zones, markets and regions
+  // (the API filters by branch; a zone, market or region is the set of its branches).
   const branch = useMemo(() => {
     if (filters.branch.length) return filters.branch;
-    if (!filters.zone.length && !filters.region.length) return [];
+    if (!filters.zone.length && !filters.market.length && !filters.region.length) return [];
     const codes = options.branches
-      .filter((b) => (!filters.zone.length || filters.zone.includes(b.zone ?? 'Others')) && (!filters.region.length || filters.region.includes(b.region ?? 'Others')))
+      .filter((b) => (!filters.zone.length || filters.zone.includes(b.zone ?? 'Others')) && (!filters.market.length || filters.market.includes(b.market ?? 'Others')) && (!filters.region.length || filters.region.includes(b.region ?? 'Others')))
       .map((b) => String(b.hub_branch_code));
     return [...new Set(codes)];
-  }, [filters.branch, filters.zone, filters.region, options.branches]);
+  }, [filters.branch, filters.zone, filters.market, filters.region, options.branches]);
   const base = useMemo(() => {
     const b: Record<string, unknown> = {};
     if (filters.classification.length) b.classification = filters.classification;
@@ -303,7 +303,9 @@ export function useDashboardData(active: TabKey) {
           s.name,
           {
             data: q.data as unknown[] | undefined,
-            isLoading: !locked && !pending && (q.isPending || (q.isFetching && q.data == null)),
+            // Any request in flight shows the loading state, a refresh included: never old figures
+            // with new ones popping in over them (user, 26 Nov 2026).
+            isLoading: !locked && !pending && (q.isPending || q.isFetching),
             isError: q.isError && !pending,
             pending,
             locked,

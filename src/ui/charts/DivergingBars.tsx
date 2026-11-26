@@ -2,6 +2,7 @@ import { Box, Flex, Text } from '@chakra-ui/react';
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useExpanded } from '@/ui/overlay';
 import { colors } from '@/constants/theme';
+import { ClassMarkSvg, classFromLabel } from '@/ui/class-badge';
 
 // Achievement charts, each shaped for its question (see the chart plan):
 //   AchRings      few items: "how close is each?"
@@ -198,9 +199,13 @@ export function DivergingBars({
                   >
                     {gapRow && <line x1={0} x2={w} y1={k * rowH} y2={k * rowH} stroke="var(--sp-border)" strokeDasharray="2 3" />}
                     <rect x={0} y={k * rowH} width={w} height={rowH} fill="transparent" />
-                    <text style={{ fontSize: 12 }} x={LABEL - 8} y={cy + 4} textAnchor="end" fill="var(--sp-body-text)">
-                      {fitName(i.name, LABEL - 12)}
-                    </text>
+                    {classFromLabel(i.name) && classFromLabel(i.name) !== 'Others' ? (
+                      <ClassMarkSvg cls={classFromLabel(i.name)!} x={LABEL - 17} y={cy - 9} />
+                    ) : (
+                      <text style={{ fontSize: 12 }} x={LABEL - 8} y={cy + 4} textAnchor="end" fill="var(--sp-body-text)">
+                        {fitName(i.name, LABEL - 12)}
+                      </text>
+                    )}
                     <rect x={bx} y={cy - 8} width={bw} height={16} rx={3} fill={neg ? 'var(--sp-bad)' : 'var(--sp-good)'} className="sp-rise" />
                     {/* The value inside its bar at the outer end (as the columns do); past the end when the bar is too short. */}
                     <text

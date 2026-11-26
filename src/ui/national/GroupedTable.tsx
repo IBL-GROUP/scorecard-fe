@@ -602,7 +602,7 @@ export function GroupedTable<R>({
             </Box>
           )}
         </Box>
-        {isLoading && !rows.length ? (
+        {isLoading ? (
           <Flex direction="column" gap={2} p={3}>
             {Array.from({ length: 12 }).map((_, i) => (
               <Skeleton key={i} h="22px" borderRadius="3px" opacity={1 - i * 0.06} />

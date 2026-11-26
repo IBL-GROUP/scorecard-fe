@@ -55,6 +55,12 @@ export interface SearchBarProps {
   fields: SearchField[];
   values: Record<string, string>;
   onChange: (next: Record<string, string>) => void;
+  /**
+   * The fields as they would be with these picks: the Custom filter panel asks
+   * with its unapplied draft, so choosing a Market narrows Region and Branch
+   * there and then, as the applied filters narrow `fields`.
+   */
+  fieldsFor?: (values: Record<string, string>) => SearchField[];
   /** Fields whose options appear as one-click toggles under "Filters". */
   quickFilterKeys?: string[];
   period?: SearchPeriod;
@@ -257,6 +263,7 @@ export function SearchBar({
   fields,
   values,
   onChange,
+  fieldsFor,
   quickFilterKeys = [],
   period,
   favoritesKey,
@@ -307,6 +314,20 @@ export function SearchBar({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only on opening
   }, [customOpen]);
   const draftList = (key: string) => (draft[key] ?? '').split(',').filter(Boolean);
+  // The panel's lists follow the draft; a pick the new lists no longer hold (a
+  // region outside the chosen market) is dropped. A list still loading (empty) keeps its picks.
+  const panelFields = useMemo(() => (customOpen && fieldsFor ? fieldsFor(draft) : fields), [customOpen, fieldsFor, draft, fields]);
+  const setDraftField = (key: string, value: string) =>
+    setDraft((d) => {
+      const next = { ...d, [key]: value };
+      if (!fieldsFor) return next;
+      for (const f of fieldsFor(next)) {
+        if (f.key === key || f.loadOptions || !f.options.length || !next[f.key]) continue;
+        const allowed = new Set(f.options.map((o) => o.value));
+        next[f.key] = next[f.key].split(',').filter((v) => allowed.has(v)).join(',');
+      }
+      return next;
+    });
   const draftChanged = fields.some((f) => (draft[f.key] ?? '') !== (values[f.key] ?? ''));
   const draftCount = fields.filter((f) => !f.loadOptions && (draft[f.key] ?? '') !== '').length;
   const applyDraft = () => {
@@ -674,7 +695,7 @@ export function SearchBar({
                 </Box>
               </Flex>
               <Grid templateColumns="repeat(auto-fill, minmax(210px, 1fr))" gap={3}>
-                {fields
+                {panelFields
                   .filter((f) => !f.loadOptions)
                   .map((f) => (
                     <Flex key={f.key} direction="column" gap="4px" minW={0}>
@@ -685,14 +706,14 @@ export function SearchBar({
                         <MultiSelect
                           value={draftList(f.key)}
                           options={f.options}
-                          onChange={(list) => setDraft((d) => ({ ...d, [f.key]: list.join(',') }))}
+                          onChange={(list) => setDraftField(f.key, list.join(','))}
                           placeholder="Any"
                         />
                       ) : (
                         <Select
                           value={draft[f.key] ?? ''}
                           options={f.options}
-                          onChange={(v) => setDraft((d) => ({ ...d, [f.key]: v ?? '' }))}
+                          onChange={(v) => setDraftField(f.key, v ?? '')}
                           isClearable
                           placeholder="Any"
                         />

@@ -18,13 +18,13 @@ import { useCardLegend, type LegendItem } from '@/ui/chart-card/legend';
 import { BarChart, LineChart } from '@/ui/charts';
 import { Segmented } from '@/ui/segmented';
 import { HighlightCard, HighlightGrid } from '@/ui/highlights';
-import { ClassBadge } from '@/ui/class-badge';
+import { ClassBadge, ClassMark } from '@/ui/class-badge';
 import { MatrixTable } from '@/ui/matrix';
 import { RowBars } from '@/ui/row-bars';
 import { CardState } from '@/components/card-state';
 import { colors } from '@/constants/theme';
 import { CLASS_HEX } from '@/constants/classColors';
-import { INV_BRANCHES, RATED_CLASSES, n0, num, type TgtVsActualRow } from '@/api/types';
+import { ALL_CLASSES, INV_BRANCHES, RATED_CLASSES, n0, num, type TgtVsActualRow, withEveryClass } from '@/api/types';
 import { rowsOf, type DashboardData } from '@/features/data';
 import { service, status, stock, workingCapitalTrend } from '@/features/derive';
 import { inventoryClassRows } from '@/features/kpis';
@@ -34,7 +34,8 @@ import { useStore } from '@/features/store';
 import { ACTIVE_ROW, useDetail, useOpenedRow } from '@/features/detail';
 import { useFitScreen } from '@/features/fit';
 
-const CLASSES = [...RATED_CLASSES, 'Others'] as const;
+// Every classification is listed, DC included (user, 26 Nov 2026); Other only when it holds something.
+const CLASSES = [...ALL_CLASSES, 'Others'] as const;
 const clsName = (c: string) => (c === 'Others' ? 'Other' : `Class ${c}`);
 const INK: Record<Rag, string> = { green: colors.good, amber: colors.warn, red: colors.bad };
 const SOFT: Record<Rag, string> = { green: colors.goodSoft, amber: colors.warnSoft, red: colors.badSoft };
@@ -96,14 +97,22 @@ export function InventoryPage({ data }: { data: DashboardData }) {
           tone="bad"
           name={`${full(sv.below)} SKUs Below Threshold`}
           value={pct1(sv.risk)}
-          caption={belowByClass[0] ? `Most In ${clsName(belowByClass[0].cls)}: ${full(belowByClass[0].below)} SKUs` : 'No SKU Below Its Threshold'}
+          caption={
+            belowByClass[0] ? (
+              <Box as="span" display="inline-flex" alignItems="center" gap="6px">
+                Most In <ClassBadge cls={belowByClass[0].cls} />: {full(belowByClass[0].below)} SKUs
+              </Box>
+            ) : (
+              'No SKU Below Its Threshold'
+            )
+          }
         />
       </Box>
       <Box data-kpi="IN-11" minW={0}>
         <HighlightCard label="Lowest Service" tone="bad" name={lowest?.branch ?? DASH} value={pct1(lowest?.avg ?? null)} caption={`Average Of Its Classes · Target ${kpiThresholds.serviceLevel.green}%`} />
       </Box>
       <Box data-kpi="IN-12" minW={0}>
-        <HighlightCard label="Lowest Cover" tone="target" name={lowCover ? clsName(lowCover.cls) : DASH} value={lowCover ? days(lowCover.cd) : DASH} caption={lowCover ? `${pct1(lowCover.cov)} Of Its ${days(lowCover.bm)} Benchmark` : 'No Class Benchmark'} />
+        <HighlightCard label="Lowest Cover" tone="target" name={lowCover ? clsName(lowCover.cls) : DASH} nameMark={lowCover ? <ClassBadge cls={lowCover.cls} /> : undefined} value={lowCover ? days(lowCover.cd) : DASH} caption={lowCover ? `${pct1(lowCover.cov)} Of Its ${days(lowCover.bm)} Benchmark` : 'No Class Benchmark'} />
       </Box>
       <Box data-kpi="IN-01 IN-02" minW={0}>
         <HighlightCard
@@ -124,6 +133,8 @@ export function InventoryPage({ data }: { data: DashboardData }) {
     name: m.branch,
     cells: [
       ...m.cells.map((v) => ({ text: v == null ? DASH : pct1(v), color: ink(rag(v, 'serviceLevel')), bg: soft(rag(v, 'serviceLevel')) })),
+      // DC: a class with no threshold, so no service level in the data — listed, shown as "—".
+      { text: DASH },
       { text: m.avg == null ? DASH : pct1(m.avg), color: ink(rag(m.avg, 'serviceLevel')) },
     ],
   }));
@@ -192,7 +203,7 @@ export function InventoryPage({ data }: { data: DashboardData }) {
                     { label: `< ${kpiThresholds.serviceLevel.amber}%`, color: colors.bad },
                   ]}
                 />
-                <MatrixTable cols={[...classHead(RATED_CLASSES), { key: 'avg', label: 'Average' }]} rows={heatRows} onRow={openBranch} />
+                <MatrixTable cols={[...classHead(ALL_CLASSES), { key: 'avg', label: 'Average' }]} rows={heatRows} onRow={openBranch} />
               </>
             ) : svcView === 'line' ? (
               <LineChart
@@ -234,14 +245,14 @@ export function InventoryPage({ data }: { data: DashboardData }) {
         {/* Row 2 — 1.0's Cover Days Threshold vs Actual: one row per class, the threshold as a tick. */}
         <ChartCard dataKpi="IN-15" title="Cover days vs threshold" colSpan={{ base: 12, lg: 3 }} isLoading={sTgt.isLoading} variant="rows">
           {CardState({ ...sTgt, empty: !tgt.length }) ?? (
-            <CoverVsThreshold rows={tgt.filter((r) => showCls(r.classification)).map((r) => ({ cls: r.classification, actual: num(r.cover_days) ?? 0, th: num(r.cover_days_tgt) ?? 0 }))} onPick={openClass} />
+            <CoverVsThreshold rows={withEveryClass(tgt.filter((r) => showCls(r.classification)).map((r) => ({ cls: r.classification, actual: num(r.cover_days) ?? 0, th: num(r.cover_days_tgt) ?? 0 })), (r) => r.cls, (cls) => ({ cls, actual: 0, th: 0 }), st.filters.classification)} onPick={openClass} />
           )}
         </ChartCard>
 
         {/* Row 2 — 1.0's SKUs vs Threshold: each class's SKUs split above / below. */}
         <ChartCard dataKpi="IN-16" title="SKUs vs threshold" colSpan={{ base: 12, lg: 3 }} isLoading={sSvc.isLoading} variant="rows">
           {CardState({ ...sSvc, empty: !sv.ab.length }) ?? (
-            <SkuSplit rows={sv.ab.map((r) => ({ cls: r.classification, above: n0(r['No Of SKUs > Threshold']), below: n0(r['No Of SKUs < Threshold']) }))} onPick={openClass} />
+            <SkuSplit rows={withEveryClass(sv.ab.map((r) => ({ cls: r.classification, above: n0(r['No Of SKUs > Threshold']), below: n0(r['No Of SKUs < Threshold']) })), (r) => r.cls, (cls) => ({ cls, above: 0, below: 0 }), st.filters.classification)} onPick={openClass} />
           )}
         </ChartCard>
       </Grid>
@@ -444,8 +455,7 @@ function InventoryDaysCard({
                       <Box as="td" {...cell} {...first} {...pin} zIndex={2} bg={colors.pageBg} fontWeight={600} color={colors.darkText}>
                         <Flex align="center" gap={2}>
                           {isOpen ? <FiChevronDown size={14} /> : <FiChevronRight size={14} />}
-                          <ClassBadge cls={c.cls} />
-                          <Text as="span">{clsName(c.cls)}</Text>
+                          <ClassMark label={clsName(c.cls)} />
                           <Text as="span" fontSize="12px" color={colors.mutedText} fontWeight={400}>
                             {c.skus.length} SKUs
                           </Text>

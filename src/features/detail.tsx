@@ -10,8 +10,8 @@ export type DetailItem =
   | { kind: 'class'; cls: string }
   /** Plan alignment drill (FR-EXEC-049): one class's IBL target vs TSCL budget, by SKU. */
   | { kind: 'alignClass'; cls: string }
-  /** Class hierarchy (19 Nov 2026, as Sales Pulse 2.0): a class in a zone (its regions) or a region (its branches). */
-  | { kind: 'geo'; cls: string; zone: string; region?: string }
+  /** Class hierarchy (as Sales Pulse 2.0): a class in a zone (its markets), a market (its regions) or a region (its branches). */
+  | { kind: 'geo'; cls: string; zone: string; market?: string; region?: string }
   /** A class at one branch: its SKUs' cover there. */
   | { kind: 'classBranch'; cls: string; branch: string }
   | { kind: 'branch'; branch: string }
@@ -47,7 +47,7 @@ export function titleOf(i: DetailItem): string {
     case 'alignClass':
       return `${i.cls === 'Others' ? 'Other' : `Class ${i.cls}`} · Forecast vs Budget By SKU`;
     case 'geo':
-      return i.region ?? i.zone;
+      return i.region ?? i.market ?? i.zone;
     case 'classBranch':
       return `${i.cls === 'Others' ? 'Other' : `Class ${i.cls}`} At ${i.branch}`;
     case 'branch':

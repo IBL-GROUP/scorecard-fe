@@ -15,14 +15,15 @@ export interface Filters {
   team: string[];
   brand: string[];
   classification: string[];
-  /** Zone and region (vw_zone_region_data): they narrow to their branches, as in Sales Pulse 2.0. */
+  /** Zone, market and region (vw_zone_region_data): they narrow to their branches, as in Sales Pulse 2.0. */
   zone: string[];
+  market: string[];
   region: string[];
   branch: string[];
   /** Hand-picked SKU codes; they win over the hierarchy's SKUs (as 1.0). */
   sku: string[];
 }
-export const EMPTY_FILTERS: Filters = { division: [], bu: [], team: [], brand: [], classification: [], zone: [], region: [], branch: [], sku: [] };
+export const EMPTY_FILTERS: Filters = { division: [], bu: [], team: [], brand: [], classification: [], zone: [], market: [], region: [], branch: [], sku: [] };
 
 export type ChipKey = 'cls' | 'branch' | 'channel' | 'material';
 export interface Chip { key: ChipKey; value: string }

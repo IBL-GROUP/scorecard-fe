@@ -3,6 +3,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { ACTIVE_ROW, useOpenedRow } from '@/features/detail';
 import { colors, fmt1 } from '@/constants/theme';
+import { classFromLabel } from '@/ui/class-badge';
 import { InfoTip } from '@/ui/overlay';
 import { HELP } from '@/ui/help';
 import { byName } from '@/ui/byName';
@@ -79,7 +80,9 @@ export function BreakdownTable({
   const opened = useOpenedRow();
 
   const { body, other, total } = useMemo(() => {
-    const named = rows.filter((r) => !isJunk(r.name) && (r.sale !== 0 || r.target !== 0 || r.prior !== 0));
+    // A class (A, B, C, N, DC) is listed even with nothing in it; other empty rows are not.
+    const isClass = (n: string) => classFromLabel(n) != null && classFromLabel(n) !== 'Others';
+    const named = rows.filter((r) => !isJunk(r.name) && (r.sale !== 0 || r.target !== 0 || r.prior !== 0 || isClass(r.name)));
     const junk = rows.filter((r) => isJunk(r.name));
     const other = junk.length
       ? junk.reduce(
@@ -177,8 +180,7 @@ export function BreakdownTable({
               alignItems="center"
               gap={2}
             >
-              {nameMark && !isTotal && nameMark(r.name)}
-              {r.name}
+              {nameMark && !isTotal ? nameMark(r.name) : r.name}
             </Box>
           );
         case 'count':

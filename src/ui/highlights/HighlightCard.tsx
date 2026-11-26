@@ -32,6 +32,7 @@ export function HighlightCard({
   label,
   tone,
   name,
+  nameMark,
   value,
   caption,
   help,
@@ -45,6 +46,8 @@ export function HighlightCard({
   label: string;
   tone: Tone;
   name: string;
+  /** Drawn instead of the name (e.g. a class badge); the name stays as its tooltip. */
+  nameMark?: ReactNode;
   value: ReactNode;
   caption: ReactNode;
 }) {
@@ -67,7 +70,13 @@ export function HighlightCard({
       </Box>
       <Text fontSize="16px" fontWeight={700} color={colors.darkText} truncate title={name} mt="2px">
         {nameTag && <TagWord tag={nameTag} />}
-        {name}
+        {nameMark ? (
+          <Box as="span" display="inline-flex" verticalAlign="middle">
+            {nameMark}
+          </Box>
+        ) : (
+          name
+        )}
       </Text>
       <Text
         fontSize="20px"

@@ -8,6 +8,7 @@
 import { Box, Flex, Text } from '@chakra-ui/react';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { colors } from '@/constants/theme';
+import { ClassMark, classFromLabel } from '@/ui/class-badge';
 
 export interface ColumnSeries {
   key: string;
@@ -221,10 +222,17 @@ export function ColumnGroups({
                   />
                 )}
               </Box>
-              <Box h={`${FOOT}px`} flexShrink={0} pt="4px" px="2px" fontSize="11px" lineHeight="15px" borderTop="1px solid" borderColor={colors.border}>
-                <Text color={colors.darkText} fontWeight={600} truncate title={g.name}>
-                  {g.name}
-                </Text>
+              {/* Name and figures centred under their columns (user, 26 Nov 2026). */}
+              <Box h={`${FOOT}px`} flexShrink={0} pt="4px" px="2px" fontSize="11px" lineHeight="15px" textAlign="center" borderTop="1px solid" borderColor={colors.border}>
+                {classFromLabel(g.name) ? (
+                  <Flex h="18px" align="center" justify="center" color={colors.darkText} fontWeight={600} title={g.name}>
+                    <ClassMark label={g.name} />
+                  </Flex>
+                ) : (
+                  <Text color={colors.darkText} fontWeight={600} truncate title={g.name}>
+                    {g.name}
+                  </Text>
+                )}
                 {g.foot != null && (
                   <Text as="div" color={colors.mutedText} truncate fontVariantNumeric="tabular-nums">
                     {g.foot}

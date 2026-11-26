@@ -15,12 +15,13 @@ import { BarChart } from '@/ui/charts';
 import { Overlay } from '@/ui/overlay';
 import { BreakdownBars, BreakdownTable } from '@/ui/breakdown';
 import { SharePie } from '@/ui/breakdown/SharePie';
-import { ClassBadge } from '@/ui/class-badge';
+import { ClassMark } from '@/ui/class-badge';
 import { Segmented } from '@/ui/segmented';
 import { colors, fmt1, formatCompact } from '@/constants/theme';
 import { clsColor } from '@/constants/classColors';
 import { SUMMARY_HELP, helpFor, type HelpText } from '@/constants/help';
-import { byClassCode, num, type CategoryAccuracyRow, type DailyAccuracyRow, type IblVsTsclRow, type SalesSummaryRow, type SalesTypeRow, type TotalSkuRow } from '@/api/types';
+import { byClassCode, num, withEveryClass, type CategoryAccuracyRow, type DailyAccuracyRow, type IblVsTsclRow, type SalesSummaryRow, type SalesTypeRow, type TotalSkuRow } from '@/api/types';
+import { useStore } from '@/features/store';
 import { rowsOf, type DashboardData } from '@/features/data';
 import { plan, status, stock, trust } from '@/features/derive';
 import { categoryCells, classHistory, projectedMonthEnd, salesSummary, salesTypeSplit } from '@/features/kpis';
@@ -326,8 +327,9 @@ function StockByClass({ d, basis, onPick }: { d: ReturnType<typeof stock> & { ra
   // not the whole item list: with "Other" picked it was still all 311.
   const totalSkus = rows.reduce((a, r) => a + (skus(r.cls) ?? 0), 0);
   const total = d.total;
-  const tpl = 'minmax(96px, 1.3fr) repeat(6, minmax(0, 1fr))';
-  const head = ['Name', 'Benchmark', 'Threshold', 'SKUs', 'Cover', 'Value', 'Units'];
+  // Each figure column at least as wide as its heading or values, so no heading is cut (user, 26 Nov 2026).
+  const tpl = 'minmax(64px, 1fr) repeat(6, minmax(max-content, 1fr))';
+  const head = ['Name', 'Benchmark', 'Threshold', 'SKUs', 'Cover Days', 'Value', 'Units'];
   const totalCover = basis === 'TP' ? d.totalCd : num(total?.cover_days_efp ?? null);
   // BreakdownTable's cell, row and header styles.
   const cell = (isTotal: boolean) => ({
@@ -340,7 +342,7 @@ function StockByClass({ d, basis, onPick }: { d: ReturnType<typeof stock> & { ra
     color: colors.bodyText,
     fontWeight: isTotal ? 700 : 400,
   });
-  const row = { display: 'grid', gridTemplateColumns: tpl, columnGap: 3, rowGap: 2, px: 3 } as const;
+  const row = { display: 'grid', gridTemplateColumns: tpl, columnGap: 2, rowGap: 2, px: 3 } as const;
   const days = (n: number | null) => (n == null ? '—' : `${fmt1(n)} d`);
   return (
     <Box border="1px solid" borderColor={colors.border} borderRadius="4px" overflow="hidden" h="100%" minH={0}>
@@ -392,8 +394,7 @@ function StockByClass({ d, basis, onPick }: { d: ReturnType<typeof stock> & { ra
               onKeyDown={(e: React.KeyboardEvent) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onPick(r.cls))}
             >
               <Box {...cell(false)} className="bd-name" textAlign="start" color={colors.brand} display="flex" alignItems="center" gap={2}>
-                <ClassBadge cls={r.cls} />
-                {clsName(r.cls)}
+                <ClassMark label={clsName(r.cls)} />
               </Box>
               <Box {...cell(false)}>{days(r.bm)}</Box>
               <Box {...cell(false)}>{days(r.th)}</Box>
@@ -521,7 +522,10 @@ export function SummaryPage({ data }: { data: DashboardData }) {
     const c = cells.find((x) => x.month === p.currentMonth && x.cls === cls);
     return c ? c.target * p.iblShare : 0;
   };
-  const breakdown = sales.rows.map((r) => ({
+  const picked = useStore().filters.classification;
+  const breakdown = withEveryClass(sales.rows, (r) => r.cls, (cls) => ({ cls, skus: 0, amount: 0, share: 0 }), picked)
+    .sort((a, b) => byClass(a.cls, b.cls))
+    .map((r) => ({
     name: clsName(r.cls),
     sale: r.amount,
     prior: salesCmp.rows.find((x) => x.cls === r.cls)?.amount ?? 0,
@@ -537,8 +541,12 @@ export function SummaryPage({ data }: { data: DashboardData }) {
   // ── Accuracy: three months per class, and forecast vs budget ──
   const histIbl = classHistory([rowsOf<CategoryAccuracyRow>(d.cat1), rowsOf<CategoryAccuracyRow>(d.cat0)], data.window.end);
   const histBud = classHistory([rowsOf<CategoryAccuracyRow>(d.catY1), rowsOf<CategoryAccuracyRow>(d.catY0)], data.window.end);
-  const fvb = rowsOf<IblVsTsclRow>(d.ibl)
-    .map((r) => ({ cls: r.classification === 'Total' ? 'Total' : r.classification || 'Others', value: num(r.ibl_vs_tscl_pct) ?? 0, ibl: num(r.ibl_target) ?? 0, tscl: num(r.tscl_target) ?? 0 }))
+  const fvb = withEveryClass(
+    rowsOf<IblVsTsclRow>(d.ibl).map((r) => ({ cls: r.classification === 'Total' ? 'Total' : r.classification || 'Others', value: num(r.ibl_vs_tscl_pct) ?? 0, ibl: num(r.ibl_target) ?? 0, tscl: num(r.tscl_target) ?? 0 })),
+    (r) => r.cls,
+    (cls) => ({ cls, value: 0, ibl: 0, tscl: 0 }),
+    picked,
+  )
     .sort((a, b) => (a.cls === 'Total' ? -1 : b.cls === 'Total' ? 1 : byClass(a.cls, b.cls)))
     .map((r) => ({ ...r, name: r.cls === 'Total' ? 'All classes' : clsName(r.cls) }));
   const daysText = `${p.days.daysGone} Of ${p.days.totalDays} Days`;
@@ -562,7 +570,7 @@ export function SummaryPage({ data }: { data: DashboardData }) {
       {/* Row 1, in 1.0's order: Sales, then Inventory, then Forecast vs Budget. As tall as its
           tables (header, Total and the five classes), so there is no empty space under them;
           the accuracy cards below take the rest of the screen. */}
-      <Grid templateColumns={{ base: '1fr', lg: 'minmax(0, 1.08fr) minmax(0, 1.3fr) minmax(0, .9fr)' }} gap={3} h={{ lg: '318px' }} flexShrink={0}>
+      <Grid templateColumns={{ base: '1fr', lg: 'minmax(0, 1.15fr) minmax(0, 1.1fr) minmax(0, .95fr)' }} gap={3} h={{ lg: '318px' }} flexShrink={0}>
         <ChartCard
           title="Sales Summary"
           help={helpFor('RV-13')}
@@ -584,7 +592,7 @@ export function SummaryPage({ data }: { data: DashboardData }) {
               showGrowth={COMPARE_ON}
               fmt={fmt}
               countLabel="SKUs"
-              nameMark={(n) => <ClassBadge cls={clsOf(n)} />}
+              nameMark={(n) => <ClassMark label={n} />}
               saleLabel={aTag}
               priorLabel={COMPARE_ON ? bTag : undefined}
               onPick={(n) => openClass(clsOf(n))}
@@ -636,7 +644,7 @@ export function SummaryPage({ data }: { data: DashboardData }) {
           headerRight={viewSwitch(fvbView, setFvbView, [['bars', 'Bars'], ['table', 'Table']])}
         >
           {fvbView === 'table' ? (
-            <BreakdownTable rows={fvbRows} timeGonePct={100} showTarget showGrowth={false} fmt={fmt} saleLabel="IBL Target" targetLabel="Budget" showShare={false} nameMark={(n) => <ClassBadge cls={clsOf(n)} />} onPick={(n) => detail.open({ kind: 'alignClass', cls: clsOf(n) })} maxHeight="100%" />
+            <BreakdownTable rows={fvbRows} timeGonePct={100} showTarget showGrowth={false} fmt={fmt} saleLabel="IBL Target" targetLabel="Budget" showShare={false} nameMark={(n) => <ClassMark label={n} />} onPick={(n) => detail.open({ kind: 'alignClass', cls: clsOf(n) })} maxHeight="100%" />
           ) : (
             <BreakdownBars rows={fvbRows} fmt={fmt} showTarget showPrior={false} targetLabel="Budget" periods={{ a: 'IBL Target', b: '' }} onPick={(n) => detail.open({ kind: 'alignClass', cls: clsOf(n) })} />
           )}

@@ -81,7 +81,13 @@ export function classHistory(responses: CategoryAccuracyRow[][], endIso: string,
       row[month] = Math.round(p * 10) / 10;
       byCls.set(cls, row);
     }
-  const rows = [...byCls.values()].sort((a, b) => byClassCode(String(a.cls), String(b.cls)));
+  // Every classification always shows, DC included, even with nothing in it (an empty class
+  // is still a class). Other is the optional bucket: shown when it has a value in some month,
+  // left out when it is all 0% (the API answers 0% where there is no target) (user, 26 Nov 2026).
+  for (const cls of [...RATED_CLASSES, 'DC']) if (!byCls.has(cls)) byCls.set(cls, { cls });
+  const rows = [...byCls.values()]
+    .filter((row) => row.cls !== 'Others' || months.some((m) => Number(row[m] ?? 0) !== 0))
+    .sort((a, b) => byClassCode(String(a.cls), String(b.cls)));
   return { months, rows };
 }
 
@@ -237,11 +243,12 @@ export function inventoryClassRows(rows: Record<string, unknown>[]) {
     const cls = normClass(r.classification as string);
     grouped.set(cls, [...(grouped.get(cls) ?? []), r]);
   }
-  return ['A', 'B', 'C', 'N', 'Others']
-    .filter((c) => grouped.get(c)?.length)
+  // Every class, DC included even with no SKUs; Other only when it has SKUs (user, 26 Nov 2026).
+  return ['A', 'B', 'C', 'N', 'DC', 'Others']
+    .filter((c) => c !== 'Others' || grouped.get(c)?.length)
     .map((cls) => {
-      const g = grouped.get(cls)!;
-      const vals = INV_BRANCHES.map((b) => sum(g, (r) => Number(r[b.key] ?? 0)) / g.length);
+      const g = grouped.get(cls) ?? [];
+      const vals = INV_BRANCHES.map((b) => (g.length ? sum(g, (r) => Number(r[b.key] ?? 0)) / g.length : 0));
       const withValue = vals.filter((v) => v > 0);
       return {
         cls,

@@ -1,5 +1,7 @@
 import { Box, Flex, Text } from '@chakra-ui/react';
 import { colors, fmt1 } from '@/constants/theme';
+import { byClassCode } from '@/api/types';
+import { classFromLabel } from '@/ui/class-badge';
 import { byName } from '@/ui/byName';
 import { useCardLegend } from '@/ui/chart-card/legend';
 import { useOpenedRow } from '@/features/detail';
@@ -36,9 +38,19 @@ export function BreakdownBars({
   periods?: { a: string; b: string; ly?: string };
   onPick?: (name: string) => void;
 }) {
+  // A class (A, B, C, N, DC) is drawn even with nothing in it, in class order (A … N, DC).
+  const clsKey = (n: string) => {
+    const c = classFromLabel(n);
+    return c && c !== 'Others' ? c : null;
+  };
   const list = rows
-    .filter((r) => r.sale || r.target || r.prior || r.ly)
-    .sort((a, b) => Number(isJunk(a.name)) - Number(isJunk(b.name)) || byName(a.name, b.name));
+    .filter((r) => r.sale || r.target || r.prior || r.ly || clsKey(r.name))
+    .sort((a, b) => {
+      const ca = clsKey(a.name);
+      const cb = clsKey(b.name);
+      if (ca && cb) return byClassCode(ca, cb);
+      return Number(isJunk(a.name)) - Number(isJunk(b.name)) || byName(a.name, b.name);
+    });
   const aName = periods?.a || 'This period';
   const bName = periods?.b || 'Comparison period';
   const lyName = periods?.ly || 'Last year';

@@ -9,6 +9,7 @@ import { FiArrowLeft, FiFilter, FiX } from 'react-icons/fi';
 import { SheetStack } from '@/ui/drill/SheetStack';
 import { RagBadge, ragCell } from '@/components/rag/Rag';
 import { colors } from '@/constants/theme';
+import { ClassBadge, ClassMark } from '@/ui/class-badge';
 import {
   INV_BRANCHES,
   n0,
@@ -53,7 +54,7 @@ function merged(data: DashboardData, names: string[]) {
 }
 
 // ── Building blocks (Sales Pulse 2.0 drill sheets: dsr-fe GroupSheets) ──
-function Stat({ label, value, sub, rag: r }: { label: string; value: ReactNode; sub?: ReactNode; rag?: ReturnType<typeof rag> }) {
+function Stat({ label, value, sub, rag: r }: { label: ReactNode; value: ReactNode; sub?: ReactNode; rag?: ReturnType<typeof rag> }) {
   return (
     <Box className="sp-card sp-tint" border="1px solid" borderColor={colors.border} borderRadius="4px" px={3} py="10px" minW={0}>
       <Text fontSize="11px" fontWeight={600} letterSpacing=".05em" textTransform="uppercase" color={colors.cardAccent} truncate>
@@ -88,17 +89,25 @@ function StatGrid({ children }: { children: ReactNode }) {
  * The card takes the height the sheet leaves (at least 240px) and its rows
  * scroll inside it, under the pinned column headers and Total row.
  */
-function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+/** titleOf, with the class drawn as its badge ("A", "A · Forecast vs Budget By SKU", "A At Karachi"). */
+function titleNode(i: DetailItem): ReactNode {
+  if (i.kind === 'class') return <ClassBadge cls={i.cls} />;
+  if (i.kind === 'alignClass') return <><ClassBadge cls={i.cls} /> · Forecast vs Budget By SKU</>;
+  if (i.kind === 'classBranch') return <><ClassBadge cls={i.cls} /> At {i.branch}</>;
+  return titleOf(i);
+}
+
+function Section({ title, hint, children }: { title: ReactNode; hint?: ReactNode; children: ReactNode }) {
   return (
     <Flex direction="column" flex="1 1 0" minH="240px" border="1px solid" borderColor={colors.border} borderRadius="4px" className="sp-tint" overflow="hidden">
       <Flex align="center" gap={2} px={3} py={2} borderBottom="1px solid" borderColor={colors.border} flexShrink={0} wrap="wrap">
-        <Text fontSize="13px" fontWeight={600} color={colors.cardAccent}>
+        <Flex as="span" align="center" gap="6px" fontSize="13px" fontWeight={600} color={colors.cardAccent}>
           {title}
-        </Text>
+        </Flex>
         {hint && (
-          <Text fontSize="12px" color={colors.mutedText} ml={2}>
+          <Flex as="span" align="center" gap="6px" fontSize="12px" color={colors.mutedText} ml={2}>
             {hint}
-          </Text>
+          </Flex>
         )}
       </Flex>
       <Box flex={1} minH={0} display="flex" flexDirection="column" overflowY="auto">
@@ -234,9 +243,9 @@ function Frame({ item, depth, stack, actions, children }: FrameProps) {
           {item.kind === 'geo' && item.region ? 'Region' : KIND_LABEL[item.kind]}
         </Box>
         <Box flex={1} minW={0} order={1}>
-          <Text fontSize="18px" fontWeight={700} color={colors.darkText} truncate title={titleOf(item)}>
-            {titleOf(item)}
-          </Text>
+          <Flex align="center" gap="8px" minW={0} fontSize="18px" fontWeight={700} color={colors.darkText} title={titleOf(item)}>
+            {titleNode(item)}
+          </Flex>
           {/* The trail, as Sales Pulse shows it: the tab, then every sheet open before this one. */}
           <Flex fontSize="13px" color={colors.mutedText} gap="4px" wrap="wrap">
               <Box as="button" color={colors.brand} fontWeight={600} _hover={{ textDecoration: 'underline' }} onClick={d.close} title={`Back to ${rootLabel}`}>
@@ -246,14 +255,14 @@ function Frame({ item, depth, stack, actions, children }: FrameProps) {
               {stack.slice(0, depth).map((s, i) => (
                 <Flex key={i} gap="4px" align="center">
                   <Box as="button" color={colors.brand} fontWeight={600} _hover={{ textDecoration: 'underline' }} onClick={() => d.popTo(i)}>
-                    {titleOf(s)}
+                    <Flex as="span" align="center" gap="4px">{titleNode(s)}</Flex>
                   </Box>
                   <Text as="span">›</Text>
                 </Flex>
               ))}
-              <Text as="span" color={colors.darkText} fontWeight={600}>
-                {titleOf(item)}
-              </Text>
+              <Flex as="span" align="center" gap="4px" color={colors.darkText} fontWeight={600}>
+                {titleNode(item)}
+              </Flex>
           </Flex>
         </Box>
         <Box as="button" order={{ base: 2, md: 3 }} aria-label="Close" title="Close (Esc)" onClick={d.close} p={1} mt="2px" borderRadius="4px" color={colors.bodyText} _hover={{ bg: colors.hoverBg }}>
@@ -329,7 +338,7 @@ function AlignClassBody({ cls, data }: { cls: string; data: DashboardData }) {
         <Stat label="TSCL budget" value={pkr(tscl)} sub="National: the budget has no branch" />
         <Stat label="Forecast ÷ budget" value={pct1(classPct)} rag={rag(classPct, 'planAlignment')} />
       </StatGrid>
-      <Section title={`SKUs in ${clsName(cls)}`} hint="IBL target and TSCL budget for the month; budget is national">
+      <Section title={<>SKUs In <ClassBadge cls={cls} /></>} hint="IBL target and TSCL budget for the month; budget is national">
         <Rows
           head={['SKU', 'IBL Target', 'TSCL Budget', 'Forecast ÷ Budget']}
           total={[money(ibl), money(tscl), <RagText key="t" v={classPct} r={rag(classPct, 'planAlignment')} text={pct1(classPct)} />]}
@@ -353,7 +362,7 @@ interface GeoRow { name: string; branches: number; cover: number | null; service
 
 /**
  * One class's cover days and service level per branch (the 14 Inventory Days
- * branches), and the same rolled up to regions and zones. A roll-up is the
+ * branches), and the same rolled up to regions, markets and zones. A roll-up is the
  * average of its branches that hold stock, the rule the Inventory Days total
  * already uses; service is the average of its branches' service level.
  */
@@ -366,9 +375,9 @@ function geoLevels(data: DashboardData, cls: string) {
   const branches = INV_BRANCHES.map((b, i) => {
     const g = where(b.label);
     const sv = ci >= 0 ? matrix.find((m) => m.branch.trim().toLowerCase() === b.label.toLowerCase())?.cells[ci] ?? null : null;
-    return { name: b.label, zone: g.zone, region: g.region, cover: classRow ? classRow.vals[i] : null, service: sv };
+    return { name: b.label, zone: g.zone, market: g.market, region: g.region, cover: classRow ? classRow.vals[i] : null, service: sv };
   });
-  const roll = (key: 'zone' | 'region', list: typeof branches): GeoRow[] => {
+  const roll = (key: 'zone' | 'market' | 'region', list: typeof branches): GeoRow[] => {
     const by = new Map<string, typeof branches>();
     for (const b of list) by.set(b[key], [...(by.get(b[key]) ?? []), b]);
     return [...by]
@@ -384,10 +393,16 @@ function geoLevels(data: DashboardData, cls: string) {
       })
       .sort((a, b) => Number(a.name === 'Others') - Number(b.name === 'Others') || a.name.localeCompare(b.name, undefined, { numeric: true }));
   };
-  return { branches, zones: roll('zone', branches), regionsOf: (zone: string) => roll('region', branches.filter((b) => b.zone === zone)), loaded: inv.length > 0 };
+  return {
+    branches,
+    zones: roll('zone', branches),
+    marketsOf: (zone: string) => roll('market', branches.filter((b) => b.zone === zone)),
+    regionsOf: (zone: string, market: string) => roll('region', branches.filter((b) => b.zone === zone && b.market === market)),
+    loaded: inv.length > 0,
+  };
 }
 
-/** A zone, region or branch list of one class: cover days and service level. */
+/** A zone, market, region or branch list of one class: cover days and service level. */
 function GeoRows({ rows, onPick, noun = 'branches' }: { rows: GeoRow[]; onPick: (name: string) => void; noun?: string }) {
   return (
     <Rows
@@ -402,32 +417,38 @@ function GeoRows({ rows, onPick, noun = 'branches' }: { rows: GeoRow[]; onPick: 
   );
 }
 
-/** A class in a zone (its regions) or in a region (its branches). */
-function GeoBody({ cls, zone, region, data }: { cls: string; zone: string; region?: string; data: DashboardData }) {
+/** A class in a zone (its markets), a market (its regions) or a region (its branches). */
+function GeoBody({ cls, zone, market, region, data }: { cls: string; zone: string; market?: string; region?: string; data: DashboardData }) {
   const { push } = useDetail();
   const g = geoLevels(data, cls);
-  const regions = g.regionsOf(zone);
+  const markets = g.marketsOf(zone);
+  const regions = market ? g.regionsOf(zone, market) : [];
   const branches = g.branches
-    .filter((b) => b.zone === zone && (!region || b.region === region))
+    .filter((b) => b.zone === zone && (!market || b.market === market) && (!region || b.region === region))
     .map((b) => ({ name: b.name, branches: 1, cover: b.cover, service: b.service }));
-  const here = region ? regions.find((r) => r.name === region) : g.zones.find((z) => z.name === zone);
+  const here = region
+    ? regions.find((r) => r.name === region)
+    : market
+      ? markets.find((m) => m.name === market)
+      : g.zones.find((z) => z.name === zone);
   if (!g.loaded) return <Waiting />;
+  // The next level down: a region's branches, a market's regions, a zone's markets.
+  const next = region
+    ? { noun: 'Branches', rows: branches, pick: (b: string) => push({ kind: 'classBranch', cls, branch: b }), hint: <><ClassBadge cls={cls} /> · Open A Branch For Its SKUs</> }
+    : market
+      ? { noun: 'Regions', rows: regions, pick: (r: string) => push({ kind: 'geo', cls, zone, market, region: r }), hint: <ClassBadge cls={cls} /> }
+      : { noun: 'Markets', rows: markets, pick: (m: string) => push({ kind: 'geo', cls, zone, market: m }), hint: <ClassBadge cls={cls} /> };
+  const where = region ?? market ?? zone;
   return (
     <>
       <StatGrid>
         <Stat label="Cover days" value={days(here?.cover)} sub="Average Of The Branches" />
         <Stat label="Service level" value={pct1(here?.service)} rag={rag(here?.service ?? null, 'serviceLevel')} sub="Share Of SKUs Above Threshold" />
-        <Stat label={region ? 'Branches' : 'Regions'} value={region ? branches.length : regions.length} sub={region ? `In ${region}` : `In ${zone}`} />
+        <Stat label={next.noun} value={next.rows.length} sub={`In ${where}`} />
       </StatGrid>
-      {region ? (
-        <Section title={`Branches In ${region}`} hint={`${clsName(cls)} · open a branch for its SKUs`}>
-          <GeoRows rows={branches} onPick={(b) => push({ kind: 'classBranch', cls, branch: b })} />
-        </Section>
-      ) : (
-        <Section title={`Regions In ${zone}`} hint={clsName(cls)}>
-          <GeoRows rows={regions} onPick={(r) => push({ kind: 'geo', cls, zone, region: r })} />
-        </Section>
-      )}
+      <Section title={`${next.noun} In ${where}`} hint={next.hint}>
+        <GeoRows rows={next.rows} onPick={next.pick} />
+      </Section>
     </>
   );
 }
@@ -450,9 +471,9 @@ function ClassBranchBody({ cls, branch, data }: { cls: string; branch: string; d
         <Stat label="Cover days" value={days(g?.cover)} sub={`Benchmark ${days(bm)} · Threshold ${days(th)}`} />
         <Stat label="Service level" value={pct1(g?.service)} rag={rag(g?.service ?? null, 'serviceLevel')} />
         <Stat label="SKUs below threshold" value={th == null ? DASH : below} sub={`Of ${skus.length} SKUs`} />
-        <Stat label="Zone · region" value={<Text as="span" fontSize="15px">{g?.zone ?? DASH}</Text>} sub={g?.region} />
+        <Stat label="Zone · market · region" value={<Text as="span" fontSize="15px">{g?.zone ?? DASH}</Text>} sub={g ? `${g.market} · ${g.region}` : undefined} />
       </StatGrid>
-      <Section title={`SKUs In ${clsName(cls)} At ${branch}`} hint="Lowest cover first · 0 d means no stock here">
+      <Section title={<>SKUs In <ClassBadge cls={cls} /> At {branch}</>} hint="Lowest cover first · 0 d means no stock here">
         <Rows
           head={['SKU', 'Cover Here', 'Threshold', 'Status']}
           rows={skus.map(({ sku, v }, i) => ({
@@ -487,7 +508,7 @@ function ClassBody({ cls, data }: { cls: string; data: DashboardData }) {
         <Stat label="Excess cost" value={excess ? pkr(excess) : DASH} sub="Above Benchmark" />
         <Stat label="Sales this period" value={pkr(num(sales?.amount ?? null))} sub={att && att.target > 0 ? `${pct1((att.amount / att.target) * 100)} Of Month Target` : undefined} />
       </StatGrid>
-      <Section title={`${clsName(cls)} By Zone`} hint="Zone › Region › Branch › SKU · cover and service are averages of the branches">
+      <Section title={<><ClassBadge cls={cls} /> By Zone</>} hint="Zone › Market › Region › Branch › SKU · cover and service are averages of the branches">
         <GeoRows rows={zones} onPick={(z) => push({ kind: 'geo', cls, zone: z })} />
       </Section>
     </>
@@ -515,8 +536,10 @@ function BranchBody({ branch, data }: { branch: string; data: DashboardData }) {
       <StatGrid>
         <Stat label="Service level (avg)" value={pct1(row?.avg)} rag={rag(row?.avg, 'serviceLevel')} sub="Simple Average Of Classes" />
         {['A', 'B', 'C', 'N'].map((c, i) => (
-          <Stat key={c} label={`Class ${c}`} value={pct1(row?.cells[i])} rag={rag(row?.cells[i], 'serviceLevel')} />
+          <Stat key={c} label={<ClassBadge cls={c} />} value={pct1(row?.cells[i])} rag={rag(row?.cells[i], 'serviceLevel')} />
         ))}
+        {/* DC is a class too (user, 26 Nov 2026); the data has no service level for it. */}
+        <Stat key="DC" label={<ClassBadge cls="DC" />} value={DASH} />
       </StatGrid>
       <Section title={`Classes At ${branch}`} hint="Open a class for its SKUs here">
         <Rows
@@ -529,7 +552,7 @@ function BranchBody({ branch, data }: { branch: string; data: DashboardData }) {
             return {
               key: c.cls,
               cells: [
-                clsName(c.cls),
+                <ClassMark key="n" label={clsName(c.cls)} />,
                 // Other has no threshold: its cover is shown plain.
                 t == null ? days(c.vals[bi]) : <RagText key="c" r={c.vals[bi] < t ? 'red' : 'green'} text={days(c.vals[bi])} />,
                 days(t),
@@ -565,7 +588,7 @@ function SkuBody({ sku, data }: { sku: string; data: DashboardData }) {
       {/* The drill ends here: Class → SKU → cover by branch. A branch row opens nothing (user request, 17 Nov 2026; FR-EXEC-053). */}
       <Section title="Cover By Branch" hint="Lowest cover first · 0 d means no stock">
         <Rows
-          head={['Branch', 'Cover', 'Threshold', 'Of Benchmark', 'Status']}
+          head={['Branch', 'Cover Days', 'Threshold', 'Of Benchmark', 'Status']}
           rows={[...vals]
             .sort((a, b) => a.v - b.v)
             .map((x) => {
@@ -781,7 +804,7 @@ export function DetailLayer({ data }: { data: DashboardData }) {
       case 'alignClass':
         return <AlignClassBody cls={item.cls} data={data} />;
       case 'geo':
-        return <GeoBody cls={item.cls} zone={item.zone} region={item.region} data={data} />;
+        return <GeoBody cls={item.cls} zone={item.zone} market={item.market} region={item.region} data={data} />;
       case 'classBranch':
         return <ClassBranchBody cls={item.cls} branch={item.branch} data={data} />;
       case 'branch':

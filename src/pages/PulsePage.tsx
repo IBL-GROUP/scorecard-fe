@@ -24,11 +24,14 @@ import { ChartCard } from '@/ui/chart-card';
 import { RowBars } from '@/ui/row-bars';
 import { InfoTip, Overlay } from '@/ui/overlay';
 import { AnimatedValue } from '@/ui/motion';
-import { ClassBadge } from '@/ui/class-badge';
+import { ClassBadge, withClassBadges } from '@/ui/class-badge';
 import { titleCase } from '@/utils/titleCase';
 import { ReviewSheet } from '@/ui/pulse/ReviewSheet';
 import type { AnalyzePoint } from '@/ui/analyze';
 
+// Every classification has its row, DC too (user, 26 Nov 2026); DC has no service-level
+// figure in the data, so its cells read "—" and open nothing.
+const GRID_CLASSES = [...RATED_CLASSES, 'DC'] as const;
 const INK: Record<Rag, string> = { green: colors.good, amber: colors.warn, red: colors.bad };
 const tabLabel = (k: TabKey) => TABS.find((t) => t.key === k)?.mid ?? k;
 const dayText = (n: number | null | undefined) => (n == null ? DASH : `${Math.round(n)} d`);
@@ -403,22 +406,22 @@ function ServiceGrid({ m }: { m: Model }) {
           <InfoTip help={PULSE_HELP.serviceGrid} />
         </Box>
       </Flex>
-      {m.st.svc.isLoading && !rows.length ? (
+      {m.st.svc.isLoading ? (
         <Skeleton flex={1} borderRadius="4px" />
       ) : (
         // Branches across, classes down (user, 25 Nov 2026); each class row led by its badge.
-        <Box flex={1} minH={0} overflowX="auto" pb="4px" display="grid" gridTemplateColumns={`minmax(64px, auto) repeat(${rows.length}, minmax(76px, 1fr))`} gridTemplateRows={`auto repeat(${RATED_CLASSES.length + 1}, minmax(0, 1fr))`} gap="4px">
+        <Box flex={1} minH={0} overflowX="auto" pb="4px" display="grid" gridTemplateColumns={`minmax(64px, auto) repeat(${rows.length}, minmax(76px, 1fr))`} gridTemplateRows={`auto repeat(${GRID_CLASSES.length + 1}, minmax(0, 1fr))`} gap="4px">
           <Box />
           {rows.map((r) => (
             <Text key={r.branch} fontSize="11px" fontWeight={600} color={colors.mutedText} textAlign="center" truncate px={1} title={r.branch}>
               {r.branch}
             </Text>
           ))}
-          {[...RATED_CLASSES, null].map((cls, i) => (
+          {[...GRID_CLASSES, null].map((cls, i) => (
             <Box key={cls ?? 'avg'} display="contents">
               <Flex align="center" justify="flex-start">
                 {cls ? (
-                  <ClassBadge cls={cls} size={20} />
+                  <ClassBadge cls={cls} />
                 ) : (
                   <Text fontSize="13px" fontWeight={600} color={colors.darkText}>
                     Average
@@ -489,7 +492,7 @@ function InsightItem({ ins, onAction, full }: { ins: Insight; onAction: (a: NonN
         {t.mark} {t.label}
       </Text>
       <Text fontSize="13px" fontWeight={600} color={colors.darkText} lineHeight="1.35" mt="2px">
-        {ins.title}
+        {withClassBadges(ins.title)}
       </Text>
       {ins.detail && (
         <Text fontSize="12px" color={colors.bodyText} mt="2px" lineClamp={full ? undefined : 2} title={ins.detail}>
@@ -510,7 +513,7 @@ function InsightItem({ ins, onAction, full }: { ins: Insight; onAction: (a: NonN
           _hover={{ textDecoration: 'underline' }}
           onClick={() => onAction(ins.action!)}
         >
-          {ins.action.label} <FiArrowRight size={12} />
+          {withClassBadges(ins.action.label)} <FiArrowRight size={12} />
         </Box>
       )}
     </Box>
@@ -574,7 +577,7 @@ function SignalsRail({ insights, loading, periodLabel }: { insights: Insight[]; 
         {chip('data', `Data ${count('data')}`)}
       </Flex>
       <Box flex={1} minH={0} overflowY="auto">
-        {loading && !insights.length ? (
+        {loading ? (
           Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} h="64px" m={3} borderRadius="4px" />)
         ) : list.length ? (
           list.map((ins) => <InsightItem key={ins.id} ins={ins} onAction={act} />)

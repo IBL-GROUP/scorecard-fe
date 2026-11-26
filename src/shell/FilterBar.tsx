@@ -3,7 +3,7 @@
 // the Custom filter panel applies on Apply) and the period button on the right.
 
 import { Box, Flex, Input } from '@chakra-ui/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { daysInMonth, parse } from '@/features/period';
 import { SearchBar, type SearchField } from '@/components/search';
 import { colors } from '@/constants/theme';
@@ -16,10 +16,10 @@ import { PeriodControl } from './PeriodControl';
 import { AnalyzeOverlay } from '@/ui/analyze';
 import { ClassLegend, useClassSkuCounts } from '@/ui/class-badge';
 import { Segmented } from '@/ui/segmented';
+import { CLASSES } from '@/api/types';
 import { FiBarChart2, FiList, FiZap } from 'react-icons/fi';
 import { VIEW_TABS, setTabView, useTabView, type TabView } from '@/features/views';
 
-const CLASSES = ['A', 'B', 'C', 'N', 'Others'];
 
 /**
  * Cover days (FR-EXEC-047): the days the month's target is spread over when
@@ -70,6 +70,19 @@ function CoverDaysInput() {
   );
 }
 const split = (v: string | undefined) => (v ? v.split(',').filter(Boolean) : []);
+/** Search-bar values (comma lists) → the store's filters. */
+const toFilters = (next: Record<string, string>): Filters => ({
+  division: split(next.division),
+  bu: split(next.bu),
+  team: split(next.team),
+  brand: split(next.brand),
+  classification: split(next.classification),
+  zone: split(next.zone),
+  market: split(next.market),
+  region: split(next.region),
+  branch: split(next.branch),
+  sku: split(next.sku),
+});
 
 export function FilterBar({ data, tab }: { data: DashboardData; tab: TabKey }) {
   const st = useStore();
@@ -79,13 +92,19 @@ export function FilterBar({ data, tab }: { data: DashboardData; tab: TabKey }) {
   const datesOnly = tab === 'fulfilment' || tab === 'distribution';
 
   const skuCounts = useClassSkuCounts();
-  const fields: SearchField[] = useMemo(() => {
+  // The fields for a set of picks: the applied filters for the bar, the Custom
+  // panel's draft while it is open (SearchBar's fieldsFor).
+  const fieldsFor = useCallback((picked: Record<string, string>): SearchField[] => {
+    const pf = toFilters(picked);
     // One row per hub branch (the list has one per storage location); names A→Z with Others last.
     const geo = [...new Map(data.options.branches.map((b) => [String(b.hub_branch_code), b])).values()].sort((x, y) => x.hub_branch_desc.localeCompare(y.hub_branch_desc));
+    const geoOf = { zone: (b: (typeof geo)[number]) => b.zone ?? 'Others', market: (b: (typeof geo)[number]) => b.market ?? 'Others', region: (b: (typeof geo)[number]) => b.region ?? 'Others', branch: (b: (typeof geo)[number]) => String(b.hub_branch_code) };
+    const geoLeft = (exclude: keyof typeof geoOf) =>
+      geo.filter((b) => (Object.keys(geoOf) as (keyof typeof geoOf)[]).every((k) => k === exclude || !pf[k].length || pf[k].includes(geoOf[k](b))));
     const uniq = (xs: string[]) => [...new Set(xs)].sort((x, y) => Number(x === 'Others') - Number(y === 'Others') || x.localeCompare(y, undefined, { numeric: true }));
     // Division › BU › Team › Brand › SKU, as every OneThunder dashboard (user, 25 Nov 2026):
     // each level lists only what sits under the levels chosen above it.
-    const under = (upTo?: (typeof HIERARCHY)[number]['key']) => hierarchyItems(data.options.items, st.filters, upTo) ?? data.options.items;
+    const under = (upTo?: (typeof HIERARCHY)[number]['key']) => hierarchyItems(data.options.items, pf, upTo) ?? data.options.items;
     const level = (key: (typeof HIERARCHY)[number]['key'], label: string): SearchField => {
       const col = HIERARCHY.find((h) => h.key === key)!.col;
       return { key, label, multi: true, options: uniq(under(key).map((i) => i[col] ?? 'Others')).map((v) => ({ value: v, label: v })) };
@@ -106,29 +125,20 @@ export function FilterBar({ data, tab }: { data: DashboardData; tab: TabKey }) {
         key: 'classification',
         label: 'Class',
         multi: true,
-        options: CLASSES.filter((c) => c !== 'Others' || (skuCounts?.Others ?? 0) > 0 || st.filters.classification.includes('Others')).map((c) => ({
+        // Plain letters, in class order A, B, C, N, DC — never "Class A" (user, 26 Nov 2026).
+        options: CLASSES.filter((c) => c !== 'Others' || (skuCounts?.Others ?? 0) > 0 || pf.classification.includes('Others')).map((c) => ({
           value: c,
-          label: c === 'Others' ? 'Other' : `Class ${c}`,
+          label: c === 'Others' ? 'Other' : c,
         })),
       },
-      // Zone › Region › Branch (vw_zone_region_data), as Sales Pulse 2.0: each narrows the next.
-      { key: 'zone', label: 'Zone', multi: true, options: uniq(geo.map((b) => b.zone ?? 'Others')).map((z) => ({ value: z, label: z })) },
-      {
-        key: 'region',
-        label: 'Region',
-        multi: true,
-        options: uniq(geo.filter((b) => !st.filters.zone.length || st.filters.zone.includes(b.zone ?? 'Others')).map((b) => b.region ?? 'Others')).map((r) => ({ value: r, label: r })),
-      },
-      {
-        key: 'branch',
-        label: 'Branch',
-        multi: true,
-        options: geo
-          .filter((b) => (!st.filters.zone.length || st.filters.zone.includes(b.zone ?? 'Others')) && (!st.filters.region.length || st.filters.region.includes(b.region ?? 'Others')))
-          .map((b) => ({ value: String(b.hub_branch_code), label: b.hub_branch_desc })),
-      },
+      // Zone › Market › Region › Branch (vw_zone_region_data), as Sales Pulse 2.0: each list holds
+      // what the OTHER geo picks leave, both ways (a branch narrows its zone, market and region too).
+      { key: 'zone', label: 'Zone', multi: true, options: uniq(geoLeft('zone').map((b) => b.zone ?? 'Others')).map((z) => ({ value: z, label: z })) },
+      { key: 'market', label: 'Market', multi: true, options: uniq(geoLeft('market').map((b) => b.market ?? 'Others')).map((m) => ({ value: m, label: m })) },
+      { key: 'region', label: 'Region', multi: true, options: uniq(geoLeft('region').map((b) => b.region ?? 'Others')).map((r) => ({ value: r, label: r })) },
+      { key: 'branch', label: 'Branch', multi: true, options: geoLeft('branch').map((b) => ({ value: String(b.hub_branch_code), label: b.hub_branch_desc })) },
     ];
-  }, [data.options.items, data.options.branches, st.filters, skuCounts]);
+  }, [data.options.items, data.options.branches, skuCounts]);
 
   const values: Record<string, string> = {
     division: st.filters.division.join(','),
@@ -137,16 +147,15 @@ export function FilterBar({ data, tab }: { data: DashboardData; tab: TabKey }) {
     brand: st.filters.brand.join(','),
     classification: st.filters.classification.join(','),
     zone: st.filters.zone.join(','),
+    market: st.filters.market.join(','),
     region: st.filters.region.join(','),
     branch: st.filters.branch.join(','),
     sku: st.filters.sku.join(','),
   };
+  const fields = useMemo(() => fieldsFor(values), [fieldsFor, values]);
   // Classes are picked in the search box (its Filters menu, as Sales Pulse 2.0 offers Primary / Secondary);
   // the legend only explains them.
-  const apply = (next: Record<string, string>) => {
-    const f: Filters = { division: split(next.division), bu: split(next.bu), team: split(next.team), brand: split(next.brand), classification: split(next.classification), zone: split(next.zone), region: split(next.region), branch: split(next.branch), sku: split(next.sku) };
-    st.applyFilters(f);
-  };
+  const apply = (next: Record<string, string>) => st.applyFilters(toFilters(next));
 
   const analysis = analyzeOpen ? supplyChainAnalysis(data) : null;
 
@@ -194,7 +203,7 @@ export function FilterBar({ data, tab }: { data: DashboardData; tab: TabKey }) {
               aria-disabled={datesOnly || undefined}
               title={datesOnly ? 'Filters do not apply to this tab' : undefined}
             >
-              <SearchBar fields={fields} values={values} onChange={apply} favoritesKey="supplyChainPulse.favorites" quickFilterKeys={['classification']} placeholder="Search division, BU, team, brand, SKU, class, branch…" />
+              <SearchBar fields={fields} values={values} fieldsFor={fieldsFor} onChange={apply} favoritesKey="supplyChainPulse.favorites" quickFilterKeys={['classification']} placeholder="Search division, BU, team, brand, SKU, class, branch…" />
             </Box>
             {datesOnly ? null : (
               <>

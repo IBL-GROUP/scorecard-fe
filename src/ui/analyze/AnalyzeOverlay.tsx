@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { FiChevronDown, FiChevronRight } from 'react-icons/fi';
 import { Overlay } from '@/ui/overlay';
 import { colors } from '@/constants/theme';
+import { withClassBadges } from '@/ui/class-badge';
 
 export interface AnalyzePoint {
   tone: 'good' | 'bad' | 'neutral';
@@ -72,7 +73,7 @@ export function AnalyzeOverlay({
                       {i + 1}
                     </Box>
                     <Text flex={1} fontSize="13px" fontWeight={600} color={colors.darkText}>
-                      {pt.title}
+                      {withClassBadges(pt.title)}
                     </Text>
                     <Box color={colors.mutedText} mt="3px">
                       {isOpen ? <FiChevronDown size={15} /> : <FiChevronRight size={15} />}

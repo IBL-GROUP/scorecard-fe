@@ -16,6 +16,7 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { colors, formatCompact as formatCompactShared } from '@/constants/theme';
+import { ClassMarkSvg, classFromLabel } from '@/ui/class-badge';
 import { useExpanded } from '@/ui/overlay';
 
 export interface BarConfig {
@@ -99,6 +100,15 @@ function renderXTick(tickWidth: number, tickMargin = 6, labelColors?: Record<str
     const val = payload?.value;
     if (val === undefined || val === null) return null;
     const full = String(val);
+    const cls = classFromLabel(full);
+    if (cls)
+      return (
+        <g transform={`translate(${x},${y + tickMargin})`}>
+          {/* The badge alone, Other included: the axis has no room for a word under it
+              (it was cut off); the badge's tooltip names it. */}
+          <ClassMarkSvg cls={cls} />
+        </g>
+      );
     const charsPerLine = Math.max(1, Math.floor(tickWidth / 7));
     // Break on a space where possible so words aren't split mid-way.
     let line1 = full;
